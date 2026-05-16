@@ -1,0 +1,1943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pundix — Predict the Market</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg:       #F5F6F8;
+    --surface:  #ECEEF2;
+    --card:     #FFFFFF;
+    --border:   #DDE0E8;
+    --border2:  #C8CDD8;
+    --gold:     #9A7220;
+    --gold-dim: #C8A84B;
+    --gold-glow:rgba(154,114,32,.10);
+    --gold-pale:#FBF5E6;
+    --green:    #1A7A4A;
+    --green-dim:#D4F0E2;
+    --red:      #C0352A;
+    --red-dim:  #FDECEA;
+    --text:     #0F1520;
+    --text-mid: #4A5568;
+    --text-dim: #8A95A8;
+    --mono:     'Space Mono', monospace;
+    --sans:     'Syne', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+
+
+  /* ── LAYOUT ── */
+  .shell {
+    position: relative; z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 20px 80px;
+  }
+
+  /* ── HEADER ── */
+  .hdr {
+    padding: 28px 24px 20px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 32px;
+    background: #141A24;
+    border-radius: 0 0 8px 8px;
+    margin-left: -20px;
+    margin-right: -20px;
+  }
+
+  .logo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .logo-mark {
+    font-family: var(--sans);
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: #FFFFFF;
+    line-height: 1;
+  }
+
+  .logo-mark span {
+    color: var(--gold);
+  }
+
+  .logo-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.45);
+  }
+
+  .hdr-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  .season-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    border: 1px solid var(--gold-dim);
+    padding: 3px 8px;
+    border-radius: 2px;
+    background: var(--gold-glow);
+  }
+
+  .week-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: rgba(255,255,255,.45);
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all .2s;
+  }
+
+  .tab.active {
+    background: var(--card);
+    color: var(--gold);
+    border: 1px solid var(--border2);
+  }
+
+  /* ── PANEL ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── SECTION LABEL ── */
+  .sec-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sec-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── TICKER CARDS ── */
+  .tickers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .ticker {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ticker::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+
+  .ticker-pair {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .ticker-price {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 700;
+    color: #0F1520;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .ticker-price .decimals {
+    font-size: 16px;
+    color: #6A7890;
+  }
+
+  .ticker-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ticker-change {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  .ticker-change.pos { color: var(--green); background: var(--green-dim); }
+  .ticker-change.neg { color: var(--red);   background: var(--red-dim); }
+
+  .ticker-timestamp {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+
+  /* ── PREDICT FORM ── */
+  .predict-form {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 24px;
+    margin-bottom: 28px;
+  }
+
+  .form-intro {
+    font-size: 13px;
+    color: var(--text-mid);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+
+  .field label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .field input {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s;
+    width: 100%;
+  }
+
+  .field input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-glow);
+  }
+
+  .field input::placeholder { color: var(--text-dim); }
+
+  .pair-predict {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+  }
+
+  .pair-predict-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .pair-predict-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--gold);
+    font-weight: 700;
+  }
+
+  .pair-predict-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .pair-predict-current {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* Stepper row */
+  .stepper-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .stepper-btn {
+    flex-shrink: 0;
+    width: 48px;
+    height: 52px;
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+
+  .stepper-btn:hover { background: var(--border); color: var(--text); }
+  .stepper-btn:active { background: var(--border2); }
+  .stepper-btn.minus:hover { color: var(--red); }
+  .stepper-btn.plus:hover  { color: var(--green); }
+
+  .stepper-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 8px 0;
+  }
+
+  .stepper-delta {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    transition: color .2s;
+  }
+
+  .stepper-delta.pos { color: var(--green); }
+  .stepper-delta.neg { color: var(--red); }
+  .stepper-delta.zero { color: var(--text-dim); }
+
+  .stepper-price {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .stepper-price span {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .stepper-unit {
+    font-size: 9px;
+    font-family: var(--mono);
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Fine-tune row */
+  .fine-tune {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .fine-btn {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all .15s;
+    letter-spacing: .5px;
+  }
+
+  .fine-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-pale); }
+
+  .pair-predict-arrow {
+    display: none; /* hidden — replaced by stepper */
+  }
+
+  .pair-predict input.hidden-input {
+    display: none;
+  }
+
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--gold);
+    border: none;
+    border-radius: 5px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--bg);
+    cursor: pointer;
+    transition: all .2s;
+    margin-top: 8px;
+  }
+
+  .submit-btn:hover {
+    background: #D4B45A;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(200,168,75,.3);
+  }
+
+  .submit-btn:active { transform: translateY(0); }
+
+  /* ── SUCCESS STATE ── */
+  .success-card {
+    background: var(--card);
+    border: 1px solid var(--green-dim);
+    border-left: 3px solid var(--green);
+    border-radius: 6px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    display: none;
+  }
+
+  .success-card.show { display: block; }
+
+  .success-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+
+  .success-text {
+    font-size: 13px;
+    color: var(--text-mid);
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+
+  .share-text {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold);
+    cursor: pointer;
+    transition: background .2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .share-text:hover { background: var(--card); }
+
+  .share-copy {
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* ── LEADERBOARD ── */
+  .leaderboard {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+
+  .lb-header {
+    display: grid;
+    grid-template-columns: 40px 1fr 80px 80px 80px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    gap: 8px;
+  }
+
+  .lb-hcell {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .lb-hcell.right { text-align: right; }
+
+  .lb-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 80px 80px 80px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    gap: 8px;
+    transition: background .15s;
+  }
+
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row:hover { background: var(--surface); }
+
+  .lb-row.top1 { background: rgba(200,168,75,.06); }
+  .lb-row.top1:hover { background: rgba(200,168,75,.10); }
+
+  .lb-rank {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  .lb-rank.gold   { color: var(--gold); }
+  .lb-rank.silver { color: #A0AEB8; }
+  .lb-rank.bronze { color: #B8734A; }
+
+  .lb-player {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .lb-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .lb-country {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+
+  .lb-cell {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-align: right;
+    color: var(--text-mid);
+  }
+
+  .lb-score {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: right;
+    color: var(--green);
+  }
+
+  .lb-streak {
+    display: flex;
+    justify-content: flex-end;
+    gap: 2px;
+  }
+
+  .streak-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border2);
+  }
+
+  .streak-dot.hit { background: var(--green); }
+
+  /* ── RESULTS PANEL ── */
+  .results-week {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 24px;
+    margin-bottom: 12px;
+  }
+
+  .results-week-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  .result-pair {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .result-pair:last-child { border-bottom: none; }
+
+  .result-pair-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--gold);
+    font-weight: 700;
+    width: 90px;
+  }
+
+  .result-values {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .result-val {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .result-val-label {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .result-val-num {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .result-arrow {
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--border2);
+  }
+
+  .result-move {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 3px;
+    min-width: 70px;
+    text-align: center;
+  }
+
+  .result-move.pos { color: var(--green); background: var(--green-dim); }
+  .result-move.neg { color: var(--red);   background: var(--red-dim);   }
+
+  /* ── CONSENSUS BAR ── */
+  .consensus-section {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin-bottom: 28px;
+  }
+
+  .consensus-pair {
+    margin-bottom: 16px;
+  }
+
+  .consensus-pair:last-child { margin-bottom: 0; }
+
+  .consensus-pair-name {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+
+  .consensus-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .consensus-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    width: 28px;
+    flex-shrink: 0;
+  }
+
+  .consensus-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .consensus-fill-up {
+    position: absolute;
+    left: 50%;
+    top: 0; bottom: 0;
+    background: var(--green);
+    border-radius: 0 3px 3px 0;
+    transition: width .6s ease;
+  }
+
+  .consensus-fill-down {
+    position: absolute;
+    right: 50%;
+    top: 0; bottom: 0;
+    background: var(--red);
+    border-radius: 3px 0 0 3px;
+    transition: width .6s ease;
+  }
+
+  .consensus-pct {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .consensus-pct.up { color: var(--green); }
+  .consensus-pct.dn { color: var(--red); }
+
+  .consensus-target {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 5px;
+    text-align: right;
+  }
+
+  .consensus-target span {
+    color: var(--gold);
+    font-weight: 700;
+  }
+
+  /* ── HOW IT WORKS ── */
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .how-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 16px;
+  }
+
+  .how-num {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 700;
+    color: #C8CDD8;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .how-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .how-text {
+    font-family: var(--mono);
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--text-dim);
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--green);
+    color: var(--bg);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 10px 20px;
+    border-radius: 4px;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    z-index: 100;
+    white-space: nowrap;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── PRIZE BANNER ── */
+  .prize-banner {
+    background: linear-gradient(135deg, #1A1200, #2A1E00);
+    border: 1px solid var(--gold-dim);
+    border-radius: 6px;
+    padding: 18px 22px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .prize-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 80% 50%, rgba(200,168,75,.08), transparent 60%);
+  }
+
+  .prize-left { position: relative; }
+
+  .prize-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 6px;
+  }
+
+  .prize-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1.15;
+    margin-bottom: 6px;
+  }
+
+  .prize-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: rgba(255,255,255,.65);
+    margin-top: 2px;
+  }
+
+  .prize-right {
+    position: relative;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .prize-weeks {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .prize-weeks-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* ── NEWS CONTEXT ── */
+  .news-section {
+    margin-bottom: 28px;
+  }
+
+  .news-pair-block {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+  }
+
+  .news-pair-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .news-pair-name {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .news-loading {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  .news-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+  }
+
+  .news-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .news-item:first-child { padding-top: 0; }
+
+  .news-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  .news-content { flex: 1; }
+
+  .news-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.45;
+    margin-bottom: 3px;
+  }
+
+  .news-item:hover .news-title { color: var(--gold); }
+
+  .news-meta {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+
+  .news-error {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .tickers { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .lb-header, .lb-row { grid-template-columns: 36px 1fr 70px 60px; }
+    .lb-header .lb-hcell:nth-child(3),
+    .lb-row .lb-cell:nth-child(3) { display: none; }
+    .how-grid { grid-template-columns: 1fr; }
+    .prize-banner { flex-direction: column; align-items: flex-start; }
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel.active > * {
+    animation: fadeUp .3s ease forwards;
+  }
+
+  .panel.active > *:nth-child(2) { animation-delay: .05s; }
+  .panel.active > *:nth-child(3) { animation-delay: .10s; }
+  .panel.active > *:nth-child(4) { animation-delay: .15s; }
+
+  /* ── TICKER BLINK ── */
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: .3; }
+  }
+
+  .live-dot {
+    display: inline-block;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: blink 2s infinite;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="logo">
+      <div class="logo-mark">PUN<span>D</span>IX</div>
+      <div class="logo-tag">FX Prediction Game</div>
+    </div>
+    <div class="hdr-right">
+      <div class="season-badge">Season 1</div>
+      <div class="week-label" id="weekLabel">Week 1 of 8 · Mon–Fri</div>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('predict')">Predict</button>
+    <button class="tab" onclick="switchTab('leaderboard')">Leaderboard</button>
+    <button class="tab" onclick="switchTab('results')">Results</button>
+    <button class="tab" onclick="switchTab('how')">How it works</button>
+  </div>
+
+  <!-- ══ PREDICT PANEL ══ -->
+  <div class="panel active" id="panel-predict">
+
+    <!-- Live tickers -->
+    <div class="sec-label"><span class="live-dot"></span>Live rates · Monday open</div>
+    <div class="tickers">
+      <div class="ticker">
+        <div class="ticker-pair">EUR / USD</div>
+        <div class="ticker-price" id="eurusd-price">1.08<span class="decimals">42</span></div>
+        <div class="ticker-meta">
+          <span class="ticker-change pos" id="eurusd-chg">+0.12%</span>
+          <span class="ticker-timestamp">as of Mon 09:00 CET</span>
+        </div>
+      </div>
+      <div class="ticker">
+        <div class="ticker-pair">USD / CHF</div>
+        <div class="ticker-price" id="usdchf-price">0.90<span class="decimals">18</span></div>
+        <div class="ticker-meta">
+          <span class="ticker-change neg" id="usdchf-chg">−0.08%</span>
+          <span class="ticker-timestamp">as of Mon 09:00 CET</span>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- News context -->
+    <div class="news-section">
+      <div class="sec-label"><span class="live-dot"></span>This week's market news</div>
+
+      <div class="news-pair-block">
+        <div class="news-pair-header">
+          <div class="news-pair-name">EUR / USD · Euro vs Dollar</div>
+          <div class="news-loading" id="eurusd-news-status">Loading...</div>
+        </div>
+        <div id="eurusd-news-list"></div>
+      </div>
+
+      <div class="news-pair-block">
+        <div class="news-pair-header">
+          <div class="news-pair-name">USD / CHF · Dollar vs Swiss Franc</div>
+          <div class="news-loading" id="usdchf-news-status">Loading...</div>
+        </div>
+        <div id="usdchf-news-list"></div>
+      </div>
+    </div>
+
+    <!-- Consensus -->
+    <div class="sec-label">Group consensus this week</div>
+    <div class="consensus-section">
+      <div class="consensus-pair">
+        <div class="consensus-pair-name">EUR/USD</div>
+        <div class="consensus-bar-wrap">
+          <div class="consensus-label" style="color:var(--red);font-size:8px;">DOWN</div>
+          <div class="consensus-bar">
+            <div class="consensus-fill-up" id="eurusd-up" style="width:38%;"></div>
+            <div class="consensus-fill-down" id="eurusd-dn" style="width:12%;"></div>
+          </div>
+          <div class="consensus-label" style="color:var(--green);font-size:8px;">UP</div>
+          <div class="consensus-pct up" id="eurusd-pct">38%</div>
+        </div>
+        <div class="consensus-target">Avg target: <span id="eurusd-avg">1.0891</span></div>
+      </div>
+      <div class="consensus-pair">
+        <div class="consensus-pair-name">USD/CHF</div>
+        <div class="consensus-bar-wrap">
+          <div class="consensus-label" style="color:var(--red);font-size:8px;">DOWN</div>
+          <div class="consensus-bar">
+            <div class="consensus-fill-up" id="usdchf-up" style="width:22%;"></div>
+            <div class="consensus-fill-down" id="usdchf-dn" style="width:28%;"></div>
+          </div>
+          <div class="consensus-label" style="color:var(--green);font-size:8px;">UP</div>
+          <div class="consensus-pct dn" id="usdchf-pct">28%</div>
+        </div>
+        <div class="consensus-target">Avg target: <span id="usdchf-avg">0.8974</span></div>
+      </div>
+    </div>
+
+    <!-- Prize -->
+    <div class="prize-banner">
+      <div class="prize-left">
+        <div class="prize-label">Season 1 Prize</div>
+        <div class="prize-title" id="prizeTitle">Weekend for two · Verbier</div>
+        <div class="prize-sub" id="prizeSub">+ Weekly winner: Bottle of Krug Grande Cuvée</div>
+      </div>
+      <div class="prize-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+        <div>
+          <div class="prize-weeks" id="weeksLeft">7</div>
+          <div class="prize-weeks-label">weeks left</div>
+        </div>
+        <button onclick="openPrizeEdit()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:4px;padding:4px 10px;font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.6);cursor:pointer;">✎ Edit</button>
+      </div>
+    </div>
+
+    <!-- Prize edit modal -->
+    <div id="prizeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:8px;padding:28px;width:90%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:16px;">Edit prize wording</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Season prize</label>
+            <input id="editPrizeTitle" type="text" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:4px;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--text);outline:none;background:var(--bg);">
+          </div>
+          <div>
+            <label style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Weekly prize</label>
+            <input id="editPrizeSub" type="text" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:4px;font-family:var(--mono);font-size:12px;color:var(--text);outline:none;background:var(--bg);">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button onclick="savePrize()" style="flex:1;padding:11px;background:var(--gold);border:none;border-radius:4px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;cursor:pointer;">Save</button>
+            <button onclick="closePrizeEdit()" style="padding:11px 16px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10px;color:var(--text-dim);cursor:pointer;">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success state -->
+    <div class="success-card" id="successCard">
+      <div class="success-title">✓ Prediction submitted</div>
+      <div class="success-text" id="successText">Your call is locked in. Check back Friday evening for results.</div>
+      <div class="share-text" onclick="copyShare()" id="shareText">
+        <span id="shareContent"></span>
+        <span class="share-copy">tap to copy</span>
+      </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--green-dim);">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:8px;">Know someone who'd beat you?</div>
+        <div style="font-size:13px;color:var(--text-mid);line-height:1.6;margin-bottom:10px;">Send them the link — the more competitors, the better the leaderboard.</div>
+        <div class="share-text" onclick="copyLink()" style="border-color:var(--border2);">
+          <span id="linkContent" style="font-family:var(--mono);font-size:11px;color:var(--text);">pundix.netlify.app</span>
+          <span class="share-copy">copy link</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Predict form -->
+    <div class="predict-form" id="predictForm">
+      <div class="form-intro">
+        Submit your price targets for <strong>Friday 16:00 CET close</strong>. Predictions lock Wednesday midnight. Closer = higher score.
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Your name</label>
+          <input type="text" id="playerName" placeholder="e.g. Bertrand R." autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Email (not shown publicly)</label>
+          <input type="email" id="playerEmail" placeholder="you@example.com" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="sec-label" style="margin-bottom:10px;">Your call for Friday close — will it go up or down?</div>
+
+      <!-- EUR/USD stepper -->
+      <div class="pair-predict">
+        <div class="pair-predict-header">
+          <div>
+            <div class="pair-predict-name">EUR/USD <span class="pair-predict-desc">· Euro vs US Dollar</span></div>
+            <div class="pair-predict-current">Current: <strong id="eurusd-now2">1.0842</strong></div>
+          </div>
+        </div>
+        <div class="stepper-row">
+          <button class="stepper-btn minus" onclick="step('eurusd', -10)" title="−0.1%">−</button>
+          <div class="stepper-center">
+            <div class="stepper-delta zero" id="eurusd-delta">No change</div>
+            <div class="stepper-price">Target: <span id="eurusd-target">1.0842</span></div>
+          </div>
+          <button class="stepper-btn plus" onclick="step('eurusd', +10)" title="+0.1%">+</button>
+        </div>
+        <div class="fine-tune">
+          <button class="fine-btn" onclick="step('eurusd', -100)">−1%</button>
+          <button class="fine-btn" onclick="step('eurusd', -50)">−0.5%</button>
+          <button class="fine-btn" onclick="step('eurusd', -10)">−0.1%</button>
+          <button class="fine-btn" onclick="step('eurusd', 0, true)">Reset</button>
+          <button class="fine-btn" onclick="step('eurusd', +10)">+0.1%</button>
+          <button class="fine-btn" onclick="step('eurusd', +50)">+0.5%</button>
+          <button class="fine-btn" onclick="step('eurusd', +100)">+1%</button>
+        </div>
+        <input type="hidden" id="pred-eurusd">
+      </div>
+
+      <!-- USD/CHF stepper -->
+      <div class="pair-predict">
+        <div class="pair-predict-header">
+          <div>
+            <div class="pair-predict-name">USD/CHF <span class="pair-predict-desc">· US Dollar vs Swiss Franc</span></div>
+            <div class="pair-predict-current">Current: <strong id="usdchf-now2">0.9018</strong></div>
+          </div>
+        </div>
+        <div class="stepper-row">
+          <button class="stepper-btn minus" onclick="step('usdchf', -10)" title="−0.1%">−</button>
+          <div class="stepper-center">
+            <div class="stepper-delta zero" id="usdchf-delta">No change</div>
+            <div class="stepper-price">Target: <span id="usdchf-target">0.9018</span></div>
+          </div>
+          <button class="stepper-btn plus" onclick="step('usdchf', +10)" title="+0.1%">+</button>
+        </div>
+        <div class="fine-tune">
+          <button class="fine-btn" onclick="step('usdchf', -100)">−1%</button>
+          <button class="fine-btn" onclick="step('usdchf', -50)">−0.5%</button>
+          <button class="fine-btn" onclick="step('usdchf', -10)">−0.1%</button>
+          <button class="fine-btn" onclick="step('usdchf', 0, true)">Reset</button>
+          <button class="fine-btn" onclick="step('usdchf', +10)">+0.1%</button>
+          <button class="fine-btn" onclick="step('usdchf', +50)">+0.5%</button>
+          <button class="fine-btn" onclick="step('usdchf', +100)">+1%</button>
+        </div>
+        <input type="hidden" id="pred-usdchf">
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-top:12px;margin-bottom:4px;padding:12px 14px;background:var(--surface);border-radius:6px;border:1px solid var(--border);">
+        <input type="checkbox" id="rulesCheck" style="margin-top:3px;accent-color:var(--gold);width:15px;height:15px;flex-shrink:0;cursor:pointer;">
+        <label for="rulesCheck" style="font-size:11px;color:var(--text-mid);line-height:1.55;cursor:pointer;">
+          I have read and accept the <span onclick="switchTab('how');document.getElementById('rulesAnchor').scrollIntoView({behavior:'smooth'})" style="color:var(--gold);text-decoration:underline;cursor:pointer;">Prize Rules &amp; Terms</span>. I confirm my predictions are my own and submitted in good faith.
+        </label>
+      </div>
+      <button class="submit-btn" onclick="submitPrediction()">SUBMIT MY PREDICTIONS →</button>
+    </div>
+
+  </div>
+
+  <!-- ══ LEADERBOARD PANEL ══ -->
+  <div class="panel" id="panel-leaderboard">
+
+    <div class="sec-label">Season 1 · Overall standings</div>
+
+    <div class="leaderboard">
+      <div class="lb-header">
+        <div class="lb-hcell">#</div>
+        <div class="lb-hcell">Player</div>
+        <div class="lb-hcell right">Avg acc.</div>
+        <div class="lb-hcell right">Weeks</div>
+        <div class="lb-hcell right">Score</div>
+      </div>
+
+      <div class="lb-row top1">
+        <div class="lb-rank gold">1</div>
+        <div class="lb-player"><div class="lb-name">Yuki Tanaka</div><div class="lb-country">Tokyo, JP</div></div>
+        <div class="lb-cell">91.4%</div>
+        <div class="lb-cell">
+          <div class="lb-streak">
+            <div class="streak-dot hit"></div><div class="streak-dot hit"></div>
+            <div class="streak-dot hit"></div><div class="streak-dot hit"></div>
+            <div class="streak-dot hit"></div>
+          </div>
+        </div>
+        <div class="lb-score">847</div>
+      </div>
+
+      <div class="lb-row">
+        <div class="lb-rank silver">2</div>
+        <div class="lb-player"><div class="lb-name">Sophie Meier</div><div class="lb-country">Zürich, CH</div></div>
+        <div class="lb-cell">88.2%</div>
+        <div class="lb-cell">
+          <div class="lb-streak">
+            <div class="streak-dot hit"></div><div class="streak-dot hit"></div>
+            <div class="streak-dot hit"></div><div class="streak-dot hit"></div>
+            <div class="streak-dot"></div>
+          </div>
+        </div>
+        <div class="lb-score">812</div>
+      </div>
+
+      <div class="lb-row">
+        <div class="lb-rank bronze">3</div>
+        <div class="lb-player"><div class="lb-name">Marc Dubois</div><div class="lb-country">Paris, FR</div></div>
+        <div class="lb-cell">85.7%</div>
+        <div class="lb-cell">
+          <div class="lb-streak">
+            <div class="streak-dot hit"></div><div class="streak-dot hit"></div>
+            <div class="streak-dot"></div><div class="streak-dot hit"></div>
+            <div class="streak-dot hit"></div>
+          </div>
+        </div>
+        <div class="lb-score">779</div>
+      </div>
+
+      <div class="lb-row">
+        <div class="lb-rank">4</div>
+        <div class="lb-player"><div class="lb-name">Lena Hoffmann</div><div class="lb-country">Frankfurt, DE</div></div>
+        <div class="lb-cell">82.1%</div>
+        <div class="lb-cell">
+          <div class="lb-streak">
+            <div class="streak-dot hit"></div><div class="streak-dot"></div>
+            <div class="streak-dot hit"></div><div class="streak-dot hit"></div>
+            <div class="streak-dot hit"></div>
+          </div>
+        </div>
+        <div class="lb-score">741</div>
+      </div>
+
+      <div class="lb-row">
+        <div class="lb-rank">5</div>
+        <div class="lb-player"><div class="lb-name">Carlos Vega</div><div class="lb-country">Madrid, ES</div></div>
+        <div class="lb-cell">79.3%</div>
+        <div class="lb-cell">
+          <div class="lb-streak">
+            <div class="streak-dot"></div><div class="streak-dot hit"></div>
+            <div class="streak-dot hit"></div><div class="streak-dot hit"></div>
+            <div class="streak-dot"></div>
+          </div>
+        </div>
+        <div class="lb-score">698</div>
+      </div>
+
+      <div class="lb-row">
+        <div class="lb-rank">6</div>
+        <div class="lb-player"><div class="lb-name">Emma Williams</div><div class="lb-country">London, UK</div></div>
+        <div class="lb-cell">76.8%</div>
+        <div class="lb-cell">
+          <div class="lb-streak">
+            <div class="streak-dot hit"></div><div class="streak-dot hit"></div>
+            <div class="streak-dot"></div><div class="streak-dot"></div>
+            <div class="streak-dot hit"></div>
+          </div>
+        </div>
+        <div class="lb-score">654</div>
+      </div>
+
+      <div class="lb-row">
+        <div class="lb-rank">7</div>
+        <div class="lb-player"><div class="lb-name">Ryo Nakamura</div><div class="lb-country">Geneva, CH</div></div>
+        <div class="lb-cell">74.2%</div>
+        <div class="lb-cell">
+          <div class="lb-streak">
+            <div class="streak-dot"></div><div class="streak-dot hit"></div>
+            <div class="streak-dot hit"></div><div class="streak-dot"></div>
+            <div class="streak-dot hit"></div>
+          </div>
+        </div>
+        <div class="lb-score">619</div>
+      </div>
+
+    </div>
+
+    <div class="sec-label">This week's winner (Week 4)</div>
+    <div class="results-week" style="border-left: 3px solid var(--gold);">
+      <div class="results-week-label">🏆 Weekly winner · Week 4</div>
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Yuki Tanaka</div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">EUR/USD: called +0.42% · actual +0.45% · <span style="color:var(--green);">very close</span></div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:3px;">USD/CHF: called −0.52% · actual −0.55% · <span style="color:var(--green);">very close</span></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--gold-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Prize</div>
+          <div style="font-size:13px;font-weight:600;color:var(--gold);">Krug Grande Cuvée</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ RESULTS PANEL ══ -->
+  <div class="panel" id="panel-results">
+
+    <div class="sec-label">Week 4 results · Fri 9 May close</div>
+
+    <div class="results-week">
+      <div class="results-week-label">Week 4 · 5–9 May 2026</div>
+      <div class="result-pair">
+        <div class="result-pair-name">EUR/USD</div>
+        <div class="result-values">
+          <div class="result-val">
+            <div class="result-val-label">Mon open</div>
+            <div class="result-val-num">1.0842</div>
+          </div>
+          <div class="result-arrow">→</div>
+          <div class="result-val">
+            <div class="result-val-label">Fri close</div>
+            <div class="result-val-num">1.0891</div>
+          </div>
+        </div>
+        <div class="result-move pos">+0.45%</div>
+      </div>
+      <div class="result-pair">
+        <div class="result-pair-name">USD/CHF</div>
+        <div class="result-values">
+          <div class="result-val">
+            <div class="result-val-label">Mon open</div>
+            <div class="result-val-num">0.9018</div>
+          </div>
+          <div class="result-arrow">→</div>
+          <div class="result-val">
+            <div class="result-val-label">Fri close</div>
+            <div class="result-val-num">0.8968</div>
+          </div>
+        </div>
+        <div class="result-move neg">−0.55%</div>
+      </div>
+    </div>
+
+    <div class="sec-label">Previous weeks</div>
+
+    <div class="results-week" style="opacity:.7;">
+      <div class="results-week-label">Week 3 · 28 Apr–2 May 2026</div>
+      <div class="result-pair">
+        <div class="result-pair-name">EUR/USD</div>
+        <div class="result-values">
+          <div class="result-val"><div class="result-val-label">Mon open</div><div class="result-val-num">1.0761</div></div>
+          <div class="result-arrow">→</div>
+          <div class="result-val"><div class="result-val-label">Fri close</div><div class="result-val-num">1.0842</div></div>
+        </div>
+        <div class="result-move pos">+0.75%</div>
+      </div>
+      <div class="result-pair">
+        <div class="result-pair-name">USD/CHF</div>
+        <div class="result-values">
+          <div class="result-val"><div class="result-val-label">Mon open</div><div class="result-val-num">0.9104</div></div>
+          <div class="result-arrow">→</div>
+          <div class="result-val"><div class="result-val-label">Fri close</div><div class="result-val-num">0.9018</div></div>
+        </div>
+        <div class="result-move neg">−0.94%</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ HOW IT WORKS PANEL ══ -->
+  <div class="panel" id="panel-how">
+
+    <div class="sec-label">The game</div>
+
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-num">01</div>
+        <div class="how-title">Predict</div>
+        <div class="how-text">Every Monday, submit your price targets for EUR/USD and USD/CHF by Wednesday midnight. Just a number — where do you think the pair closes on Friday?</div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">02</div>
+        <div class="how-title">Score</div>
+        <div class="how-text">Friday close prices determine your score. Accuracy is measured by how close your % move call is to the actual move. The closer your call, the higher your score. Consistent accuracy builds your rank.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">03</div>
+        <div class="how-title">Win</div>
+        <div class="how-text">Weekly winner gets a bottle of Krug. Season champion wins a weekend for two in Verbier. Everyone is ranked publicly — your reputation is on the line.</div>
+      </div>
+    </div>
+
+    <div class="sec-label">Scoring formula</div>
+
+    <div class="results-week">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text-mid);line-height:2;">
+        <div>Score per pair = <span style="color:var(--gold);">100 − (|your % call − actual % move| × 100)</span></div>
+        <div style="color:var(--text-dim);font-size:10px;margin-top:4px;">i.e. each 0.01% off costs 1 point · max 100 pts per pair per week · weekly total = 200 pts max</div>
+        <div style="margin-top:12px;">Season score = <span style="color:var(--gold);">sum of all weekly scores</span> (max 1600 pts over 8 weeks)</div>
+        <div style="color:var(--text-dim);font-size:10px;margin-top:4px;">No penalty for missing a week — your average accuracy still counts for the leaderboard weight</div>
+      </div>
+    </div>
+
+    <div class="sec-label" style="margin-top:20px;">The consensus</div>
+
+    <div class="results-week">
+      <div style="font-size:13px;color:var(--text-mid);line-height:1.7;">
+        Each week your prediction contributes to a <strong style="color:var(--text);">group consensus</strong> shown on the Predict tab. Your contribution is weighted by your accuracy over recent weeks — the better your track record, the more your call influences the group signal. New players start at neutral weight.
+      </div>
+    </div>
+
+    <div class="sec-label" style="margin-top:20px;" id="rulesAnchor">Prize Rules &amp; Terms</div>
+
+    <div class="results-week" style="border-left:3px solid var(--gold);">
+      <div style="font-size:12px;color:var(--text-mid);line-height:1.8;">
+
+        <div style="margin-bottom:10px;">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">Season prize</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);" id="rulesPrizeTitle">Weekend for two · Verbier</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Awarded to the player with the highest cumulative score at the end of Season 1 (8 weeks). Dates to be agreed with the winner; valid until 31 December 2026.</div>
+        </div>
+
+        <div style="height:1px;background:var(--border);margin:10px 0;"></div>
+
+        <div style="margin-bottom:10px;">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">Weekly prize</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);" id="rulesPrizeSub">Bottle of Krug Grande Cuvée</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Awarded each Friday to the player whose combined prediction for EUR/USD and USD/CHF is closest to the actual closing prices. One weekly prize per person per week.</div>
+        </div>
+
+        <div style="height:1px;background:var(--border);margin:10px 0;"></div>
+
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);line-height:1.9;">
+          <div>· Open to anyone. Free to enter. No purchase necessary.</div>
+          <div>· Predictions must be submitted by <strong style="color:var(--text);">Wednesday 23:59 CET</strong> each week to be eligible.</div>
+          <div>· Scoring is based on % accuracy vs ECB reference rate at Friday 16:00 CET close.</div>
+          <div>· In the event of a tie, the earliest submission wins.</div>
+          <div>· Players may submit one prediction per week. Multiple submissions void that week's entry.</div>
+          <div>· Prizes are non-transferable and have no cash equivalent.</div>
+          <div>· Pundix reserves the right to disqualify entries submitted in bad faith or by automated means.</div>
+          <div>· Season 1 runs for 8 consecutive weeks from the first prediction Monday.</div>
+          <div>· These rules may be updated before Season 1 begins. Participants will be notified by email.</div>
+        </div>
+
+        <div style="height:1px;background:var(--border);margin:10px 0;"></div>
+
+        <div style="font-size:11px;color:var(--text-dim);">Organised by Pundix · Questions: <span style="color:var(--gold);">hello@pundix.com</span></div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+  // ── NEWS CONTEXT ──
+  const NEWS_API_KEY = 'b70bef90c3bb4c4ba22a5b29660bbbd9';
+
+  const NEWS_QUERIES = {
+    eurusd: 'euro dollar EUR USD currency',
+    usdchf: 'dollar swiss franc USD CHF currency'
+  };
+
+  async function fetchNews(pair) {
+    const query    = NEWS_QUERIES[pair];
+    const statusEl = document.getElementById(pair + '-news-status');
+    const listEl   = document.getElementById(pair + '-news-list');
+    const today    = new Date();
+    const weekAgo  = new Date(today - 7 * 24 * 60 * 60 * 1000);
+    const from     = weekAgo.toISOString().split('T')[0];
+
+    try {
+      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${from}&sortBy=publishedAt&language=en&pageSize=3&apiKey=${NEWS_API_KEY}`;
+      const res  = await fetch(url);
+      const data = await res.json();
+
+      if (data.status !== 'ok' || !data.articles?.length) {
+        statusEl.textContent = '';
+        listEl.innerHTML = '<div class="news-error">No recent news found.</div>';
+        return;
+      }
+
+      statusEl.textContent = `${data.articles.length} articles`;
+      listEl.innerHTML = data.articles.map(a => {
+        const date    = new Date(a.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        const source  = a.source?.name || '';
+        const url     = a.url || '#';
+        const title   = a.title?.replace(/ - [^-]+$/, '') || ''; // strip source suffix
+        return `
+          <a class="news-item" href="${url}" target="_blank" rel="noopener">
+            <div class="news-dot"></div>
+            <div class="news-content">
+              <div class="news-title">${title}</div>
+              <div class="news-meta">${source} · ${date}</div>
+            </div>
+          </a>`;
+      }).join('');
+
+    } catch (e) {
+      statusEl.textContent = '';
+      listEl.innerHTML = '<div class="news-error">Could not load news — check your connection.</div>';
+    }
+  }
+
+  // Fetch news for both pairs on load
+  fetchNews('eurusd');
+  fetchNews('usdchf');
+
+  // ── NEWS CONTEXT ──
+
+  // ── TAB SWITCHING ──
+  function switchTab(id) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      const ids = ['predict','leaderboard','results','how'];
+      t.classList.toggle('active', ids[i] === id);
+    });
+    document.querySelectorAll('.panel').forEach(p => {
+      p.classList.toggle('active', p.id === 'panel-' + id);
+    });
+  }
+
+  // ── LIVE FX RATES ──
+  async function fetchLiveRates() {
+    try {
+      // Frankfurter: get EUR/USD and USD/CHF
+      const [resEUR, resCHF] = await Promise.all([
+        fetch('https://api.frankfurter.app/latest?from=EUR&to=USD'),
+        fetch('https://api.frankfurter.app/latest?from=USD&to=CHF')
+      ]);
+
+      const dataEUR = await resEUR.json();
+      const dataCHF = await resCHF.json();
+
+      const eurusd = dataEUR.rates.USD;
+      const usdchf = dataCHF.rates.CHF;
+
+      if (!eurusd || !usdchf) return;
+
+      // Update BASE prices for stepper
+      BASE.eurusd = eurusd;
+      BASE.usdchf = usdchf;
+
+      // Reset stepper moves to 0 and re-initialise inputs
+      moves.eurusd = 0;
+      moves.usdchf = 0;
+      document.getElementById('pred-eurusd').value = eurusd.toFixed(4);
+      document.getElementById('pred-usdchf').value = usdchf.toFixed(4);
+      document.getElementById('eurusd-target').textContent = eurusd.toFixed(4);
+      document.getElementById('usdchf-target').textContent = usdchf.toFixed(4);
+
+      // Update ticker display
+      const eurInt  = Math.floor(eurusd);
+      const eurDec  = eurusd.toFixed(4).split('.')[1];
+      document.getElementById('eurusd-price').innerHTML =
+        `${eurInt}.<span class="decimals">${eurDec}</span>`;
+
+      const chfInt  = Math.floor(usdchf * 10) / 10;
+      const chfDec  = usdchf.toFixed(4).split('.')[1];
+      document.getElementById('usdchf-price').innerHTML =
+        `${usdchf.toFixed(2).split('.')[0]}.<span class="decimals">${chfDec}</span>`;
+
+      // Update "Current:" labels in stepper
+      document.getElementById('eurusd-now2').textContent = eurusd.toFixed(4);
+      document.getElementById('usdchf-now2').textContent = usdchf.toFixed(4);
+
+      // Update timestamp
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const dateStr = now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      document.querySelectorAll('.ticker-timestamp').forEach(el => {
+        el.textContent = `as of ${dateStr} ${timeStr} CET`;
+      });
+
+      // Fetch yesterday's rates to compute % change
+      const yesterday = new Date(now - 86400000).toISOString().split('T')[0];
+      const [prevEUR, prevCHF] = await Promise.all([
+        fetch(`https://api.frankfurter.app/${yesterday}?from=EUR&to=USD`),
+        fetch(`https://api.frankfurter.app/${yesterday}?from=USD&to=CHF`)
+      ]);
+      const prevEURdata = await prevEUR.json();
+      const prevCHFdata = await prevCHF.json();
+
+      const prevEurusd = prevEURdata.rates?.USD;
+      const prevUsdchf = prevCHFdata.rates?.CHF;
+
+      if (prevEurusd) {
+        const chg    = ((eurusd - prevEurusd) / prevEurusd * 100);
+        const sign   = chg >= 0 ? '+' : '';
+        const chgEl  = document.getElementById('eurusd-chg');
+        chgEl.textContent  = `${sign}${chg.toFixed(2)}%`;
+        chgEl.className    = 'ticker-change ' + (chg >= 0 ? 'pos' : 'neg');
+      }
+
+      if (prevUsdchf) {
+        const chg    = ((usdchf - prevUsdchf) / prevUsdchf * 100);
+        const sign   = chg >= 0 ? '+' : '';
+        const chgEl  = document.getElementById('usdchf-chg');
+        chgEl.textContent  = `${sign}${chg.toFixed(2)}%`;
+        chgEl.className    = 'ticker-change ' + (chg >= 0 ? 'pos' : 'neg');
+      }
+
+    } catch (e) {
+      console.warn('FX fetch failed:', e);
+      // silently keep hardcoded fallback values
+    }
+  }
+
+  // Run on load — BASE and moves must already be defined (they are, just above)
+  fetchLiveRates();
+
+  // ── LIVE FX RATES ──
+
+  // ── WEEK LABEL ──
+  (function() {
+    const now = new Date();
+    const day = now.getDay();
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - ((day + 6) % 7));
+    const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+    const fmt = d => d.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+    document.getElementById('weekLabel').textContent =
+      `Week 5 of 8 · ${fmt(mon)}–${fmt(fri)}`;
+  })();
+
+  // ── SUBMIT ──
+  function submitPrediction() {
+    const name   = document.getElementById('playerName').value.trim();
+    const email  = document.getElementById('playerEmail').value.trim();
+    const eurusd = parseFloat(document.getElementById('pred-eurusd').value);
+    const usdchf = parseFloat(document.getElementById('pred-usdchf').value);
+
+    const rulesOk = document.getElementById('rulesCheck')?.checked;
+    if (!rulesOk) {
+      const rc = document.getElementById('rulesCheck');
+      rc.closest('div').style.borderColor = 'var(--red)';
+      setTimeout(() => rc.closest('div').style.borderColor = 'var(--border)', 1500);
+      return;
+    }
+    if (!name)   { shake('playerName');   return; }
+    if (!email)  { shake('playerEmail');  return; }
+
+    // Store prediction
+    const predictions = JSON.parse(localStorage.getItem('pundix_predictions') || '[]');
+    predictions.push({ name, email, eurusd, usdchf, week: 5, ts: Date.now() });
+    localStorage.setItem('pundix_predictions', JSON.stringify(predictions));
+
+    // Update consensus
+    updateConsensus(predictions);
+
+    // Show success
+    document.getElementById('predictForm').style.display = 'none';
+    const card = document.getElementById('successCard');
+    card.classList.add('show');
+    document.getElementById('successText').textContent =
+      `${name}, your call is locked in for Week 5. Check back Friday evening for results.`;
+
+    const eurPct  = (moves.eurusd / 100).toFixed(2);
+    const chfPct  = (moves.usdchf / 100).toFixed(2);
+    const eurSign = moves.eurusd >= 0 ? '+' : '';
+    const chfSign = moves.usdchf >= 0 ? '+' : '';
+    const shareStr = `📊 My Pundix call this week: Euro ${eurSign}${eurPct}% · Dollar ${chfSign}${chfPct}%. Think you can beat me? pundix.com`;
+    document.getElementById('shareContent').textContent = shareStr;
+    window._shareStr = shareStr;
+  }
+
+  function shake(id) {
+    const el = document.getElementById(id);
+    el.style.borderColor = 'var(--red)';
+    el.style.boxShadow = '0 0 0 3px rgba(224,85,85,.2)';
+    el.focus();
+    setTimeout(() => {
+      el.style.borderColor = '';
+      el.style.boxShadow = '';
+    }, 1200);
+  }
+
+  function copyLink() {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).catch(() => {});
+    const toast = document.getElementById('toast');
+    toast.textContent = 'Link copied!';
+    toast.classList.add('show');
+    setTimeout(() => { toast.classList.remove('show'); toast.textContent = 'Copied to clipboard'; }, 2000);
+  }
+
+  function copyShare() {
+    navigator.clipboard.writeText(window._shareStr || '').catch(() => {});
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  // ── CONSENSUS UPDATE ──
+  function updateConsensus(predictions) {
+    const week5 = predictions.filter(p => p.week === 5);
+    if (!week5.length) return;
+
+    const eurusdBase = 1.0842;
+    const usdchfBase = 0.9018;
+
+    const eurusdUp  = week5.filter(p => p.eurusd > eurusdBase).length;
+    const usdchfDn  = week5.filter(p => p.usdchf < usdchfBase).length;
+
+    const eurusdPct = Math.round(eurusdUp / week5.length * 100);
+    const usdchfPct = Math.round(usdchfDn / week5.length * 100);
+
+    const avgEur = (week5.reduce((s,p) => s + p.eurusd, 0) / week5.length).toFixed(4);
+    const avgChf = (week5.reduce((s,p) => s + p.usdchf, 0) / week5.length).toFixed(4);
+
+    document.getElementById('eurusd-up').style.width  = eurusdPct + '%';
+    document.getElementById('eurusd-dn').style.width  = (100 - eurusdPct) / 2 + '%';
+    document.getElementById('eurusd-pct').textContent = eurusdPct + '%';
+    document.getElementById('eurusd-avg').textContent = avgEur;
+
+    document.getElementById('usdchf-up').style.width  = (100 - usdchfPct) / 2 + '%';
+    document.getElementById('usdchf-dn').style.width  = usdchfPct + '%';
+    document.getElementById('usdchf-pct').textContent = usdchfPct + '%';
+    document.getElementById('usdchf-avg').textContent = avgChf;
+  }
+
+  // Load any existing predictions on start
+  const existing = JSON.parse(localStorage.getItem('pundix_predictions') || '[]');
+  if (existing.length) updateConsensus(existing);
+
+  // If already submitted this week, show success
+  const thisWeek = existing.filter(p => p.week === 5);
+  if (thisWeek.length) {
+    const last = thisWeek[thisWeek.length - 1];
+    document.getElementById('predictForm').style.display = 'none';
+    const card = document.getElementById('successCard');
+    card.classList.add('show');
+    document.getElementById('successText').textContent =
+      `${last.name}, you already submitted this week. Check back Friday for results.`;
+    const shareStr = `📊 I just called EUR/USD at ${last.eurusd.toFixed(4)} and USD/CHF at ${last.usdchf.toFixed(4)} on Pundix this week. Think you can beat me? pundix.com`;
+    document.getElementById('shareContent').textContent = shareStr;
+    window._shareStr = shareStr;
+  }
+  // ── STEPPER ──
+  const BASE  = { eurusd: 1.0842, usdchf: 0.9018 };
+  const moves = { eurusd: 0, usdchf: 0 }; // stored as basis points (1 bp = 0.01%)
+  const NAMES = { eurusd: 'Euro', usdchf: 'Dollar' };
+
+  function step(pair, bps, reset) {
+    if (reset) { moves[pair] = 0; }
+    else { moves[pair] = Math.round((moves[pair] + bps) * 100) / 100; }
+
+    const base   = BASE[pair];
+    const pct    = moves[pair] / 100;           // e.g. 0.5 bps → 0.005%
+    const target = (base * (1 + pct / 100)).toFixed(4);
+
+    // Update hidden input (used by submit)
+    document.getElementById('pred-' + pair).value = target;
+
+    // Update delta display — plain English
+    const deltaEl  = document.getElementById(pair + '-delta');
+    const absPct   = Math.abs(moves[pair]);
+    const name     = NAMES[pair];
+    let label;
+    if (moves[pair] === 0) {
+      label = 'No change';
+    } else {
+      const dir = moves[pair] > 0 ? 'up' : 'down';
+      label = `${name} ${dir} ${absPct.toFixed(2)}%`;
+    }
+    deltaEl.textContent = label;
+    deltaEl.className   = 'stepper-delta ' + (moves[pair] > 0 ? 'pos' : moves[pair] < 0 ? 'neg' : 'zero');
+
+    // Update target display
+    document.getElementById(pair + '-target').textContent = target;
+  }
+
+  // Initialise hidden inputs to base price
+  document.getElementById('pred-eurusd').value = BASE.eurusd.toFixed(4);
+  document.getElementById('pred-usdchf').value = BASE.usdchf.toFixed(4);
+
+  // ── STEPPER ──
+  function openPrizeEdit() {
+    document.getElementById('editPrizeTitle').value = document.getElementById('prizeTitle').textContent;
+    document.getElementById('editPrizeSub').value   = document.getElementById('prizeSub').textContent;
+    document.getElementById('prizeModal').style.display = 'flex';
+  }
+
+  function closePrizeEdit() {
+    document.getElementById('prizeModal').style.display = 'none';
+  }
+
+  function savePrize() {
+    const title = document.getElementById('editPrizeTitle').value.trim();
+    const sub   = document.getElementById('editPrizeSub').value.trim();
+    if (!title) return;
+    document.getElementById('prizeTitle').textContent = title;
+    document.getElementById('prizeSub').textContent   = sub;
+    localStorage.setItem('pundix_prize_title', title);
+    localStorage.setItem('pundix_prize_sub',   sub);
+    // Sync rules section
+    const rt = document.getElementById('rulesPrizeTitle');
+    const rs = document.getElementById('rulesPrizeSub');
+    if (rt) rt.textContent = title;
+    if (rs) rs.textContent = sub;
+    closePrizeEdit();
+    const toast = document.getElementById('toast');
+    toast.textContent = 'Prize updated';
+    toast.classList.add('show');
+    setTimeout(() => { toast.classList.remove('show'); toast.textContent = 'Copied to clipboard'; }, 2000);
+  }
+
+  document.getElementById('prizeModal').addEventListener('click', function(e) {
+    if (e.target === this) closePrizeEdit();
+  });
+
+  // Load saved prize on start
+  (function() {
+    const t = localStorage.getItem('pundix_prize_title');
+    const s = localStorage.getItem('pundix_prize_sub');
+    if (t) { document.getElementById('prizeTitle').textContent = t; const rt = document.getElementById('rulesPrizeTitle'); if(rt) rt.textContent = t; }
+    if (s) { document.getElementById('prizeSub').textContent   = s; const rs = document.getElementById('rulesPrizeSub');   if(rs) rs.textContent = s; }
+  })();
+
+</script>
+
+</body>
+</html>
