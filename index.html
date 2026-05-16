@@ -297,12 +297,13 @@
 
   .field input::placeholder { color: var(--text-dim); }
 
+  /* ── CONTAINER PREDICT ── */
   .pair-predict {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px 18px;
-    margin-bottom: 10px;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
   }
 
   .pair-predict-header {
@@ -314,16 +315,10 @@
 
   .pair-predict-name {
     font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: 1px;
-    color: var(--gold);
+    font-size: 10px;
     font-weight: 700;
-  }
-
-  .pair-predict-desc {
-    font-size: 11px;
-    color: var(--text-dim);
-    font-weight: 400;
+    letter-spacing: 1.5px;
+    color: var(--gold);
   }
 
   .pair-predict-current {
@@ -332,112 +327,272 @@
     color: var(--text-dim);
   }
 
-  /* Stepper row */
-  .stepper-row {
+  /* The wallet row */
+  .wallet-row {
     display: flex;
     align-items: center;
-    gap: 0;
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: 6px;
-    overflow: hidden;
+    gap: 10px;
+    margin-bottom: 14px;
   }
 
-  .stepper-btn {
-    flex-shrink: 0;
-    width: 48px;
-    height: 52px;
-    background: transparent;
-    border: none;
-    font-size: 22px;
-    font-weight: 300;
-    color: var(--text-mid);
-    cursor: pointer;
-    transition: background .15s, color .15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    user-select: none;
-  }
-
-  .stepper-btn:hover { background: var(--border); color: var(--text); }
-  .stepper-btn:active { background: var(--border2); }
-  .stepper-btn.minus:hover { color: var(--red); }
-  .stepper-btn.plus:hover  { color: var(--green); }
-
-  .stepper-center {
-    flex: 1;
+  .wallet-from {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
-    padding: 8px 0;
+    gap: 4px;
+    flex-shrink: 0;
   }
 
-  .stepper-delta {
+  .wallet-flag { font-size: 28px; line-height: 1; }
+
+  .wallet-amount {
     font-family: var(--mono);
-    font-size: 20px;
+    font-size: 11px;
     font-weight: 700;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+
+  .wallet-arrow {
+    font-size: 18px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .wallet-to {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .wallet-to-flag-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wallet-to-flag { font-size: 28px; line-height: 1; }
+
+  .wallet-to-amount {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
     line-height: 1;
     transition: color .2s;
   }
 
-  .stepper-delta.pos { color: var(--green); }
-  .stepper-delta.neg { color: var(--red); }
-  .stepper-delta.zero { color: var(--text-dim); }
+  .wallet-to-amount.up   { color: var(--green); }
+  .wallet-to-amount.down { color: #4A90D9; }
 
-  .stepper-price {
+  /* Container bar */
+  .container-wrap {
+    position: relative;
+    height: 22px;
+    background: var(--surface);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .container-base {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    border-radius: 6px 0 0 6px;
+    background: var(--border);
+    transition: width .2s ease;
+  }
+
+  .container-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    border-radius: 6px 0 0 6px;
+    transition: width .2s ease, background .2s ease;
+  }
+
+  .container-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-dim);
-  }
-
-  .stepper-price span {
-    color: var(--text);
-    font-weight: 700;
-  }
-
-  .stepper-unit {
     font-size: 9px;
-    font-family: var(--mono);
-    color: var(--text-dim);
+    font-weight: 700;
     letter-spacing: 1px;
+    color: rgba(0,0,0,.5);
+    pointer-events: none;
     text-transform: uppercase;
-    margin-top: 2px;
   }
 
-  /* Fine-tune row */
+  /* Verdict */
+  .predict-verdict {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    gap: 8px;
+  }
+
+  .predict-verdict-text {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.4;
+    flex: 1;
+  }
+
+  .predict-verdict-text em {
+    font-style: normal;
+    color: var(--text-dim);
+    font-weight: 400;
+    font-size: 10px;
+  }
+
+  .predict-target {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gold);
+    border: 1px solid var(--gold-dim);
+    background: var(--gold-pale);
+    padding: 3px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  /* Quick buttons */
   .fine-tune {
     display: flex;
-    gap: 6px;
-    margin-top: 8px;
+    gap: 4px;
+    margin-top: 10px;
     flex-wrap: wrap;
   }
 
   .fine-btn {
-    font-family: var(--mono);
-    font-size: 9px;
-    padding: 4px 8px;
-    border-radius: 4px;
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 5px;
     border: 1px solid var(--border2);
     background: var(--surface);
-    color: var(--text-dim);
+    color: var(--text-mid);
     cursor: pointer;
     transition: all .15s;
-    letter-spacing: .5px;
+    font-family: var(--sans);
   }
 
   .fine-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-pale); }
+  .fine-btn.reset-btn:hover { border-color: var(--border2); color: var(--text-dim); background: var(--surface); }
+  .pair-predict-arrow { display: none; }
 
-  .pair-predict-arrow {
-    display: none; /* hidden — replaced by stepper */
+  /* ── CONSENSUS CONTAINER ── */
+  .consensus-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 28px;
   }
 
-  .pair-predict input.hidden-input {
-    display: none;
+  .gauge-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
   }
+
+  .gauge-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .gauge-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--gold);
+  }
+
+  .gauge-players {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+
+  .gauge-wallet-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .gauge-flag { font-size: 22px; line-height: 1; flex-shrink: 0; }
+
+  .gauge-arrow { font-size: 14px; color: var(--text-dim); flex-shrink: 0; }
+
+  .gauge-amount-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .gauge-amount {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .gauge-amount-label {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .gauge-container-wrap {
+    position: relative;
+    height: 16px;
+    background: var(--surface);
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .gauge-container-base {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: var(--border);
+    border-radius: 5px 0 0 5px;
+    transition: width .6s ease;
+  }
+
+  .gauge-container-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    border-radius: 5px 0 0 5px;
+    transition: width .6s ease, background .6s ease;
+  }
+
+  .gauge-verdict {
+    font-size: 11px;
+    color: var(--text-mid);
+    line-height: 1.4;
+  }
+
+  .gauge-verdict strong { color: var(--text); }
 
   .submit-btn {
     width: 100%;
@@ -706,93 +861,130 @@
   .result-move.pos { color: var(--green); background: var(--green-dim); }
   .result-move.neg { color: var(--red);   background: var(--red-dim);   }
 
-  /* ── CONSENSUS BAR ── */
+  /* ── CONSENSUS GAUGE ── */
   .consensus-section {
-    background: #FFFFFF;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
     margin-bottom: 28px;
   }
 
-  .consensus-pair {
-    margin-bottom: 16px;
+  .gauge-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
   }
 
-  .consensus-pair:last-child { margin-bottom: 0; }
+  .gauge-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
 
-  .consensus-pair-name {
+  .gauge-title {
     font-family: var(--mono);
     font-size: 10px;
-    letter-spacing: 2px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
     color: var(--gold);
-    margin-bottom: 6px;
   }
 
-  .consensus-bar-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .consensus-label {
+  .gauge-players {
     font-family: var(--mono);
     font-size: 9px;
     color: var(--text-dim);
-    width: 28px;
-    flex-shrink: 0;
   }
 
-  .consensus-bar {
-    flex: 1;
-    height: 6px;
-    background: var(--border);
-    border-radius: 3px;
-    overflow: hidden;
-    position: relative;
+  /* Flag row */
+  .gauge-flags {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
   }
 
-  .consensus-fill-up {
-    position: absolute;
-    left: 50%;
-    top: 0; bottom: 0;
-    background: var(--green);
-    border-radius: 0 3px 3px 0;
-    transition: width .6s ease;
+  .gauge-flag {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
   }
 
-  .consensus-fill-down {
-    position: absolute;
-    right: 50%;
-    top: 0; bottom: 0;
-    background: var(--red);
-    border-radius: 3px 0 0 3px;
-    transition: width .6s ease;
+  .gauge-flag-emoji {
+    font-size: 20px;
+    line-height: 1;
   }
 
-  .consensus-pct {
+  .gauge-flag-name {
     font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 700;
-    width: 32px;
-    text-align: right;
-    flex-shrink: 0;
-  }
-
-  .consensus-pct.up { color: var(--green); }
-  .consensus-pct.dn { color: var(--red); }
-
-  .consensus-target {
-    font-family: var(--mono);
-    font-size: 10px;
+    font-size: 8px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
     color: var(--text-dim);
-    margin-top: 5px;
-    text-align: right;
   }
 
-  .consensus-target span {
-    color: var(--gold);
+  /* The track */
+  .gauge-track {
+    position: relative;
+    height: 10px;
+    background: var(--surface);
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 0 4px;
+    border: 1px solid var(--border);
+  }
+
+  .gauge-fill {
+    position: absolute;
+    top: 0; bottom: 0;
+    border-radius: 5px;
+    transition: left .6s ease, width .6s ease;
+  }
+
+  .gauge-midline {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: var(--border2);
+    z-index: 2;
+  }
+
+  /* Verdict row */
+  .gauge-verdict {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .gauge-verdict-text {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  .gauge-verdict-text em {
+    font-style: normal;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .gauge-target {
+    font-family: var(--mono);
+    font-size: 12px;
     font-weight: 700;
+    color: var(--gold);
+    white-space: nowrap;
+    flex-shrink: 0;
+    border: 1px solid var(--gold-dim);
+    background: var(--gold-pale);
+    padding: 3px 8px;
+    border-radius: 4px;
   }
 
   /* ── HOW IT WORKS ── */
@@ -1084,7 +1276,7 @@
         </div>
       </div>
       <div class="ticker">
-        <div class="ticker-pair">USD / CHF</div>
+        <div class="ticker-pair">CHF / USD</div>
         <div class="ticker-price" id="usdchf-price">0.90<span class="decimals">18</span></div>
         <div class="ticker-meta">
           <span class="ticker-change neg" id="usdchf-chg">−0.08%</span>
@@ -1108,7 +1300,7 @@
 
       <div class="news-pair-block">
         <div class="news-pair-header">
-          <div class="news-pair-name">USD / CHF · Dollar vs Swiss Franc</div>
+          <div class="news-pair-name">CHF / USD · Swiss Franc vs Dollar</div>
           <div class="news-loading" id="usdchf-news-status">Loading...</div>
         </div>
         <div id="usdchf-news-list"></div>
@@ -1116,34 +1308,51 @@
     </div>
 
     <!-- Consensus -->
-    <div class="sec-label">Group consensus this week</div>
+    <div class="sec-label">What the crowd thinks 1 unit buys by Friday</div>
     <div class="consensus-section">
-      <div class="consensus-pair">
-        <div class="consensus-pair-name">EUR/USD</div>
-        <div class="consensus-bar-wrap">
-          <div class="consensus-label" style="color:var(--red);font-size:8px;">DOWN</div>
-          <div class="consensus-bar">
-            <div class="consensus-fill-up" id="eurusd-up" style="width:38%;"></div>
-            <div class="consensus-fill-down" id="eurusd-dn" style="width:12%;"></div>
-          </div>
-          <div class="consensus-label" style="color:var(--green);font-size:8px;">UP</div>
-          <div class="consensus-pct up" id="eurusd-pct">38%</div>
+
+      <!-- EUR/USD consensus container -->
+      <div class="gauge-card">
+        <div class="gauge-header">
+          <div class="gauge-title">EUR / USD</div>
+          <div class="gauge-players" id="eurusd-players">— players</div>
         </div>
-        <div class="consensus-target">Avg target: <span id="eurusd-avg">1.0891</span></div>
-      </div>
-      <div class="consensus-pair">
-        <div class="consensus-pair-name">USD/CHF</div>
-        <div class="consensus-bar-wrap">
-          <div class="consensus-label" style="color:var(--red);font-size:8px;">DOWN</div>
-          <div class="consensus-bar">
-            <div class="consensus-fill-up" id="usdchf-up" style="width:22%;"></div>
-            <div class="consensus-fill-down" id="usdchf-dn" style="width:28%;"></div>
+        <div class="gauge-wallet-row">
+          <div class="gauge-flag">🇪🇺</div>
+          <div class="gauge-arrow">→</div>
+          <div class="gauge-amount-wrap">
+            <div class="gauge-amount" id="eurusd-avg">—</div>
+            <div class="gauge-amount-label">avg crowd target 🇺🇸 $</div>
           </div>
-          <div class="consensus-label" style="color:var(--green);font-size:8px;">UP</div>
-          <div class="consensus-pct dn" id="usdchf-pct">28%</div>
         </div>
-        <div class="consensus-target">Avg target: <span id="usdchf-avg">0.8974</span></div>
+        <div class="gauge-container-wrap">
+          <div class="gauge-container-base" id="eurusd-cbase" style="width:58%;"></div>
+          <div class="gauge-container-fill" id="eurusd-fill" style="width:58%;background:var(--border);"></div>
+        </div>
+        <div class="gauge-verdict" id="eurusd-verdict"><em>No predictions yet</em></div>
       </div>
+
+      <!-- CHF/USD consensus container -->
+      <div class="gauge-card">
+        <div class="gauge-header">
+          <div class="gauge-title">CHF / USD</div>
+          <div class="gauge-players" id="usdchf-players">— players</div>
+        </div>
+        <div class="gauge-wallet-row">
+          <div class="gauge-flag">🇨🇭</div>
+          <div class="gauge-arrow">→</div>
+          <div class="gauge-amount-wrap">
+            <div class="gauge-amount" id="usdchf-avg">—</div>
+            <div class="gauge-amount-label">avg crowd target 🇺🇸 $</div>
+          </div>
+        </div>
+        <div class="gauge-container-wrap">
+          <div class="gauge-container-base" id="usdchf-cbase" style="width:39%;"></div>
+          <div class="gauge-container-fill" id="usdchf-fill" style="width:39%;background:var(--border);"></div>
+        </div>
+        <div class="gauge-verdict" id="usdchf-verdict"><em>No predictions yet</em></div>
+      </div>
+
     </div>
 
     <!-- Prize -->
@@ -1204,7 +1413,7 @@
     <!-- Predict form -->
     <div class="predict-form" id="predictForm">
       <div class="form-intro">
-        Submit your price targets for <strong>Friday 16:00 CET close</strong>. Predictions lock Wednesday midnight. Closer = higher score.
+        Where will your currency be by <strong>Friday 16:00 CET</strong>? Set your prediction below. Predictions lock Wednesday midnight.
       </div>
 
       <div class="form-grid">
@@ -1218,60 +1427,88 @@
         </div>
       </div>
 
-      <div class="sec-label" style="margin-bottom:10px;">Your call for Friday close — will it go up or down?</div>
+      <div class="sec-label" style="margin-bottom:10px;">By Friday, 1 unit of your currency will buy...</div>
 
-      <!-- EUR/USD stepper -->
+      <!-- EUR/USD container -->
       <div class="pair-predict">
         <div class="pair-predict-header">
-          <div>
-            <div class="pair-predict-name">EUR/USD <span class="pair-predict-desc">· Euro vs US Dollar</span></div>
-            <div class="pair-predict-current">Current: <strong id="eurusd-now2">1.0842</strong></div>
+          <div class="pair-predict-name">EUR / USD</div>
+          <div class="pair-predict-current">Today: <strong id="eurusd-now2">1.1630</strong> $</div>
+        </div>
+
+        <div class="wallet-row">
+          <div class="wallet-from">
+            <div class="wallet-flag">🇪🇺</div>
+            <div class="wallet-amount">1 €</div>
+          </div>
+          <div class="wallet-arrow">→</div>
+          <div class="wallet-to">
+            <div class="wallet-to-flag-row">
+              <div class="wallet-to-flag">🇺🇸</div>
+              <div class="wallet-to-amount" id="eurusd-display">1.1630 $</div>
+            </div>
+            <div class="container-wrap" id="eurusd-container" onclick="containerClick('eurusd', event)">
+              <div class="container-base" id="eurusd-base-bar" style="width:58.15%;"></div>
+              <div class="container-fill" id="eurusd-fill-bar" style="width:58.15%;background:var(--border);"></div>
+              <div class="container-label" id="eurusd-container-label">Today's rate</div>
+            </div>
           </div>
         </div>
-        <div class="stepper-row">
-          <button class="stepper-btn minus" onclick="step('eurusd', -10)" title="−0.1%">−</button>
-          <div class="stepper-center">
-            <div class="stepper-delta zero" id="eurusd-delta">No change</div>
-            <div class="stepper-price">Target: <span id="eurusd-target">1.0842</span></div>
-          </div>
-          <button class="stepper-btn plus" onclick="step('eurusd', +10)" title="+0.1%">+</button>
+
+        <div class="predict-verdict">
+          <div class="predict-verdict-text" id="eurusd-delta"><em>Drag the bar or tap below to set your prediction</em></div>
+          <div class="predict-target" id="eurusd-target">1.1630</div>
         </div>
         <div class="fine-tune">
-          <button class="fine-btn" onclick="step('eurusd', -100)">−1%</button>
-          <button class="fine-btn" onclick="step('eurusd', -50)">−0.5%</button>
-          <button class="fine-btn" onclick="step('eurusd', -10)">−0.1%</button>
-          <button class="fine-btn" onclick="step('eurusd', 0, true)">Reset</button>
-          <button class="fine-btn" onclick="step('eurusd', +10)">+0.1%</button>
-          <button class="fine-btn" onclick="step('eurusd', +50)">+0.5%</button>
-          <button class="fine-btn" onclick="step('eurusd', +100)">+1%</button>
+          <button class="fine-btn" onclick="step('eurusd', -100)">💵 Surges</button>
+          <button class="fine-btn" onclick="step('eurusd', -50)">💵 Gains</button>
+          <button class="fine-btn" onclick="step('eurusd', -10)">💵 Edges up</button>
+          <button class="fine-btn reset-btn" onclick="step('eurusd', 0, true)">Reset</button>
+          <button class="fine-btn" onclick="step('eurusd', +10)">€ Edges up</button>
+          <button class="fine-btn" onclick="step('eurusd', +50)">€ Gains</button>
+          <button class="fine-btn" onclick="step('eurusd', +100)">€ Surges</button>
         </div>
         <input type="hidden" id="pred-eurusd">
       </div>
 
-      <!-- USD/CHF stepper -->
+      <!-- CHF/USD container -->
       <div class="pair-predict">
         <div class="pair-predict-header">
-          <div>
-            <div class="pair-predict-name">USD/CHF <span class="pair-predict-desc">· US Dollar vs Swiss Franc</span></div>
-            <div class="pair-predict-current">Current: <strong id="usdchf-now2">0.9018</strong></div>
+          <div class="pair-predict-name">CHF / USD</div>
+          <div class="pair-predict-current">Today: <strong id="usdchf-now2">0.7865</strong> $</div>
+        </div>
+
+        <div class="wallet-row">
+          <div class="wallet-from">
+            <div class="wallet-flag">🇨🇭</div>
+            <div class="wallet-amount">1 ₣</div>
+          </div>
+          <div class="wallet-arrow">→</div>
+          <div class="wallet-to">
+            <div class="wallet-to-flag-row">
+              <div class="wallet-to-flag">🇺🇸</div>
+              <div class="wallet-to-amount" id="usdchf-display">0.7865 $</div>
+            </div>
+            <div class="container-wrap" id="usdchf-container" onclick="containerClick('usdchf', event)">
+              <div class="container-base" id="usdchf-base-bar" style="width:39.33%;"></div>
+              <div class="container-fill" id="usdchf-fill-bar" style="width:39.33%;background:var(--border);"></div>
+              <div class="container-label" id="usdchf-container-label">Today's rate</div>
+            </div>
           </div>
         </div>
-        <div class="stepper-row">
-          <button class="stepper-btn minus" onclick="step('usdchf', -10)" title="−0.1%">−</button>
-          <div class="stepper-center">
-            <div class="stepper-delta zero" id="usdchf-delta">No change</div>
-            <div class="stepper-price">Target: <span id="usdchf-target">0.9018</span></div>
-          </div>
-          <button class="stepper-btn plus" onclick="step('usdchf', +10)" title="+0.1%">+</button>
+
+        <div class="predict-verdict">
+          <div class="predict-verdict-text" id="usdchf-delta"><em>Drag the bar or tap below to set your prediction</em></div>
+          <div class="predict-target" id="usdchf-target">0.7865</div>
         </div>
         <div class="fine-tune">
-          <button class="fine-btn" onclick="step('usdchf', -100)">−1%</button>
-          <button class="fine-btn" onclick="step('usdchf', -50)">−0.5%</button>
-          <button class="fine-btn" onclick="step('usdchf', -10)">−0.1%</button>
-          <button class="fine-btn" onclick="step('usdchf', 0, true)">Reset</button>
-          <button class="fine-btn" onclick="step('usdchf', +10)">+0.1%</button>
-          <button class="fine-btn" onclick="step('usdchf', +50)">+0.5%</button>
-          <button class="fine-btn" onclick="step('usdchf', +100)">+1%</button>
+          <button class="fine-btn" onclick="step('usdchf', -100)">💵 Surges</button>
+          <button class="fine-btn" onclick="step('usdchf', -50)">💵 Gains</button>
+          <button class="fine-btn" onclick="step('usdchf', -10)">💵 Edges up</button>
+          <button class="fine-btn reset-btn" onclick="step('usdchf', 0, true)">Reset</button>
+          <button class="fine-btn" onclick="step('usdchf', +10)">₣ Edges up</button>
+          <button class="fine-btn" onclick="step('usdchf', +50)">₣ Gains</button>
+          <button class="fine-btn" onclick="step('usdchf', +100)">₣ Surges</button>
         </div>
         <input type="hidden" id="pred-usdchf">
       </div>
@@ -1408,7 +1645,7 @@
         <div>
           <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Yuki Tanaka</div>
           <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">EUR/USD: called +0.42% · actual +0.45% · <span style="color:var(--green);">very close</span></div>
-          <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:3px;">USD/CHF: called −0.52% · actual −0.55% · <span style="color:var(--green);">very close</span></div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:3px;">CHF/USD: called −0.52% · actual −0.55% · <span style="color:var(--green);">very close</span></div>
         </div>
         <div style="text-align:right;">
           <div style="font-family:var(--mono);font-size:9px;color:var(--gold-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Prize</div>
@@ -1442,7 +1679,7 @@
         <div class="result-move pos">+0.45%</div>
       </div>
       <div class="result-pair">
-        <div class="result-pair-name">USD/CHF</div>
+        <div class="result-pair-name">CHF/USD</div>
         <div class="result-values">
           <div class="result-val">
             <div class="result-val-label">Mon open</div>
@@ -1472,7 +1709,7 @@
         <div class="result-move pos">+0.75%</div>
       </div>
       <div class="result-pair">
-        <div class="result-pair-name">USD/CHF</div>
+        <div class="result-pair-name">CHF/USD</div>
         <div class="result-values">
           <div class="result-val"><div class="result-val-label">Mon open</div><div class="result-val-num">0.9104</div></div>
           <div class="result-arrow">→</div>
@@ -1493,7 +1730,7 @@
       <div class="how-card">
         <div class="how-num">01</div>
         <div class="how-title">Predict</div>
-        <div class="how-text">Every Monday, submit your price targets for EUR/USD and USD/CHF by Wednesday midnight. Just a number — where do you think the pair closes on Friday?</div>
+        <div class="how-text">Every Monday, submit your price targets for EUR/USD and CHF/USD by Wednesday midnight. Just a number — where do you think the pair closes on Friday?</div>
       </div>
       <div class="how-card">
         <div class="how-num">02</div>
@@ -1542,7 +1779,7 @@
         <div style="margin-bottom:10px;">
           <div style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">Weekly prize</div>
           <div style="font-size:13px;font-weight:600;color:var(--text);" id="rulesPrizeSub">Bottle of Krug Grande Cuvée</div>
-          <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Awarded each Friday to the player whose combined prediction for EUR/USD and USD/CHF is closest to the actual closing prices. One weekly prize per person per week.</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Awarded each Friday to the player whose combined prediction for EUR/USD and CHF/USD is closest to the actual closing prices. One weekly prize per person per week.</div>
         </div>
 
         <div style="height:1px;background:var(--border);margin:10px 0;"></div>
@@ -1577,7 +1814,7 @@
   // ── NEWS CONTEXT ──
   const NEWS_QUERIES = {
     eurusd: 'EURUSD euro dollar exchange rate',
-    usdchf: 'USD CHF dollar swiss franc currency'
+    usdchf: 'CHF USD swiss franc dollar currency'
   };
 
   async function fetchNews(pair) {
@@ -1790,29 +2027,60 @@
   // ── CONSENSUS UPDATE ──
   function updateConsensus(predictions) {
     const week5 = predictions.filter(p => p.week === 5);
-    if (!week5.length) return;
+    const n     = week5.length;
+    if (!n) return;
 
-    const eurusdBase = 1.0842;
-    const usdchfBase = 0.9018;
+    const avgEur = parseFloat((week5.reduce((s,p) => s + p.eurusd, 0) / n).toFixed(4));
+    const avgChf = parseFloat((week5.reduce((s,p) => s + p.usdchf, 0) / n).toFixed(4));
 
-    const eurusdUp  = week5.filter(p => p.eurusd > eurusdBase).length;
-    const usdchfDn  = week5.filter(p => p.usdchf < usdchfBase).length;
+    const eurUp  = week5.filter(p => p.eurusd > BASE.eurusd).length;
+    const chfUp  = week5.filter(p => p.usdchf > BASE.usdchf).length;
 
-    const eurusdPct = Math.round(eurusdUp / week5.length * 100);
-    const usdchfPct = Math.round(usdchfDn / week5.length * 100);
+    function crowdLabel(upCount, total) {
+      const pct = upCount / total;
+      if (pct >= 0.8) return 'overwhelmingly expects';
+      if (pct >= 0.65) return 'largely expects';
+      if (pct >= 0.55) return 'leans toward';
+      return 'is split —';
+    }
 
-    const avgEur = (week5.reduce((s,p) => s + p.eurusd, 0) / week5.length).toFixed(4);
-    const avgChf = (week5.reduce((s,p) => s + p.usdchf, 0) / week5.length).toFixed(4);
+    function renderConsensus(pair, avg, upCount, n) {
+      const base      = BASE[pair];
+      const local     = pair === 'eurusd' ? 'Euro' : 'Franc';
+      const symbol    = pair === 'eurusd' ? '€' : '₣';
+      const pctLocal  = Math.round(upCount / n * 100);
+      const pctDollar = 100 - pctLocal;
+      const targetFill = rateToFill(pair, avg);
+      const baseFill   = rateToFill(pair, base);
 
-    document.getElementById('eurusd-up').style.width  = eurusdPct + '%';
-    document.getElementById('eurusd-dn').style.width  = (100 - eurusdPct) / 2 + '%';
-    document.getElementById('eurusd-pct').textContent = eurusdPct + '%';
-    document.getElementById('eurusd-avg').textContent = avgEur;
+      // Update avg amount
+      document.getElementById(pair + '-avg').textContent = avg.toFixed(4);
+      document.getElementById(pair + '-players').textContent = n + (n===1?' player':' players');
 
-    document.getElementById('usdchf-up').style.width  = (100 - usdchfPct) / 2 + '%';
-    document.getElementById('usdchf-dn').style.width  = usdchfPct + '%';
-    document.getElementById('usdchf-pct').textContent = usdchfPct + '%';
-    document.getElementById('usdchf-avg').textContent = avgChf;
+      // Container fill
+      const fillEl  = document.getElementById(pair + '-fill');
+      fillEl.style.width = targetFill + '%';
+      if (avg > base) {
+        fillEl.style.background = 'var(--green)';
+      } else if (avg < base) {
+        fillEl.style.background = '#4A90D9';
+      } else {
+        fillEl.style.background = 'var(--border)';
+      }
+
+      // Verdict
+      const verdictEl = document.getElementById(pair + '-verdict');
+      if (avg > base) {
+        verdictEl.innerHTML = `Crowd ${crowdLabel(upCount, n)} <strong>${local} to buy more $</strong> <em>(${pctLocal}% of ${n})</em>`;
+      } else if (avg < base) {
+        verdictEl.innerHTML = `Crowd ${crowdLabel(n - upCount, n)} <strong>Dollar to strengthen</strong> <em>(${pctDollar}% of ${n})</em>`;
+      } else {
+        verdictEl.innerHTML = `<em>Crowd expects no change</em>`;
+      }
+    }
+
+    renderConsensus('eurusd', avgEur, eurUp, n);
+    renderConsensus('usdchf', avgChf, chfUp, n);
   }
 
   // Load any existing predictions on start
@@ -1828,49 +2096,101 @@
     card.classList.add('show');
     document.getElementById('successText').textContent =
       `${last.name}, you already submitted this week. Check back Friday for results.`;
-    const shareStr = `📊 I just called EUR/USD at ${last.eurusd.toFixed(4)} and USD/CHF at ${last.usdchf.toFixed(4)} on Pundix this week. Think you can beat me? pundix.com`;
+    const shareStr = `📊 I just called EUR/USD at ${last.eurusd.toFixed(4)} and CHF/USD at ${last.usdchf.toFixed(4)} on Pundix this week. Think you can beat me? pundix.com`;
     document.getElementById('shareContent').textContent = shareStr;
     window._shareStr = shareStr;
   }
-  // ── STEPPER ──
-  const BASE  = { eurusd: 1.0842, usdchf: 0.9018 };
-  const moves = { eurusd: 0, usdchf: 0 }; // stored as basis points (1 bp = 0.01%)
-  const NAMES = { eurusd: 'Euro', usdchf: 'Dollar' };
+  // ── CONTAINER PREDICT ──
+  const BASE  = { eurusd: 1.1630, usdchf: 0.7865 };
+  const moves = { eurusd: 0, usdchf: 0 }; // bps (100=1%), positive = local currency up
+
+  const RANGE = {
+    eurusd: { min: 0.90, max: 1.50 },
+    usdchf: { min: 0.60, max: 1.20 }
+  };
+
+  function rateToFill(pair, rate) {
+    const r = RANGE[pair];
+    return Math.min(100, Math.max(0, (rate - r.min) / (r.max - r.min) * 100));
+  }
+
+  function fillToRate(pair, fillPct) {
+    const r = RANGE[pair];
+    return r.min + (fillPct / 100) * (r.max - r.min);
+  }
+
+  function toLabel(absBps) {
+    if (absBps >= 100) return 'surges';
+    if (absBps >= 50)  return 'gains';
+    if (absBps >= 20)  return 'rises';
+    if (absBps >= 5)   return 'edges up';
+    return 'barely moves';
+  }
 
   function step(pair, bps, reset) {
     if (reset) { moves[pair] = 0; }
-    else { moves[pair] = Math.round((moves[pair] + bps) * 100) / 100; }
-
-    const base   = BASE[pair];
-    const pct    = moves[pair] / 100;           // e.g. 0.5 bps → 0.005%
-    const target = (base * (1 + pct / 100)).toFixed(4);
-
-    // Update hidden input (used by submit)
-    document.getElementById('pred-' + pair).value = target;
-
-    // Update delta display — plain English
-    const deltaEl  = document.getElementById(pair + '-delta');
-    const absPct   = Math.abs(moves[pair]);
-    const name     = NAMES[pair];
-    let label;
-    if (moves[pair] === 0) {
-      label = 'No change';
-    } else {
-      const dir = moves[pair] > 0 ? 'up' : 'down';
-      label = `${name} ${dir} ${absPct.toFixed(2)}%`;
-    }
-    deltaEl.textContent = label;
-    deltaEl.className   = 'stepper-delta ' + (moves[pair] > 0 ? 'pos' : moves[pair] < 0 ? 'neg' : 'zero');
-
-    // Update target display
-    document.getElementById(pair + '-target').textContent = target;
+    else { moves[pair] = Math.round((moves[pair] + bps) * 10) / 10; }
+    renderContainer(pair);
   }
 
-  // Initialise hidden inputs to base price
+  function containerClick(pair, event) {
+    const el      = document.getElementById(pair + '-container');
+    const rect    = el.getBoundingClientRect();
+    const fillPct = ((event.clientX - rect.left) / rect.width) * 100;
+    const rate    = fillToRate(pair, fillPct);
+    moves[pair]   = Math.round((rate / BASE[pair] - 1) * 10000);
+    renderContainer(pair);
+  }
+
+  function renderContainer(pair) {
+    const base    = BASE[pair];
+    const bps     = moves[pair];
+    const absBps  = Math.abs(bps);
+    const target  = parseFloat((base * (1 + bps / 10000)).toFixed(4));
+    const local   = pair === 'eurusd' ? 'Euro' : 'Franc';
+    const symbol  = pair === 'eurusd' ? '€' : '₣';
+
+    // Hidden input
+    document.getElementById('pred-' + pair).value = target.toFixed(4);
+
+    // Large amount display
+    const displayEl = document.getElementById(pair + '-display');
+    if (displayEl) {
+      displayEl.textContent = target.toFixed(4) + ' $';
+      displayEl.className = 'wallet-to-amount' + (bps > 0 ? ' up' : bps < 0 ? ' down' : '');
+    }
+
+    // Target badge
+    document.getElementById(pair + '-target').textContent = target.toFixed(4);
+
+    // Container bar
+    const targetFill = rateToFill(pair, target);
+    const fillEl     = document.getElementById(pair + '-fill-bar');
+    const labelEl    = document.getElementById(pair + '-container-label');
+    if (fillEl) {
+      fillEl.style.width = targetFill + '%';
+      fillEl.style.background = bps > 0 ? 'var(--green)' : bps < 0 ? '#4A90D9' : 'var(--border)';
+    }
+    if (labelEl) {
+      labelEl.textContent = bps > 0 ? `${symbol} buys more $` : bps < 0 ? '$ stronger' : "Today's rate";
+    }
+
+    // Verdict
+    const verdictEl = document.getElementById(pair + '-delta');
+    if (bps === 0) {
+      verdictEl.innerHTML = '<em>Drag the bar or tap below to set your prediction</em>';
+    } else if (bps > 0) {
+      verdictEl.innerHTML = `${local} <strong>${toLabel(absBps)}</strong> — 1 ${symbol} buys <strong>${target.toFixed(4)} $</strong> <em>(+${(absBps/100).toFixed(2)}%)</em>`;
+    } else {
+      verdictEl.innerHTML = `Dollar <strong>${toLabel(absBps)}</strong> — 1 ${symbol} buys only <strong>${target.toFixed(4)} $</strong> <em>(${(bps/100).toFixed(2)}%)</em>`;
+    }
+  }
+
+  // Initialise
   document.getElementById('pred-eurusd').value = BASE.eurusd.toFixed(4);
   document.getElementById('pred-usdchf').value = BASE.usdchf.toFixed(4);
 
-  // ── STEPPER ──
+  // ── CONTAINER PREDICT ──
   function openPrizeEdit() {
     document.getElementById('editPrizeTitle').value = document.getElementById('prizeTitle').textContent;
     document.getElementById('editPrizeSub').value   = document.getElementById('prizeSub').textContent;
