@@ -1575,40 +1575,49 @@
 
 <script>
   // ── NEWS CONTEXT ──
-  const NEWS_API_KEY = 'b70bef90c3bb4c4ba22a5b29660bbbd9';
-
   const NEWS_QUERIES = {
-    eurusd: 'euro dollar EUR USD currency',
-    usdchf: 'dollar swiss franc USD CHF currency'
+    eurusd: 'EUR USD euro dollar currency',
+    usdchf: 'USD CHF dollar swiss franc currency'
   };
 
   async function fetchNews(pair) {
     const query    = NEWS_QUERIES[pair];
     const statusEl = document.getElementById(pair + '-news-status');
     const listEl   = document.getElementById(pair + '-news-list');
-    const today    = new Date();
-    const weekAgo  = new Date(today - 7 * 24 * 60 * 60 * 1000);
-    const from     = weekAgo.toISOString().split('T')[0];
 
     try {
-      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${from}&sortBy=publishedAt&language=en&pageSize=3&apiKey=${NEWS_API_KEY}`;
-      const res  = await fetch(url);
-      const data = await res.json();
+      // Google News RSS via allorigins CORS proxy
+      const rssUrl  = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en&gl=US&ceid=US:en`;
+      const proxy   = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
+      const res     = await fetch(proxy);
+      const data    = await res.json();
 
-      if (data.status !== 'ok' || !data.articles?.length) {
+      if (!data.contents) throw new Error('No content');
+
+      // Parse RSS XML
+      const parser  = new DOMParser();
+      const xml     = parser.parseFromString(data.contents, 'text/xml');
+      const items   = Array.from(xml.querySelectorAll('item')).slice(0, 3);
+
+      if (!items.length) {
         statusEl.textContent = '';
         listEl.innerHTML = '<div class="news-error">No recent news found.</div>';
         return;
       }
 
-      statusEl.textContent = `${data.articles.length} articles`;
-      listEl.innerHTML = data.articles.map(a => {
-        const date    = new Date(a.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        const source  = a.source?.name || '';
-        const url     = a.url || '#';
-        const title   = a.title?.replace(/ - [^-]+$/, '') || ''; // strip source suffix
+      statusEl.textContent = `${items.length} articles`;
+      listEl.innerHTML = items.map(item => {
+        const rawTitle  = item.querySelector('title')?.textContent || '';
+        const link      = item.querySelector('link')?.textContent || '#';
+        const pubDate   = item.querySelector('pubDate')?.textContent || '';
+        const source    = item.querySelector('source')?.textContent || 'Google News';
+
+        // Strip source suffix from title (e.g. " - Reuters")
+        const title     = rawTitle.replace(/ - [^-]+$/, '').trim();
+        const date      = pubDate ? new Date(pubDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+
         return `
-          <a class="news-item" href="${url}" target="_blank" rel="noopener">
+          <a class="news-item" href="${link}" target="_blank" rel="noopener">
             <div class="news-dot"></div>
             <div class="news-content">
               <div class="news-title">${title}</div>
