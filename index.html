@@ -1598,14 +1598,8 @@ body {
 // CONFIG
 // ══════════════════════════════════════════
 
-const SUPABASE_URL  = 'https://ukgvfahozidwilcqsjcu.supabase.co';
-const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrZ3ZmYWhvemlkd2lsY3FzamN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMjcxMzQsImV4cCI6MjA5NDYwMzEzNH0.L7MWg1SDyI8yiahl43p6s52NmlcNbbmQLvTO8EMHSQw';
-const HEADERS = {
-  'Content-Type':  'application/json',
-  'apikey':        SUPABASE_KEY,
-  'Authorization': 'Bearer ' + SUPABASE_KEY,
-  'Prefer':        'return=representation'
-};
+// Supabase — reserved for pundix.com launch
+// const SUPABASE_URL = 'https://ukgvfahozidwilcqsjcu.supabase.co';
 
 const CURRENT_WEEK = 1;
 const WEEK_CAP     = 50;
@@ -1618,49 +1612,26 @@ let shareType    = 'prediction';
 let myPrediction = null;
 
 // ══════════════════════════════════════════
-// SUPABASE HELPERS
+// SUPABASE CLIENT
 // ══════════════════════════════════════════
 
-async function sbFetch(path, options = {}) {
-  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
-    ...options,
-    headers: { ...HEADERS, ...(options.headers || {}) }
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error('Supabase error ' + res.status + ': ' + err);
-  }
-  const text = await res.text();
-  return text ? JSON.parse(text) : [];
-}
+
 
 // ══════════════════════════════════════════
 // PERSISTENCE — Supabase for all predictions,
 // localStorage only for "my" prediction identity
 // ══════════════════════════════════════════
 
-async function getAllPredictions() {
-  try {
-    return await sbFetch('predictions?week=eq.' + CURRENT_WEEK + '&order=ts.asc');
-  } catch(e) {
-    console.warn('getAllPredictions failed:', e);
-    return [];
-  }
+function getAllPredictions() {
+  const raw = localStorage.getItem('pundix_all_predictions_w' + CURRENT_WEEK);
+  return raw ? JSON.parse(raw) : [];
 }
 
-async function savePrediction(entry) {
-  // Upsert — unique on (name, week)
-  await sbFetch('predictions', {
-    method: 'POST',
-    headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
-    body: JSON.stringify({
-      name:     entry.name,
-      price:    entry.price,
-      week:     entry.week,
-      ts:       entry.ts,
-      live_btc: entry.live
-    })
-  });
+function savePrediction(entry) {
+  const all = getAllPredictions();
+  const idx = all.findIndex(p => p.name === entry.name && p.week === entry.week);
+  if (idx >= 0) all[idx] = entry; else all.push(entry);
+  localStorage.setItem('pundix_all_predictions_w' + CURRENT_WEEK, JSON.stringify(all));
 }
 
 function getMyPrediction() {
@@ -1676,21 +1647,14 @@ function clearMyPrediction() {
   localStorage.removeItem(MY_KEY);
 }
 
-async function getHOF() {
-  try {
-    return await sbFetch('hall_of_fame?order=season.asc');
-  } catch(e) {
-    return [];
-  }
+function getHOF() {
+  const raw = localStorage.getItem('pundix_hof');
+  return raw ? JSON.parse(raw) : [];
 }
 
-async function getWeeklyWinner() {
-  try {
-    const rows = await sbFetch('weekly_winners?week=eq.' + CURRENT_WEEK + '&limit=1');
-    return rows[0] || null;
-  } catch(e) {
-    return null;
-  }
+function getWeeklyWinner() {
+  const raw = localStorage.getItem('pundix_winner_w' + CURRENT_WEEK);
+  return raw ? JSON.parse(raw) : null;
 }
 
 // ══════════════════════════════════════════
@@ -1894,7 +1858,7 @@ async function submitPrediction() {
   const entry = { name, price, week: CURRENT_WEEK, ts: Date.now(), live: liveBTC };
 
   try {
-    await savePrediction(entry);
+    savePrediction(entry);
     saveMyPrediction(entry);
     myPrediction = entry;
 
@@ -1904,8 +1868,8 @@ async function submitPrediction() {
     document.getElementById('lockedSub').textContent =
       `${name}, your call is locked in for Week ${CURRENT_WEEK}. Results are published Sunday night.`;
 
-    await renderLeaderboard();
-    await updateLivePanel();
+    renderLeaderboard();
+    updateLivePanel();
   } catch(e) {
     showToast('Could not save — check your connection.');
     submitBtn.disabled = false;
@@ -1932,8 +1896,8 @@ function computeScore(predicted, actual) {
   return Math.round(100 / (1 + 10 * E * E));
 }
 
-async function renderLeaderboard() {
-  const all    = await getAllPredictions();
+function renderLeaderboard() {
+  const all    = getAllPredictions();
   const n      = all.length;
   const myPred = getMyPrediction();
 
@@ -1992,9 +1956,9 @@ async function renderLeaderboard() {
 // LIVE PANEL
 // ══════════════════════════════════════════
 
-async function updateLivePanel() {
+function updateLivePanel() {
   const myPred  = getMyPrediction();
-  const allPreds = await getAllPredictions();
+  const allPreds = getAllPredictions();
 
   const noSection  = document.getElementById('liveNoPrediction');
   const yesSection = document.getElementById('liveComparisonSection');
@@ -2048,8 +2012,8 @@ async function updateLivePanel() {
 // HALL OF FAME
 // ══════════════════════════════════════════
 
-async function renderHallOfFame() {
-  const hof = await getHOF();
+function renderHallOfFame() {
+  const hof = getHOF();
   const el  = document.getElementById('hofRows');
   if (!el) return;
 
@@ -2079,8 +2043,8 @@ async function renderHallOfFame() {
 // WEEKLY WINNER
 // ══════════════════════════════════════════
 
-async function renderWeeklyWinner() {
-  const winner = await getWeeklyWinner();
+function renderWeeklyWinner() {
+  const winner = getWeeklyWinner();
   const card   = document.getElementById('weeklyWinnerCard');
   if (!card) return;
 
@@ -2106,29 +2070,25 @@ async function renderWeeklyWinner() {
 // ══════════════════════════════════════════
 
 async function fetchBTCNews() {
-  const el      = document.getElementById('newsRows');
-  const metaEl  = document.getElementById('news-updated');
+  const el     = document.getElementById('newsRows');
+  const metaEl = document.getElementById('news-updated');
   if (!el) return;
 
-  // Use CryptoPanic public feed (no key needed, CORS-friendly)
-  const url = 'https://cryptopanic.com/api/free/v1/posts/?auth_token=free&currencies=BTC&kind=news&public=true';
+  // CryptoCompare — free, no key, open CORS
+  const url = 'https://min-api.cryptocompare.com/data/v2/news/?categories=BTC&excludeCategories=Sponsored&lang=EN&limit=6';
 
   try {
     const res  = await fetch(url);
     const data = await res.json();
-    const items = (data.results || []).slice(0, 6);
+    const items = (data.Data || []).slice(0, 6);
 
-    if (items.length === 0) {
-      el.innerHTML = '<div class="news-loading">No headlines available.</div>';
-      return;
-    }
+    if (!items.length) throw new Error('empty');
 
     el.innerHTML = items.map(item => {
-      const source = item.source?.title || 'News';
-      const ago    = timeAgo(new Date(item.published_at));
-      const title  = item.title.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      const href   = item.url || '#';
-      return `<a class="news-item" href="${href}" target="_blank" rel="noopener">
+      const ago    = timeAgo(new Date(item.published_on * 1000));
+      const title  = (item.title || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const source = item.source_info?.name || item.source || 'Crypto';
+      return `<a class="news-item" href="${item.url || '#'}" target="_blank" rel="noopener">
         <div class="news-dot"></div>
         <div class="news-item-body">
           <div class="news-item-title">${title}</div>
@@ -2142,26 +2102,6 @@ async function fetchBTCNews() {
       metaEl.textContent = 'Updated ' + now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     }
   } catch(e) {
-    // Fallback: try NewsAPI-compatible free endpoint
-    try {
-      const r2 = await fetch('https://rss.app/feeds/v1.1/tV9K6V5mSPqwqLCQ.json');
-      const d2 = await r2.json();
-      const items2 = (d2.items || []).slice(0, 6);
-      if (items2.length > 0) {
-        el.innerHTML = items2.map(item => {
-          const ago   = timeAgo(new Date(item.date_published || item.date_modified));
-          const title = (item.title || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-          return `<a class="news-item" href="${item.url || '#'}" target="_blank" rel="noopener">
-            <div class="news-dot"></div>
-            <div class="news-item-body">
-              <div class="news-item-title">${title}</div>
-              <div class="news-item-meta">${ago}</div>
-            </div>
-          </a>`;
-        }).join('');
-        return;
-      }
-    } catch(e2) {}
     el.innerHTML = '<div class="news-loading">Headlines unavailable — check back shortly.</div>';
   }
 }
@@ -2278,11 +2218,9 @@ function showToast(msg) {
   document.getElementById('lb-week-num').textContent   = CURRENT_WEEK;
   document.getElementById('live-week-num').textContent = CURRENT_WEEK;
 
-  await Promise.all([
-    renderLeaderboard(),
-    renderHallOfFame(),
-    renderWeeklyWinner(),
-  ]);
+  renderLeaderboard();
+  renderHallOfFame();
+  renderWeeklyWinner();
 
   updateWindowStatus();
   fetchBTCPrice();
@@ -2290,7 +2228,9 @@ function showToast(msg) {
   setInterval(updateWindowStatus, 1000);
   setInterval(fetchBTCPrice, 60000);
   // Refresh leaderboard every 30s so new players appear automatically
-  setInterval(renderLeaderboard, 30000);
+  setInterval(() => {
+    if (!document.hidden) renderLeaderboard();
+  }, 30000);
   // Refresh news every 5 minutes
   setInterval(fetchBTCNews, 300000);
 })();
