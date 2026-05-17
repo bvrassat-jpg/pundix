@@ -2074,13 +2074,13 @@ async function fetchBTCNews() {
   const metaEl = document.getElementById('news-updated');
   if (!el) return;
 
-  // CryptoCompare — free, no key, open CORS
-  const url = 'https://min-api.cryptocompare.com/data/v2/news/?categories=BTC&excludeCategories=Sponsored&lang=EN&limit=6';
+  // CryptoCompare latest news — no key needed on v1 endpoint
+  const url = 'https://min-api.cryptocompare.com/data/news/?lang=EN&sortOrder=latest';
 
   try {
     const res  = await fetch(url);
     const data = await res.json();
-    const items = (data.Data || []).slice(0, 6);
+    const items = (Array.isArray(data) ? data : (data.Data || [])).slice(0, 6);
 
     if (!items.length) throw new Error('empty');
 
