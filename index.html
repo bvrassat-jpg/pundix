@@ -942,6 +942,173 @@ body {
 .score-example-value.mid  { color: var(--blue); }
 .score-example-value.low  { color: var(--text-dim); }
 
+/* ── FOUNDER BADGE ── */
+.founder-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--orange);
+  border: 1px solid rgba(245,158,11,.35);
+  background: rgba(245,158,11,.07);
+  padding: 2px 5px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+/* ── WEEKLY WINNER CALLOUT ── */
+.weekly-winner-card {
+  background: var(--navy);
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(245,158,11,.2);
+  position: relative;
+  overflow: hidden;
+}
+.weekly-winner-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--orange), transparent);
+}
+.weekly-winner-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 12px;
+}
+.weekly-winner-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.weekly-winner-name {
+  font-family: var(--sans);
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+.weekly-winner-sub {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(255,255,255,.45);
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+}
+.weekly-winner-score {
+  text-align: right;
+  flex-shrink: 0;
+}
+.weekly-winner-score-value {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: -0.5px;
+}
+.weekly-winner-score-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.3);
+  margin-top: 2px;
+}
+
+/* ── HALL OF FAME ── */
+.hof-section {
+  margin-top: 28px;
+}
+.hof-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.hof-header {
+  background: var(--navy);
+  padding: 16px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.hof-header-title {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hof-header-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255,255,255,.35);
+  letter-spacing: 1px;
+}
+.hof-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.hof-row:last-child { border-bottom: none; }
+.hof-season {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orange);
+  text-align: center;
+}
+.hof-name {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.hof-name-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 3px;
+  letter-spacing: 0.3px;
+}
+.hof-score {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-mid);
+  text-align: right;
+}
+.hof-empty {
+  padding: 36px 22px;
+  text-align: center;
+}
+.hof-empty-title {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-mid);
+  margin-bottom: 6px;
+}
+.hof-empty-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  letter-spacing: 0.3px;
+}
+
 /* ── TOAST ── */
 .toast {
   position: fixed;
@@ -1053,7 +1220,7 @@ body {
 
         <!-- Live preview -->
         <div class="predict-preview" id="predictPreview">
-          <div class="predict-preview-label">📋 Your prediction card · preview</div>
+          <div class="predict-preview-label">◇ Your prediction card · preview</div>
           <div class="predict-preview-body" id="previewBody">—</div>
         </div>
 
@@ -1071,7 +1238,7 @@ body {
 
     <!-- Locked / success state -->
     <div class="locked-card" id="lockedCard">
-      <div class="locked-icon">🔒</div>
+      <div class="locked-icon" style="font-size:36px;color:var(--orange);">◈</div>
       <div class="locked-title">Your call is locked in</div>
       <div class="locked-sub" id="lockedSub">Your prediction is set. Results are published Sunday night after the BTC weekly close.</div>
       <div class="locked-prediction-display">
@@ -1139,7 +1306,7 @@ body {
     <!-- No prediction yet nudge -->
     <div id="liveNoPrediction" style="display:none">
       <div class="predict-form-card" style="text-align:center;padding:32px;">
-        <div style="font-size:32px;margin-bottom:14px;">🎯</div>
+        <div style="font-size:28px;margin-bottom:14px;color:var(--orange);">◈</div>
         <div class="predict-form-title" style="margin-bottom:8px;">You haven't predicted yet</div>
         <div class="predict-form-sub" style="margin-bottom:20px;">Submit your BTC forecast to see how you compare to the crowd.</div>
         <button class="submit-btn" onclick="switchTab('predict')">Make my prediction →</button>
@@ -1199,11 +1366,46 @@ body {
       </div>
     </div>
 
+    <!-- Weekly winner callout (shown post-resolution) -->
+    <div id="weeklyWinnerCard" style="display:none;">
+      <div class="sec-label">This week's winner</div>
+      <div class="weekly-winner-card">
+        <div class="weekly-winner-label">◈ Week <span id="winner-week-num">1</span> Champion</div>
+        <div class="weekly-winner-body">
+          <div>
+            <div class="weekly-winner-name" id="winner-name">—</div>
+            <div class="weekly-winner-sub" id="winner-detail">—</div>
+          </div>
+          <div class="weekly-winner-score">
+            <div class="weekly-winner-score-value" id="winner-score">—</div>
+            <div class="weekly-winner-score-label">accuracy score</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Share result button (shown after resolution) -->
     <div id="shareResultSection" style="display:none;">
-      <button class="submit-btn" onclick="openShareModal('result')" style="background:var(--orange);color:var(--navy);">
+      <button class="submit-btn" onclick="openShareModal('result')" style="background:var(--orange);color:var(--navy);margin-bottom:28px;">
         ↗ Share my result card
       </button>
+    </div>
+
+    <!-- Hall of Fame -->
+    <div class="hof-section">
+      <div class="sec-label">Hall of Fame</div>
+      <div class="hof-card">
+        <div class="hof-header">
+          <div class="hof-header-title">◈ Season Champions</div>
+          <div class="hof-header-sub">All-time</div>
+        </div>
+        <div id="hofRows">
+          <div class="hof-empty">
+            <div class="hof-empty-title">Season 1 in progress</div>
+            <div class="hof-empty-sub">The season champion is crowned at the end of 8 weeks.<br>Their name stays here permanently.</div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -1642,9 +1844,9 @@ function renderLeaderboard() {
   if (n === 0) {
     document.getElementById('leaderboardRows').innerHTML = `
       <div class="lb-empty">
-        <div class="lb-empty-icon">🎯</div>
+        <div class="lb-empty-icon" style="font-size:28px;margin-bottom:12px;">◈</div>
         <div class="lb-empty-text">No predictions yet</div>
-        <div class="lb-empty-sub">Be the first to submit your BTC forecast.<br>Others can join until Friday 23:59 UTC.</div>
+        <div class="lb-empty-sub">Be the first — Week 1 participants receive a permanent Founder mark.<br>Predictions close Friday 23:59 UTC.</div>
       </div>`;
     return;
   }
@@ -1654,20 +1856,22 @@ function renderLeaderboard() {
   const sorted = [...all].sort((a, b) => a.ts - b.ts);
 
   const rows = sorted.map((p, i) => {
-    const isMe   = myPred && p.name === myPred.name && p.week === myPred.week;
-    const rank   = i + 1;
-    const rankCls = rank <= 3 ? 'lb-rank top3' : 'lb-rank';
-    const rankStr = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#' + rank;
-    const fmtPred = '$' + Math.round(p.price).toLocaleString('en-US');
-    // Pre-resolution: show "pending"
-    const scoreTxt = '—';
-    const scoreCls = 'lb-score';
+    const isMe      = myPred && p.name === myPred.name && p.week === myPred.week;
+    const isFounder = p.week === 1; // Week 1 participants are permanent founders
+    const rank      = i + 1;
+    const rankCls   = rank <= 3 ? 'lb-rank top3' : 'lb-rank';
+    const rankStr   = rank === 1 ? '◆' : rank === 2 ? '◇' : rank === 3 ? '◈' : '#' + rank;
+    const fmtPred   = '$' + Math.round(p.price).toLocaleString('en-US');
+    const scoreTxt  = '—';
+    const scoreCls  = 'lb-score';
+    const founderTag = isFounder ? '<span class="founder-badge">Founder</span>' : '';
+    const youTag     = isMe ? ' <span style="color:var(--blue);font-size:11px;font-family:var(--mono);">(you)</span>' : '';
 
     return `<div class="leaderboard-row ${isMe ? 'your-row' : ''}">
       <div class="${rankCls}">${rankStr}</div>
       <div>
-        <div class="lb-name">${escHtml(p.name)}${isMe ? ' <span style="color:var(--blue);font-size:11px;">(you)</span>' : ''}</div>
-        <div class="lb-name-sub">Week ${p.week}</div>
+        <div class="lb-name">${escHtml(p.name)}${founderTag}${youTag}</div>
+        <div class="lb-name-sub">Week ${p.week} · ${new Date(p.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</div>
       </div>
       <div class="lb-prediction">${fmtPred}</div>
       <div class="${scoreCls}">${scoreTxt}</div>
@@ -1790,7 +1994,7 @@ function closeShareModal(e) {
 
 function copyShareText() {
   navigator.clipboard.writeText(currentShareText).then(() => {
-    showToast('Copied! Paste it into X 🚀');
+    showToast('Copied — paste it into X');
     closeShareModal();
   }).catch(() => {
     showToast('Copy failed — try manually selecting the text.');
@@ -1834,6 +2038,74 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════
+// HALL OF FAME
+// ══════════════════════════════════════════
+
+// Hall of Fame data — populated when weeks resolve
+// Structure: { season, week, name, score, prediction, actual }
+// For now stored in localStorage under 'pundix_hof'
+function getHOF() {
+  return JSON.parse(localStorage.getItem('pundix_hof') || '[]');
+}
+
+function renderHallOfFame() {
+  const hof = getHOF();
+  const el  = document.getElementById('hofRows');
+  if (!el) return;
+
+  if (hof.length === 0) {
+    el.innerHTML = `
+      <div class="hof-empty">
+        <div class="hof-empty-title">Season 1 in progress</div>
+        <div class="hof-empty-sub">The season champion is crowned at the end of 8 weeks.<br>Their name stays here permanently.</div>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = hof.map(entry => {
+    const fmt = entry.prediction ? '$' + Math.round(entry.prediction).toLocaleString('en-US') : '—';
+    return `<div class="hof-row">
+      <div class="hof-season">S${entry.season}</div>
+      <div>
+        <div class="hof-name">${escHtml(entry.name)} <span class="founder-badge" style="color:var(--orange);border-color:rgba(245,158,11,.4);">Champion</span></div>
+        <div class="hof-name-sub">Season ${entry.season} · Week ${entry.week} winner · Predicted ${fmt}</div>
+      </div>
+      <div class="hof-score">${entry.score || '—'} pts</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// WEEKLY WINNER DISPLAY
+// ══════════════════════════════════════════
+
+// This is called post-resolution. For now it reads from localStorage 'pundix_weekly_winner'
+// In production this would come from the backend after Sunday close.
+function renderWeeklyWinner() {
+  const winner = JSON.parse(localStorage.getItem('pundix_weekly_winner') || 'null');
+  const card   = document.getElementById('weeklyWinnerCard');
+  if (!card) return;
+
+  if (!winner) {
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = 'block';
+  document.getElementById('winner-week-num').textContent = winner.week || CURRENT_WEEK;
+  document.getElementById('winner-name').textContent     = winner.name || '—';
+
+  const fmtPred   = winner.prediction ? '$' + Math.round(winner.prediction).toLocaleString('en-US') : '—';
+  const fmtActual = winner.actual     ? '$' + Math.round(winner.actual).toLocaleString('en-US')     : '—';
+  const errPct    = (winner.errorPct  || 0).toFixed(2);
+
+  document.getElementById('winner-detail').textContent =
+    `Predicted ${fmtPred} · Actual ${fmtActual} · ${errPct}% error`;
+  document.getElementById('winner-score').textContent =
+    winner.score ? winner.score + '/100' : '—';
+}
+
+// ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
 
@@ -1851,6 +2123,8 @@ function showToast(msg) {
   }
 
   renderLeaderboard();
+  renderHallOfFame();
+  renderWeeklyWinner();
   updateWindowStatus();
   fetchBTCPrice();
 
