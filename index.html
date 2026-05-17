@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwMDAwMCIvPjx0ZXh0IHg9IjUwIiB5PSI3MiIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iNzgiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNGNTlFMEIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlA8L3RleHQ+PGxpbmUgeDE9IjEzIiB5MT0iMzYiIHgyPSI4NyIgeTI9IjM2IiBzdHJva2U9IiNGNTlFMEIiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PGxpbmUgeDE9IjEzIiB5MT0iNDciIHgyPSI4NyIgeTI9IjQ3IiBzdHJva2U9IiNGNTlFMEIiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1511,41 +1512,72 @@ body {
 
 <script>
 // ══════════════════════════════════════════
-// CORE STATE
+// CONFIG
 // ══════════════════════════════════════════
+
+const SUPABASE_URL  = 'https://ukgvfahozidwilcqsjcu.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_oNPwmq7A-O3iYRTQuKUn6w_Do936QKk';
+const HEADERS = {
+  'Content-Type':  'application/json',
+  'apikey':        SUPABASE_KEY,
+  'Authorization': 'Bearer ' + SUPABASE_KEY,
+  'Prefer':        'return=representation'
+};
 
 const CURRENT_WEEK = 1;
 const WEEK_CAP     = 50;
-const BTC_BASE     = 84200; // fallback if API fails
+const BTC_BASE     = 84200;
 
-// Timing (UTC)
-// Window opens Mon 00:00, closes Fri 23:59, resolves Sun 23:59
-const WINDOW_OPEN_DAY  = 1; // Monday
-const WINDOW_CLOSE_DAY = 5; // Friday
-const RESOLVE_DAY      = 0; // Sunday (next)
+const MY_KEY = 'pundix_btc_my_prediction'; // localStorage — only MY own prediction
 
-// Storage key
-const STORE_KEY = 'pundix_btc_predictions';
-const MY_KEY    = 'pundix_btc_my_prediction';
-
-let liveBTC     = BTC_BASE;
-let shareType   = 'prediction'; // 'prediction' or 'result'
+let liveBTC      = BTC_BASE;
+let shareType    = 'prediction';
 let myPrediction = null;
 
 // ══════════════════════════════════════════
-// PERSISTENCE
+// SUPABASE HELPERS
 // ══════════════════════════════════════════
 
-function getAllPredictions() {
-  return JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+async function sbFetch(path, options = {}) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    ...options,
+    headers: { ...HEADERS, ...(options.headers || {}) }
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error('Supabase error ' + res.status + ': ' + err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
 }
 
-function savePrediction(entry) {
-  const all = getAllPredictions();
-  // Remove any prior entry by same name+week
-  const filtered = all.filter(p => !(p.name === entry.name && p.week === entry.week));
-  filtered.push(entry);
-  localStorage.setItem(STORE_KEY, JSON.stringify(filtered));
+// ══════════════════════════════════════════
+// PERSISTENCE — Supabase for all predictions,
+// localStorage only for "my" prediction identity
+// ══════════════════════════════════════════
+
+async function getAllPredictions() {
+  try {
+    return await sbFetch('predictions?week=eq.' + CURRENT_WEEK + '&order=ts.asc');
+  } catch(e) {
+    console.warn('getAllPredictions failed:', e);
+    return [];
+  }
+}
+
+async function savePrediction(entry) {
+  // Upsert — unique on (name, week)
+  await sbFetch('predictions', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify({
+      name:     entry.name,
+      price:    entry.price,
+      week:     entry.week,
+      ts:       entry.ts,
+      live_btc: entry.live
+    })
+  });
 }
 
 function getMyPrediction() {
@@ -1561,32 +1593,44 @@ function clearMyPrediction() {
   localStorage.removeItem(MY_KEY);
 }
 
+async function getHOF() {
+  try {
+    return await sbFetch('hall_of_fame?order=season.asc');
+  } catch(e) {
+    return [];
+  }
+}
+
+async function getWeeklyWinner() {
+  try {
+    const rows = await sbFetch('weekly_winners?week=eq.' + CURRENT_WEEK + '&limit=1');
+    return rows[0] || null;
+  } catch(e) {
+    return null;
+  }
+}
+
 // ══════════════════════════════════════════
 // BTC LIVE PRICE
 // ══════════════════════════════════════════
 
 async function fetchBTCPrice() {
   try {
-    const res  = await fetch('https://open.er-api.com/v6/latest/USD');
-    // open.er-api doesn't have BTC, use CoinGecko simple price instead
     const r2   = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
     const data = await r2.json();
     if (data?.bitcoin?.usd) {
       liveBTC = data.bitcoin.usd;
-      const chg = data.bitcoin.usd_24h_change || 0;
-      updateBTCDisplay(liveBTC, chg);
+      updateBTCDisplay(liveBTC, data.bitcoin.usd_24h_change || 0);
     }
   } catch(e) {
-    // Keep fallback
     updateBTCDisplay(liveBTC, null);
   }
 }
 
 function updateBTCDisplay(price, chg24) {
-  const fmt = Math.round(price).toLocaleString('en-US');
+  const fmt   = Math.round(price).toLocaleString('en-US');
   const parts = fmt.split(',');
 
-  // Main predict ticker
   const intEl = document.getElementById('btc-int');
   const decEl = document.getElementById('btc-dec');
   if (intEl && decEl) {
@@ -1599,26 +1643,22 @@ function updateBTCDisplay(price, chg24) {
     }
   }
 
-  // Change badge
   const chgEl = document.getElementById('btc-change');
   if (chgEl && chg24 !== null) {
     const sign = chg24 >= 0 ? '+' : '';
     chgEl.textContent = sign + chg24.toFixed(2) + '% 24h';
-    chgEl.className = 'btc-change ' + (chg24 >= 0 ? 'pos' : 'neg');
+    chgEl.className   = 'btc-change ' + (chg24 >= 0 ? 'pos' : 'neg');
   }
 
-  // Meta
   const metaEl = document.getElementById('btc-meta');
   if (metaEl) {
     const now = new Date();
     metaEl.textContent = 'Last updated ' + now.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) + ' · CoinGecko';
   }
 
-  // Hint
   const hintEl = document.getElementById('btc-current-hint');
   if (hintEl) hintEl.textContent = '$' + Math.round(price).toLocaleString('en-US');
 
-  // Live panel
   const liveEl = document.getElementById('live-btc-price');
   if (liveEl) liveEl.textContent = '$' + Math.round(price).toLocaleString('en-US');
 
@@ -1628,7 +1668,6 @@ function updateBTCDisplay(price, chg24) {
     liveMeta.textContent = sign + chg24.toFixed(2) + '% past 24h';
   }
 
-  // Update preview if visible
   updatePreview();
 }
 
@@ -1638,17 +1677,14 @@ function updateBTCDisplay(price, chg24) {
 
 function getWindowState() {
   const now = new Date();
-  const day = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
+  const day = now.getUTCDay();
   const h   = now.getUTCHours();
   const m   = now.getUTCMinutes();
 
-  // Window is open Mon 00:00 through Fri 23:59 UTC
   const isOpen = (day >= 1 && day <= 5) ||
                  (day === 5 && (h < 23 || (h === 23 && m <= 59)));
 
-  // Next Friday 23:59 UTC close
-  const closeDate = getNextWeekday(5, 23, 59);
-  // Sunday 23:59 UTC
+  const closeDate   = getNextWeekday(5, 23, 59);
   const resolveDate = getNextWeekday(0, 23, 59);
 
   return { isOpen, closeDate, resolveDate, now };
@@ -1662,11 +1698,10 @@ function getNextWeekday(targetDay, targetH, targetM) {
   if (diff === 0 && (now.getUTCHours() > targetH || (now.getUTCHours() === targetH && now.getUTCMinutes() >= targetM))) {
     diff = 7;
   }
-  const target = new Date(Date.UTC(
+  return new Date(Date.UTC(
     now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff,
     targetH, targetM, 0
   ));
-  return target;
 }
 
 function formatCountdown(ms) {
@@ -1683,34 +1718,26 @@ function formatCountdown(ms) {
 function updateWindowStatus() {
   const { isOpen, closeDate, resolveDate, now } = getWindowState();
 
-  const dotEl   = document.getElementById('window-dot');
-  const textEl  = document.getElementById('window-text');
-  const cdEl    = document.getElementById('window-countdown');
-
+  const dotEl  = document.getElementById('window-dot');
+  const textEl = document.getElementById('window-text');
+  const cdEl   = document.getElementById('window-countdown');
   const submitBtn = document.getElementById('submitBtn');
 
   if (isOpen) {
     dotEl.className = 'window-dot-open';
     textEl.innerHTML = 'Predictions <strong>open</strong> · Closes Friday 23:59 UTC';
-    const msLeft = closeDate - now;
-    cdEl.textContent = formatCountdown(msLeft);
+    cdEl.textContent = formatCountdown(closeDate - now);
     if (submitBtn) submitBtn.disabled = false;
   } else {
     dotEl.className = 'window-dot-closed';
     textEl.innerHTML = 'Predictions <strong>closed</strong> · Resolves Sunday 23:59 UTC';
-    const msLeft = resolveDate - now;
-    cdEl.textContent = formatCountdown(msLeft);
+    cdEl.textContent = formatCountdown(resolveDate - now);
     if (submitBtn) submitBtn.disabled = true;
   }
 
-  // Live week countdown
   const liveCd = document.getElementById('live-countdown');
-  if (liveCd) {
-    const msLeft = resolveDate - now;
-    liveCd.textContent = formatCountdown(msLeft);
-  }
+  if (liveCd) liveCd.textContent = formatCountdown(resolveDate - now);
 
-  // Header
   const hdrWeek = document.getElementById('hdr-week');
   if (hdrWeek) hdrWeek.textContent = 'Week ' + CURRENT_WEEK + ' · ' + (isOpen ? 'Open' : 'Closed');
 }
@@ -1723,20 +1750,20 @@ function updatePreview() {
   const name  = (document.getElementById('playerName')?.value || '').trim();
   const price = parseFloat(document.getElementById('btcPrediction')?.value || '0');
 
-  const preview = document.getElementById('predictPreview');
-  const body    = document.getElementById('previewBody');
+  const preview  = document.getElementById('predictPreview');
+  const body     = document.getElementById('previewBody');
   const shareBtn = document.getElementById('shareBeforeBtn');
 
   if (!name || !price || price < 10000) {
-    if (preview) preview.classList.remove('show');
+    if (preview)  preview.classList.remove('show');
     if (shareBtn) shareBtn.style.display = 'none';
     return;
   }
 
-  const fmtPrice = '$' + Math.round(price).toLocaleString('en-US');
-  const fmtLive  = '$' + Math.round(liveBTC).toLocaleString('en-US');
-  const diff     = price - liveBTC;
-  const diffPct  = ((diff / liveBTC) * 100).toFixed(1);
+  const fmtPrice  = '$' + Math.round(price).toLocaleString('en-US');
+  const fmtLive   = '$' + Math.round(liveBTC).toLocaleString('en-US');
+  const diff      = price - liveBTC;
+  const diffPct   = ((diff / liveBTC) * 100).toFixed(1);
   const direction = diff > 0 ? 'above' : diff < 0 ? 'below' : 'at';
   const sign      = diff > 0 ? '+' : '';
 
@@ -1749,7 +1776,7 @@ function updatePreview() {
       `Week ${CURRENT_WEEK} · Pundix BTC League`;
   }
 
-  if (preview) preview.classList.add('show');
+  if (preview)  preview.classList.add('show');
   if (shareBtn) shareBtn.style.display = 'block';
 }
 
@@ -1757,13 +1784,11 @@ function updatePreview() {
 // SUBMIT
 // ══════════════════════════════════════════
 
-function submitPrediction() {
+async function submitPrediction() {
   const name  = (document.getElementById('playerName')?.value || '').trim();
   const price = parseFloat(document.getElementById('btcPrediction')?.value || '0');
 
-  // Validate
   let ok = true;
-
   if (!name) {
     document.getElementById('playerName').classList.add('error');
     setTimeout(() => document.getElementById('playerName').classList.remove('error'), 1500);
@@ -1777,41 +1802,37 @@ function submitPrediction() {
   if (!ok) return;
 
   const { isOpen } = getWindowState();
-  if (!isOpen) {
-    showToast('Predictions are closed for this week.');
-    return;
+  if (!isOpen) { showToast('Predictions are closed for this week.'); return; }
+
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Saving…';
+
+  const entry = { name, price, week: CURRENT_WEEK, ts: Date.now(), live: liveBTC };
+
+  try {
+    await savePrediction(entry);
+    saveMyPrediction(entry);
+    myPrediction = entry;
+
+    document.getElementById('predictForm').style.display = 'none';
+    document.getElementById('lockedCard').classList.add('show');
+    document.getElementById('lockedValue').textContent = '$' + Math.round(price).toLocaleString('en-US');
+    document.getElementById('lockedSub').textContent =
+      `${name}, your call is locked in for Week ${CURRENT_WEEK}. Results are published Sunday night.`;
+
+    await renderLeaderboard();
+    await updateLivePanel();
+  } catch(e) {
+    showToast('Could not save — check your connection.');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Lock in my prediction →';
   }
-
-  const entry = {
-    name,
-    price,
-    week: CURRENT_WEEK,
-    ts: Date.now(),
-    live: liveBTC
-  };
-
-  savePrediction(entry);
-  saveMyPrediction(entry);
-  myPrediction = entry;
-
-  // Show locked state
-  document.getElementById('predictForm').style.display = 'none';
-  document.getElementById('lockedCard').classList.add('show');
-  document.getElementById('lockedValue').textContent = '$' + Math.round(price).toLocaleString('en-US');
-  document.getElementById('lockedSub').textContent =
-    `${name}, your call is locked in for Week ${CURRENT_WEEK}. Results are published Sunday night.`;
-
-  // Refresh leaderboard
-  renderLeaderboard();
-  updateLivePanel();
 }
 
-function changeMyPrediction() {
+async function changeMyPrediction() {
   const { isOpen } = getWindowState();
-  if (!isOpen) {
-    showToast('Window is closed — predictions are locked.');
-    return;
-  }
+  if (!isOpen) { showToast('Window is closed — predictions are locked.'); return; }
   clearMyPrediction();
   myPrediction = null;
   document.getElementById('lockedCard').classList.remove('show');
@@ -1828,19 +1849,24 @@ function computeScore(predicted, actual) {
   return Math.round(100 / (1 + 10 * E * E));
 }
 
-function renderLeaderboard() {
-  const all    = getAllPredictions().filter(p => p.week === CURRENT_WEEK);
+async function renderLeaderboard() {
+  const all    = await getAllPredictions();
   const n      = all.length;
   const myPred = getMyPrediction();
 
-  // Player count
   const countEl = document.getElementById('lb-player-count');
   if (countEl) countEl.textContent = n;
 
-  document.getElementById('lb-week-num').textContent = CURRENT_WEEK;
+  document.getElementById('lb-week-num').textContent   = CURRENT_WEEK;
   document.getElementById('live-week-num').textContent = CURRENT_WEEK;
 
-  // No players yet
+  const metaEl = document.getElementById('lb-meta');
+  if (metaEl) {
+    metaEl.textContent = n < 50
+      ? 'Week ' + CURRENT_WEEK + ' · Early cohort · ' + n + ' players'
+      : 'Week ' + CURRENT_WEEK + ' · In progress · ' + n + ' players';
+  }
+
   if (n === 0) {
     document.getElementById('leaderboardRows').innerHTML = `
       <div class="lb-empty">
@@ -1851,19 +1877,17 @@ function renderLeaderboard() {
     return;
   }
 
-  // Sort by name for pre-resolution (no score yet), or by score if resolved
-  // For now: sort by submission time, show predictions as locked
   const sorted = [...all].sort((a, b) => a.ts - b.ts);
 
   const rows = sorted.map((p, i) => {
     const isMe      = myPred && p.name === myPred.name && p.week === myPred.week;
-    const isFounder = p.week === 1; // Week 1 participants are permanent founders
+    const isFounder = p.week === 1;
     const rank      = i + 1;
     const rankCls   = rank <= 3 ? 'lb-rank top3' : 'lb-rank';
     const rankStr   = rank === 1 ? '◆' : rank === 2 ? '◇' : rank === 3 ? '◈' : '#' + rank;
     const fmtPred   = '$' + Math.round(p.price).toLocaleString('en-US');
-    const scoreTxt  = '—';
-    const scoreCls  = 'lb-score';
+    const scoreTxt  = p.score != null ? p.score + ' pts' : '—';
+    const scoreCls  = p.score == null ? 'lb-score' : p.score >= 80 ? 'lb-score high' : p.score >= 50 ? 'lb-score mid' : 'lb-score low';
     const founderTag = isFounder ? '<span class="founder-badge">Founder</span>' : '';
     const youTag     = isMe ? ' <span style="color:var(--blue);font-size:11px;font-family:var(--mono);">(you)</span>' : '';
 
@@ -1879,40 +1903,31 @@ function renderLeaderboard() {
   }).join('');
 
   document.getElementById('leaderboardRows').innerHTML = rows;
-
-  // Show percentile note based on n
-  const metaEl = document.getElementById('lb-meta');
-  if (metaEl) {
-    if (n < 50) metaEl.textContent = 'Week ' + CURRENT_WEEK + ' · Early cohort · ' + n + ' players';
-    else metaEl.textContent = 'Week ' + CURRENT_WEEK + ' · In progress · ' + n + ' players';
-  }
 }
 
 // ══════════════════════════════════════════
-// LIVE PANEL UPDATE
+// LIVE PANEL
 // ══════════════════════════════════════════
 
-function updateLivePanel() {
-  const myPred = getMyPrediction();
-  const allPreds = getAllPredictions().filter(p => p.week === CURRENT_WEEK);
+async function updateLivePanel() {
+  const myPred  = getMyPrediction();
+  const allPreds = await getAllPredictions();
 
-  const noSection = document.getElementById('liveNoPrediction');
+  const noSection  = document.getElementById('liveNoPrediction');
   const yesSection = document.getElementById('liveComparisonSection');
 
   if (!myPred) {
-    if (noSection)  noSection.style.display = 'block';
+    if (noSection)  noSection.style.display  = 'block';
     if (yesSection) yesSection.style.display = 'none';
     return;
   }
 
-  if (noSection)  noSection.style.display = 'none';
+  if (noSection)  noSection.style.display  = 'none';
   if (yesSection) yesSection.style.display = 'block';
 
-  // Your call
   const yourCallEl = document.getElementById('live-your-call');
   if (yourCallEl) yourCallEl.textContent = '$' + Math.round(myPred.price).toLocaleString('en-US');
 
-  // Crowd median
   if (allPreds.length > 0) {
     const prices = allPreds.map(p => p.price).sort((a,b) => a - b);
     const mid    = Math.floor(prices.length / 2);
@@ -1925,20 +1940,17 @@ function updateLivePanel() {
     if (medEl) medEl.textContent = '$' + Math.round(median).toLocaleString('en-US');
     if (nEl)   nEl.textContent   = allPreds.length + ' players';
 
-    // Position band
     const posEl = document.getElementById('live-position');
     if (posEl) {
-      const aboveCount = allPreds.filter(p => p.price > myPred.price).length;
-      const pct = Math.round((1 - aboveCount / allPreds.length) * 100);
       if (myPred.price > median) {
-        posEl.textContent = 'Above median · Higher than ' + (allPreds.filter(p => p.price < myPred.price).length) + ' players';
-        posEl.className = 'consensus-band-value above';
+        posEl.textContent = 'Above median · Higher than ' + allPreds.filter(p => p.price < myPred.price).length + ' players';
+        posEl.className   = 'consensus-band-value above';
       } else if (myPred.price < median) {
-        posEl.textContent = 'Below median · Lower than ' + (allPreds.filter(p => p.price > myPred.price).length) + ' players';
-        posEl.className = 'consensus-band-value below';
+        posEl.textContent = 'Below median · Lower than ' + allPreds.filter(p => p.price > myPred.price).length + ' players';
+        posEl.className   = 'consensus-band-value below';
       } else {
         posEl.textContent = 'At crowd median';
-        posEl.className = 'consensus-band-value inline-c';
+        posEl.className   = 'consensus-band-value inline-c';
       }
     }
   } else {
@@ -1947,6 +1959,62 @@ function updateLivePanel() {
     const posEl = document.getElementById('live-position');
     if (posEl) { posEl.textContent = 'First prediction in!'; posEl.className = 'consensus-band-value above'; }
   }
+}
+
+// ══════════════════════════════════════════
+// HALL OF FAME
+// ══════════════════════════════════════════
+
+async function renderHallOfFame() {
+  const hof = await getHOF();
+  const el  = document.getElementById('hofRows');
+  if (!el) return;
+
+  if (hof.length === 0) {
+    el.innerHTML = `
+      <div class="hof-empty">
+        <div class="hof-empty-title">Season 1 in progress</div>
+        <div class="hof-empty-sub">The season champion is crowned at the end of 8 weeks.<br>Their name stays here permanently.</div>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = hof.map(entry => {
+    const fmt = entry.prediction ? '$' + Math.round(entry.prediction).toLocaleString('en-US') : '—';
+    return `<div class="hof-row">
+      <div class="hof-season">S${entry.season}</div>
+      <div>
+        <div class="hof-name">${escHtml(entry.name)} <span class="founder-badge" style="color:var(--orange);border-color:rgba(245,158,11,.4);">Champion</span></div>
+        <div class="hof-name-sub">Season ${entry.season} · Week ${entry.week} winner · Predicted ${fmt}</div>
+      </div>
+      <div class="hof-score">${entry.score || '—'} pts</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// WEEKLY WINNER
+// ══════════════════════════════════════════
+
+async function renderWeeklyWinner() {
+  const winner = await getWeeklyWinner();
+  const card   = document.getElementById('weeklyWinnerCard');
+  if (!card) return;
+
+  if (!winner) { card.style.display = 'none'; return; }
+
+  card.style.display = 'block';
+  document.getElementById('winner-week-num').textContent = winner.week || CURRENT_WEEK;
+  document.getElementById('winner-name').textContent     = winner.name || '—';
+
+  const fmtPred   = winner.prediction ? '$' + Math.round(winner.prediction).toLocaleString('en-US') : '—';
+  const fmtActual = winner.actual     ? '$' + Math.round(winner.actual).toLocaleString('en-US')     : '—';
+  const errPct    = (winner.error_pct || 0).toFixed(2);
+
+  document.getElementById('winner-detail').textContent =
+    `Predicted ${fmtPred} · Actual ${fmtActual} · ${errPct}% error`;
+  document.getElementById('winner-score').textContent =
+    winner.score ? winner.score + '/100' : '—';
 }
 
 // ══════════════════════════════════════════
@@ -1974,7 +2042,6 @@ function openShareModal(type) {
     bodyHTML  = `₿ BTC Weekly Forecast\n\n<strong>${escHtml(name)}</strong> predicts\n<strong>BTC closes at ${fmtPrice}</strong>\n${sign}${diffPct}% vs current (${fmtLive})\n\nWeek ${CURRENT_WEEK} · Pundix BTC League`;
     shareText = `₿ My BTC call for this week: ${fmtPrice} (${sign}${diffPct}% vs current)\n\nI'm in the Pundix weekly prediction league. Can you beat me?\n\npundix.com — Week ${CURRENT_WEEK}`;
   } else {
-    // Result share (post-resolution)
     bodyHTML  = `₿ Week ${CURRENT_WEEK} result — coming soon`;
     shareText = `₿ Pundix Week ${CURRENT_WEEK} result — pundix.com`;
   }
@@ -1982,7 +2049,6 @@ function openShareModal(type) {
   document.getElementById('shareModalTitle').textContent = titleText;
   document.getElementById('shareCardBody').innerHTML = bodyHTML.replace(/\n/g, '<br>');
   currentShareText = shareText;
-
   document.getElementById('shareModal').classList.add('open');
 }
 
@@ -2038,83 +2104,13 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════
-// HALL OF FAME
-// ══════════════════════════════════════════
-
-// Hall of Fame data — populated when weeks resolve
-// Structure: { season, week, name, score, prediction, actual }
-// For now stored in localStorage under 'pundix_hof'
-function getHOF() {
-  return JSON.parse(localStorage.getItem('pundix_hof') || '[]');
-}
-
-function renderHallOfFame() {
-  const hof = getHOF();
-  const el  = document.getElementById('hofRows');
-  if (!el) return;
-
-  if (hof.length === 0) {
-    el.innerHTML = `
-      <div class="hof-empty">
-        <div class="hof-empty-title">Season 1 in progress</div>
-        <div class="hof-empty-sub">The season champion is crowned at the end of 8 weeks.<br>Their name stays here permanently.</div>
-      </div>`;
-    return;
-  }
-
-  el.innerHTML = hof.map(entry => {
-    const fmt = entry.prediction ? '$' + Math.round(entry.prediction).toLocaleString('en-US') : '—';
-    return `<div class="hof-row">
-      <div class="hof-season">S${entry.season}</div>
-      <div>
-        <div class="hof-name">${escHtml(entry.name)} <span class="founder-badge" style="color:var(--orange);border-color:rgba(245,158,11,.4);">Champion</span></div>
-        <div class="hof-name-sub">Season ${entry.season} · Week ${entry.week} winner · Predicted ${fmt}</div>
-      </div>
-      <div class="hof-score">${entry.score || '—'} pts</div>
-    </div>`;
-  }).join('');
-}
-
-// ══════════════════════════════════════════
-// WEEKLY WINNER DISPLAY
-// ══════════════════════════════════════════
-
-// This is called post-resolution. For now it reads from localStorage 'pundix_weekly_winner'
-// In production this would come from the backend after Sunday close.
-function renderWeeklyWinner() {
-  const winner = JSON.parse(localStorage.getItem('pundix_weekly_winner') || 'null');
-  const card   = document.getElementById('weeklyWinnerCard');
-  if (!card) return;
-
-  if (!winner) {
-    card.style.display = 'none';
-    return;
-  }
-
-  card.style.display = 'block';
-  document.getElementById('winner-week-num').textContent = winner.week || CURRENT_WEEK;
-  document.getElementById('winner-name').textContent     = winner.name || '—';
-
-  const fmtPred   = winner.prediction ? '$' + Math.round(winner.prediction).toLocaleString('en-US') : '—';
-  const fmtActual = winner.actual     ? '$' + Math.round(winner.actual).toLocaleString('en-US')     : '—';
-  const errPct    = (winner.errorPct  || 0).toFixed(2);
-
-  document.getElementById('winner-detail').textContent =
-    `Predicted ${fmtPred} · Actual ${fmtActual} · ${errPct}% error`;
-  document.getElementById('winner-score').textContent =
-    winner.score ? winner.score + '/100' : '—';
-}
-
-// ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
 
-// Restore state on load
-(function init() {
+(async function init() {
   myPrediction = getMyPrediction();
 
   if (myPrediction && myPrediction.week === CURRENT_WEEK) {
-    // Already predicted this week — show locked state
     document.getElementById('predictForm').style.display = 'none';
     document.getElementById('lockedCard').classList.add('show');
     document.getElementById('lockedValue').textContent = '$' + Math.round(myPrediction.price).toLocaleString('en-US');
@@ -2122,21 +2118,22 @@ function renderWeeklyWinner() {
       `${myPrediction.name}, your call is locked in for Week ${CURRENT_WEEK}. Results published Sunday night.`;
   }
 
-  renderLeaderboard();
-  renderHallOfFame();
-  renderWeeklyWinner();
+  document.getElementById('lb-week-num').textContent   = CURRENT_WEEK;
+  document.getElementById('live-week-num').textContent = CURRENT_WEEK;
+
+  await Promise.all([
+    renderLeaderboard(),
+    renderHallOfFame(),
+    renderWeeklyWinner(),
+  ]);
+
   updateWindowStatus();
   fetchBTCPrice();
 
-  // Refresh countdown every second
   setInterval(updateWindowStatus, 1000);
-
-  // Refresh BTC every 60s
   setInterval(fetchBTCPrice, 60000);
-
-  // Leaderboard/week numbers
-  document.getElementById('lb-week-num').textContent = CURRENT_WEEK;
-  document.getElementById('live-week-num').textContent = CURRENT_WEEK;
+  // Refresh leaderboard every 30s so new players appear automatically
+  setInterval(renderLeaderboard, 30000);
 })();
 </script>
 
