@@ -1787,7 +1787,7 @@ body {
 
  
   <!-- ══ ADMIN PANEL ══ -->
-  <div class="panel" id="panel-admin" style="min-height:300px;">
+  <div class="panel" id="panel-admin" style="min-height:300px;padding-top:20px;">
 
     <!-- Password gate -->
     <div id="adminGate">
@@ -2604,7 +2604,12 @@ function switchTab(id) {
 
   if (id === 'live')   updateLivePanel();
   if (id === 'league') renderLeaderboard();
-  if (id === 'admin')  loadAdminDashboard();
+  if (id === 'admin') {
+    // Force panel visible in case querySelectorAll index is off
+    const adminPanel = document.getElementById('panel-admin');
+    if (adminPanel) adminPanel.classList.add('active');
+    loadAdminDashboard();
+  }
 }
 
 // ══════════════════════════════════════════
