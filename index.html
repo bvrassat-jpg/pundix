@@ -1540,18 +1540,20 @@ let myPrediction = null;
 
 async function sbFetch(path, opts = {}) {
   const url = SUPABASE_URL + '/rest/v1/' + path;
+  const headers = {
+    'apikey':        SUPABASE_ANON,
+    'Authorization': 'Bearer ' + SUPABASE_ANON,
+    'Content-Type':  'application/json',
+  };
+  if (opts.prefer) headers['Prefer'] = opts.prefer;
   const res = await fetch(url, {
-    ...opts,
-    headers: {
-      'apikey':        SUPABASE_ANON,
-      'Authorization': 'Bearer ' + SUPABASE_ANON,
-      'Content-Type':  'application/json',
-      'Prefer':        opts.prefer || '',
-      ...(opts.headers || {}),
-    },
+    method:  opts.method || 'GET',
+    headers,
+    body:    opts.body || undefined,
   });
   if (!res.ok) {
     const err = await res.text();
+    console.error('Supabase error', res.status, err);
     throw new Error('Supabase ' + res.status + ': ' + err);
   }
   const text = await res.text();
@@ -1585,9 +1587,8 @@ async function getAllPredictions() {
 async function savePrediction(entry) {
   // Upsert on (name, week) — last write wins if player edits
   await sbFetch('predictions', {
-    method:  'POST',
-    prefer:  'resolution=merge-duplicates',
-    headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
     body: JSON.stringify({
       name:         entry.name,
       price:        entry.price,
