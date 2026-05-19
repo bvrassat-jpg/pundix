@@ -114,7 +114,11 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.tabs::-webkit-scrollbar { display: none; }
 .tab {
   flex: 1;
   padding: 13px 16px;
@@ -1304,9 +1308,11 @@ body {
 
 /* ── ADMIN ── */
 .tab-admin {
-  margin-left: auto;
-  opacity: .5;
-  font-size: 11px;
+  flex: 0 0 auto !important;
+  padding: 13px 12px !important;
+  opacity: .6;
+  font-size: 10px !important;
+  letter-spacing: 1px !important;
 }
 .tab-admin:hover { opacity: 1; }
 .admin-gate-card {
@@ -1781,7 +1787,7 @@ body {
 
  
   <!-- ══ ADMIN PANEL ══ -->
-  <div class="panel" id="panel-admin">
+  <div class="panel" id="panel-admin" style="min-height:300px;">
 
     <!-- Password gate -->
     <div id="adminGate">
@@ -2692,7 +2698,7 @@ function renderNews(items) {
 // ADMIN
 // ══════════════════════════════════════════
 
-const ADMIN_PASSWORD = 'pundix123'; // change this to your own password
+const ADMIN_PASSWORD = 'pundix2025'; // change this to your own password
 const ADMIN_KEY      = 'pundix_admin_unlocked';
 
 function checkAdminPassword() {
@@ -2710,7 +2716,12 @@ function checkAdminPassword() {
 
 async function loadAdminDashboard() {
   // Check if already unlocked this session
-  if (sessionStorage.getItem(ADMIN_KEY) !== '1') return;
+  if (sessionStorage.getItem(ADMIN_KEY) !== '1') {
+    // Show gate, hide dashboard
+    document.getElementById('adminGate').style.display      = 'block';
+    document.getElementById('adminDashboard').style.display = 'none';
+    return;
+  }
 
   document.getElementById('adminGate').style.display      = 'none';
   document.getElementById('adminDashboard').style.display = 'block';
