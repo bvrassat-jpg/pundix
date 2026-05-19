@@ -284,6 +284,13 @@ body {
 }
 
 .form-row { margin-bottom: 18px; }
+.form-label-note {
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-dim);
+  opacity: .7;
+}
 .form-label {
   font-family: var(--mono);
   font-size: 11px;
@@ -1236,6 +1243,64 @@ body {
   margin-top: 2px;
 }
 
+
+/* ── RESOLVED BANNER ── */
+.resolved-banner {
+  display: none;
+  background: var(--navy);
+  border: 1px solid var(--orange);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.resolved-banner.show { display: block; }
+.resolved-banner-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 8px;
+}
+.resolved-banner-winner {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.resolved-banner-detail {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255,255,255,.6);
+  margin-bottom: 14px;
+}
+.resolved-banner-next {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--orange);
+  letter-spacing: .05em;
+}
+.predict-closed-msg {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.predict-closed-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.predict-closed-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
 </style>
 </head>
 <body>
@@ -1250,7 +1315,7 @@ body {
         <div class="logo-tag">BTC Weekly League</div>
       </div>
       <div class="hdr-right">
-        <div class="season-badge">Season 1</div>
+        <div class="season-badge" id="season-badge">Season 1</div>
         <div class="week-label" id="hdr-week">Week 1 · Open</div>
       </div>
     </div>
@@ -1280,6 +1345,14 @@ body {
         <span class="btc-change pos" id="btc-change">Live</span>
       </div>
       <div class="btc-meta" id="btc-meta">Fetching live price…</div>
+    </div>
+
+    <!-- Resolved Week Banner (shown when week_status = resolved) -->
+    <div class="resolved-banner" id="resolvedBanner">
+      <div class="resolved-banner-label">◈ Week <span id="resolved-week-num">1</span> · Final results</div>
+      <div class="resolved-banner-winner" id="resolved-winner-name">—</div>
+      <div class="resolved-banner-detail" id="resolved-winner-detail">—</div>
+      <div class="resolved-banner-next" id="resolved-next-msg">Next week opens soon</div>
     </div>
 
     <!-- News Section -->
@@ -1319,6 +1392,12 @@ body {
           <input class="form-input" id="playerName" type="text" placeholder="e.g. Bertrand or @satoshi_fan" autocomplete="off" oninput="updatePreview()">
         </div>
 
+        <!-- Email — used to prevent duplicate entries -->
+        <div class="form-row">
+          <label class="form-label" for="playerEmail">Your email <span class="form-label-note">· one entry per person · not shared</span></label>
+          <input class="form-input" id="playerEmail" type="email" placeholder="your@email.com" autocomplete="email">
+        </div>
+
         <!-- BTC price input -->
         <div class="btc-input-wrapper">
           <label class="btc-input-label" for="btcPrediction">Your BTC price prediction (USD)</label>
@@ -1343,6 +1422,12 @@ body {
           Lock in my prediction →
         </button>
       </div>
+    </div>
+
+    <!-- Week resolved / closed message -->
+    <div class="predict-closed-msg" id="weekClosedMsg" style="display:none;">
+      <div class="predict-closed-title">Week <span id="closed-week-num">1</span> is closed</div>
+      <div class="predict-closed-sub">Results are in — check the Leaderboard tab.<br>Week <span id="next-week-num">2</span> opens next Monday.</div>
     </div>
 
     <!-- Locked / success state -->
@@ -1625,11 +1710,14 @@ body {
 const SUPABASE_URL    = 'https://ukgvfahozidwilcqsjcu.supabase.co';
 const SUPABASE_ANON   = 'sb_publishable_SdUKAiao-DPQwnUbe0bjMA_gEGhCnGn';
 
-const CURRENT_WEEK = 1;
-const WEEK_CAP     = 50;
-const BTC_BASE     = 84200;
+// Week config — loaded dynamically from Supabase config table
+// These are fallback defaults only, overwritten on load
+let CURRENT_WEEK = 1;
+let WEEK_STATUS  = 'open';   // 'open' | 'resolved'
+const BTC_BASE   = 84200;
 
-const MY_KEY = 'pundix_btc_my_prediction'; // localStorage — only MY identity/prediction
+const MY_KEY      = 'pundix_btc_my_prediction'; // localStorage — identity on this device
+const MY_EMAIL_KEY = 'pundix_player_email';           // remember email across weeks
 
 let liveBTC      = BTC_BASE;
 let shareType    = 'prediction';
@@ -1664,6 +1752,22 @@ async function sbPost(path, body, prefer) {
 }
 
 // ══════════════════════════════════════════
+// CONFIG — load week number + status from Supabase
+// ══════════════════════════════════════════
+
+async function loadConfig() {
+  try {
+    const rows = await sbGet('config?select=current_week,week_status&limit=1');
+    if (rows && rows[0]) {
+      CURRENT_WEEK = rows[0].current_week || 1;
+      WEEK_STATUS  = rows[0].week_status  || 'open';
+    }
+  } catch(e) {
+    console.warn('loadConfig fallback — using defaults:', e.message);
+  }
+}
+
+// ══════════════════════════════════════════
 // PERSISTENCE  —  Supabase + localStorage fallback
 // ══════════════════════════════════════════
 
@@ -1691,6 +1795,7 @@ async function savePrediction(entry) {
     'predictions',
     {
       name:         entry.name,
+      email:        entry.email || null,
       price:        entry.price,
       week:         entry.week,
       btc_at_entry: entry.live || null,
@@ -1872,7 +1977,10 @@ function updateWindowStatus() {
   if (liveCd) liveCd.textContent = formatCountdown(resolveDate - now);
 
   const hdrWeek = document.getElementById('hdr-week');
-  if (hdrWeek) hdrWeek.textContent = 'Week ' + CURRENT_WEEK + ' · ' + (isOpen ? 'Open' : 'Closed');
+  if (hdrWeek) {
+    const label = WEEK_STATUS === 'resolved' ? 'Resolved' : (isOpen ? 'Open' : 'Closed');
+    hdrWeek.textContent = 'Week ' + CURRENT_WEEK + ' · ' + label;
+  }
 }
 
 // ══════════════════════════════════════════
@@ -1921,13 +2029,20 @@ let submitConfirmPending = false;
 
 function handleSubmitClick() {
   const name  = (document.getElementById('playerName')?.value || '').trim();
+  const email = (document.getElementById('playerEmail')?.value || '').trim().toLowerCase();
   const price = parseFloat(document.getElementById('btcPrediction')?.value || '0');
 
-  // Validate first
+  // Validate
   let ok = true;
   if (!name) {
     document.getElementById('playerName').classList.add('error');
     setTimeout(() => document.getElementById('playerName').classList.remove('error'), 1500);
+    ok = false;
+  }
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    document.getElementById('playerEmail').classList.add('error');
+    setTimeout(() => document.getElementById('playerEmail').classList.remove('error'), 1500);
+    showToast('Please enter a valid email address.');
     ok = false;
   }
   if (!price || price < 10000 || price > 500000) {
@@ -1967,6 +2082,7 @@ function handleSubmitClick() {
 
 async function submitPrediction() {
   const name  = (document.getElementById('playerName')?.value || '').trim();
+  const email = (document.getElementById('playerEmail')?.value || '').trim().toLowerCase();
   const price = parseFloat(document.getElementById('btcPrediction')?.value || '0');
 
   const { isOpen } = getWindowState();
@@ -1974,10 +2090,27 @@ async function submitPrediction() {
 
   const submitBtn = document.getElementById('submitBtn');
   submitBtn.disabled = true;
+  submitBtn.textContent = 'Checking…';
+
+  // One prediction per email per week — enforced here
+  try {
+    const existing = await sbGet(
+      'predictions?email=eq.' + encodeURIComponent(email) +
+      '&week=eq.' + CURRENT_WEEK + '&select=name,price&limit=1'
+    );
+    if (existing && existing.length > 0) {
+      const oldPrice = '$' + Math.round(existing[0].price).toLocaleString('en-US');
+      showToast(existing[0].name + ' already predicted ' + oldPrice + ' this week.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Lock in my prediction →';
+      return;
+    }
+  } catch(e) { /* proceed if check fails */ }
 
   submitBtn.textContent = 'Saving…';
+  localStorage.setItem(MY_EMAIL_KEY, email);
 
-  const entry = { name, price, week: CURRENT_WEEK, ts: Date.now(), live: liveBTC };
+  const entry = { name, email, price, week: CURRENT_WEEK, ts: Date.now(), live: liveBTC };
 
   try {
     await savePrediction(entry);
@@ -1988,7 +2121,9 @@ async function submitPrediction() {
     document.getElementById('lockedCard').classList.add('show');
     document.getElementById('lockedValue').textContent = '$' + Math.round(price).toLocaleString('en-US');
     document.getElementById('lockedSub').textContent =
-      `${name}, your call is locked in for Week ${CURRENT_WEEK}. Results are published Sunday night.`;
+      WEEK_STATUS === 'resolved'
+        ? `${name}, your prediction for Week ${CURRENT_WEEK} is final. Check the Leaderboard for results.`
+        : `${name}, your call is locked in for Week ${CURRENT_WEEK}. Results are published Sunday night.`;
 
     renderLeaderboard();
     updateLivePanel();
@@ -2024,9 +2159,8 @@ async function renderLeaderboard() {
 
   const metaEl = document.getElementById('lb-meta');
   if (metaEl) {
-    metaEl.textContent = n < 50
-      ? 'Week ' + CURRENT_WEEK + ' · Early cohort · ' + n + ' players'
-      : 'Week ' + CURRENT_WEEK + ' · In progress · ' + n + ' players';
+    const statusLabel = WEEK_STATUS === 'resolved' ? 'Resolved' : 'In progress';
+    metaEl.textContent = 'Week ' + CURRENT_WEEK + ' · ' + statusLabel + ' · ' + n + ' players';
   }
 
   if (n === 0) {
@@ -2039,7 +2173,13 @@ async function renderLeaderboard() {
     return;
   }
 
-  const sorted = [...all].sort((a, b) => a.ts - b.ts);
+  // Sort by score (desc) when scores exist, otherwise by submission time (asc)
+  const hasScores = all.some(p => p.score != null);
+  const sorted = [...all].sort((a, b) =>
+    hasScores
+      ? (b.score ?? -1) - (a.score ?? -1)   // highest score first
+      : a.ts - b.ts                           // earliest submission first
+  );
 
   const rows = sorted.map((p, i) => {
     const isMe      = myPred && p.name === myPred.name && p.week === myPred.week;
@@ -2121,6 +2261,51 @@ async function updateLivePanel() {
     const posEl = document.getElementById('live-position');
     if (posEl) { posEl.textContent = 'First prediction in!'; posEl.className = 'consensus-band-value above'; }
   }
+}
+
+// ══════════════════════════════════════════
+// RESOLVED STATE
+// ══════════════════════════════════════════
+
+async function renderResolvedBanner() {
+  const banner = document.getElementById('resolvedBanner');
+  const form   = document.getElementById('predictForm');
+  const locked = document.getElementById('lockedCard');
+  if (!banner) return;
+
+  if (WEEK_STATUS !== 'resolved') {
+    banner.classList.remove('show');
+    return;
+  }
+
+  // Show banner
+  banner.classList.add('show');
+  document.getElementById('resolved-week-num').textContent = CURRENT_WEEK;
+
+  // Hide predict form — week is over
+  if (form && !myPrediction) {
+    form.style.display = 'none';
+    // Show closed message instead
+    const closed = document.getElementById('weekClosedMsg');
+    if (closed) closed.style.display = 'block';
+  }
+
+  // Populate winner details from weekly_winners
+  try {
+    const rows = await sbGet('weekly_winners?week=eq.' + CURRENT_WEEK + '&select=*&limit=1');
+    if (rows && rows[0]) {
+      const w = rows[0];
+      const fmtPred   = w.prediction ? '$' + Math.round(w.prediction).toLocaleString('en-US') : '—';
+      const fmtActual = w.actual     ? '$' + Math.round(w.actual).toLocaleString('en-US')     : '—';
+      document.getElementById('resolved-winner-name').textContent =
+        '🏆 ' + (w.name || '—');
+      document.getElementById('resolved-winner-detail').textContent =
+        'Predicted ' + fmtPred + ' · Actual close ' + fmtActual +
+        ' · ' + (w.error_pct || 0).toFixed(2) + '% error · ' + (w.score || '—') + ' pts';
+      document.getElementById('resolved-next-msg').textContent =
+        'Week ' + (CURRENT_WEEK + 1) + ' opens next Monday';
+    }
+  } catch(e) { console.warn('renderResolvedBanner:', e.message); }
 }
 
 // ══════════════════════════════════════════
@@ -2343,9 +2528,28 @@ function renderNews(items) {
 // ══════════════════════════════════════════
 
 (async function init() {
+  // Load week config from Supabase first — everything depends on CURRENT_WEEK
+  await loadConfig();
+
   myPrediction = getMyPrediction();
 
-  if (myPrediction && myPrediction.week === CURRENT_WEEK) {
+  // Pre-fill email if returning player
+  const savedEmail = localStorage.getItem(MY_EMAIL_KEY);
+  if (savedEmail) {
+    const emailEl = document.getElementById('playerEmail');
+    if (emailEl) emailEl.value = savedEmail;
+  }
+
+  // Update all week number displays
+  document.getElementById('lb-week-num').textContent    = CURRENT_WEEK;
+  document.getElementById('live-week-num').textContent  = CURRENT_WEEK;
+  const closedWk = document.getElementById('closed-week-num');
+  const nextWk   = document.getElementById('next-week-num');
+  if (closedWk) closedWk.textContent = CURRENT_WEEK;
+  if (nextWk)   nextWk.textContent   = CURRENT_WEEK + 1;
+
+  // Locked prediction state (only relevant if week is open)
+  if (myPrediction && myPrediction.week === CURRENT_WEEK && WEEK_STATUS === 'open') {
     document.getElementById('predictForm').style.display = 'none';
     document.getElementById('lockedCard').classList.add('show');
     document.getElementById('lockedValue').textContent = '$' + Math.round(myPrediction.price).toLocaleString('en-US');
@@ -2353,9 +2557,18 @@ function renderNews(items) {
       `${myPrediction.name}, your call is locked in for Week ${CURRENT_WEEK}. Results published Sunday night.`;
   }
 
-  document.getElementById('lb-week-num').textContent   = CURRENT_WEEK;
-  document.getElementById('live-week-num').textContent = CURRENT_WEEK;
+  // If week resolved — hide form, show closed msg
+  if (WEEK_STATUS === 'resolved') {
+    const form = document.getElementById('predictForm');
+    if (form) form.style.display = 'none';
+    const closedMsg = document.getElementById('weekClosedMsg');
+    if (closedMsg) closedMsg.style.display = 'block';
+    // Also disable submit button
+    const btn = document.getElementById('submitBtn');
+    if (btn) btn.disabled = true;
+  }
 
+  renderResolvedBanner();
   renderLeaderboard();
   renderHallOfFame();
   renderWeeklyWinner();
@@ -2363,11 +2576,9 @@ function renderNews(items) {
   updateWindowStatus();
   fetchBTCPrice();
   fetchNews();
-  setInterval(fetchNews, 5 * 60 * 1000); // refresh every 5 min
-
+  setInterval(fetchNews, 5 * 60 * 1000);
   setInterval(updateWindowStatus, 1000);
   setInterval(fetchBTCPrice, 60000);
-  // Refresh leaderboard every 30s so new players appear automatically
   setInterval(() => {
     if (!document.hidden) renderLeaderboard();
   }, 30000);
