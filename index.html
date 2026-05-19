@@ -2278,50 +2278,40 @@ async function fetchNews() {
   const el = document.getElementById('newsList');
   if (!el) return;
 
-  // Binance Square news — same domain already used for BTC price, no CORS issue
-  try {
-    const r = await fetch(
-      'https://www.binance.com/bapi/composite/v1/public/cms/article/list/query' +
-      '?type=1&pageNo=1&pageSize=5&tag=Bitcoin'
-    );
-    if (r.ok) {
-      const d = await r.json();
-      const rows = d?.data?.articles?.rows || d?.data?.rows || [];
-      if (rows.length) {
-        renderNews(rows.map(item => ({
-          title:  item.title,
-          url:    'https://www.binance.com/en/square/news/' + item.id,
-          source: 'Binance News',
-          age:    timeAgo(new Date(item.releaseDate || item.publishDate || Date.now())),
-        })));
-        return;
-      }
-    }
-  } catch(e) { console.warn('Binance news failed:', e.message); }
+  // Parse an RSS feed returned via allorigins proxy
+  function parseRSS(contents, source) {
+    const xml = new DOMParser().parseFromString(contents, 'text/xml');
+    const items = [...xml.querySelectorAll('item')].slice(0, 5);
+    if (!items.length) return null;
+    return items.map(item => {
+      // <link> in RSS is a text node after the tag, not an attribute
+      const linkEl = item.querySelector('link');
+      const url = linkEl?.nextSibling?.nodeValue?.trim()
+               || linkEl?.textContent?.trim()
+               || '#';
+      const rawTitle = item.querySelector('title')?.textContent || '';
+      const title = rawTitle.replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '').trim();
+      const pub = item.querySelector('pubDate')?.textContent;
+      return { title, url, source, age: timeAgo(pub ? new Date(pub) : new Date()) };
+    });
+  }
 
-  // Fallback: CoinTelegraph via allorigins
-  try {
-    const r = await fetch(
-      'https://api.allorigins.win/get?url=' + encodeURIComponent('https://cointelegraph.com/rss/tag/bitcoin')
-    );
-    if (r.ok) {
+  const feeds = [
+    { url: 'https://cointelegraph.com/rss/tag/bitcoin',        source: 'CoinTelegraph' },
+    { url: 'https://coinjournal.net/feed/',                    source: 'CoinJournal'   },
+    { url: 'https://bitcoinmagazine.com/.rss/full/',           source: 'Bitcoin Mag'   },
+  ];
+
+  for (const feed of feeds) {
+    try {
+      const r = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(feed.url));
+      if (!r.ok) continue;
       const d = await r.json();
-      if (d?.contents) {
-        const xml = new DOMParser().parseFromString(d.contents, 'text/xml');
-        const items = [...xml.querySelectorAll('item')].slice(0, 5);
-        if (items.length) {
-          renderNews(items.map(item => ({
-            title:  item.querySelector('title')?.textContent?.trim() || '',
-            url:    item.querySelector('link')?.nextSibling?.nodeValue?.trim()
-                    || item.querySelector('link')?.textContent?.trim() || '#',
-            source: 'CoinTelegraph',
-            age:    timeAgo(new Date(item.querySelector('pubDate')?.textContent || Date.now())),
-          })));
-          return;
-        }
-      }
-    }
-  } catch(e) { console.warn('CoinTelegraph RSS failed:', e.message); }
+      if (!d?.contents) continue;
+      const items = parseRSS(d.contents, feed.source);
+      if (items && items.length) { renderNews(items); return; }
+    } catch(e) { console.warn(feed.source + ' failed:', e.message); }
+  }
 
   el.innerHTML = '<div class="news-loading">Headlines unavailable — check back later</div>';
 }
