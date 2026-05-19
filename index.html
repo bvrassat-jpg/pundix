@@ -1301,6 +1301,105 @@ body {
   color: var(--text-dim);
 }
 
+
+/* ── ADMIN ── */
+.tab-admin {
+  margin-left: auto;
+  opacity: .5;
+  font-size: 11px;
+}
+.tab-admin:hover { opacity: 1; }
+.admin-gate-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px 28px;
+  text-align: center;
+  max-width: 360px;
+  margin: 40px auto;
+}
+.admin-gate-icon { font-size: 32px; margin-bottom: 12px; }
+.admin-gate-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.admin-gate-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.admin-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 20px;
+  margin-bottom: 16px;
+}
+.admin-card-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+.admin-card-sub {
+  font-size: 12px;
+  color: var(--text-mid);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+.admin-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.admin-status-row:last-child { border-bottom: none; }
+.admin-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.admin-value {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+.admin-pred-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.admin-pred-row:last-child { border-bottom: none; }
+.admin-pred-name { font-weight: 600; color: var(--text); }
+.admin-pred-price { font-family: var(--mono); font-size: 11px; color: var(--text-mid); }
+.admin-pred-score {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--orange);
+  text-align: right;
+  min-width: 50px;
+}
+.admin-pred-score.scored { color: var(--blue); }
+.admin-empty {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 16px 0;
+}
+
 </style>
 </head>
 <body>
@@ -1315,7 +1414,7 @@ body {
         <div class="logo-tag">BTC Weekly League</div>
       </div>
       <div class="hdr-right">
-        <div class="season-badge" id="season-badge">Season 1</div>
+        <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
         <div class="week-label" id="hdr-week">Week 1 · Open</div>
       </div>
     </div>
@@ -1327,6 +1426,7 @@ body {
     <button class="tab" onclick="switchTab('live')">Live Week</button>
     <button class="tab" onclick="switchTab('league')">League</button>
     <button class="tab" onclick="switchTab('how')">How it works</button>
+    <button class="tab tab-admin" id="adminTab" onclick="switchTab('admin')" style="display:none">⚙ Admin</button>
   </div>
 
   <!-- ══ PREDICT PANEL ══ -->
@@ -1679,7 +1779,71 @@ body {
       </div>
     </div>
 
-  </div>
+ 
+  <!-- ══ ADMIN PANEL ══ -->
+  <div class="panel" id="panel-admin">
+
+    <!-- Password gate -->
+    <div id="adminGate">
+      <div class="admin-gate-card">
+        <div class="admin-gate-icon">⚙</div>
+        <div class="admin-gate-title">Admin Access</div>
+        <div class="admin-gate-sub">Enter your admin password to continue</div>
+        <input class="form-input" id="adminPasswordInput" type="password" placeholder="Password" style="margin:16px 0 12px;">
+        <button class="submit-btn" onclick="checkAdminPassword()" style="width:100%">Enter</button>
+        <div id="adminGateError" style="color:var(--red);font-family:var(--mono);font-size:11px;margin-top:8px;display:none;">Incorrect password</div>
+      </div>
+    </div>
+
+    <!-- Admin dashboard (shown after password) -->
+    <div id="adminDashboard" style="display:none">
+
+      <div class="admin-card">
+        <div class="admin-card-title">Current State</div>
+        <div class="admin-status-row">
+          <span class="admin-label">Week</span>
+          <span class="admin-value" id="admin-current-week">—</span>
+        </div>
+        <div class="admin-status-row">
+          <span class="admin-label">Status</span>
+          <span class="admin-value" id="admin-week-status">—</span>
+        </div>
+        <div class="admin-status-row">
+          <span class="admin-label">Predictions</span>
+          <span class="admin-value" id="admin-prediction-count">—</span>
+        </div>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-title">This Week's Predictions</div>
+        <div id="adminPredictionsList"></div>
+      </div>
+
+      <div class="admin-card" id="adminResolveCard">
+        <div class="admin-card-title">Resolve Week <span id="admin-resolve-week">—</span></div>
+        <div class="admin-card-sub">Enter the BTC Sunday close price to score all predictions and declare the winner automatically.</div>
+        <div style="margin:16px 0 8px;">
+          <label class="form-label">BTC Closing Price (USD)</label>
+          <input class="form-input" id="adminClosePrice" type="number" placeholder="e.g. 84500" min="10000" max="500000">
+        </div>
+        <button class="submit-btn" id="adminResolveBtn" onclick="resolveWeek()" style="width:100%;margin-top:8px;">
+          Resolve Week & Score All →
+        </button>
+        <div id="adminResolveStatus" style="font-family:var(--mono);font-size:11px;margin-top:10px;display:none;"></div>
+      </div>
+
+      <div class="admin-card" id="adminNextWeekCard" style="display:none">
+        <div class="admin-card-title">Start Next Week</div>
+        <div class="admin-card-sub">Opens Week <span id="admin-next-week-num">—</span> and resets the prediction window.</div>
+        <button class="submit-btn" id="adminNextWeekBtn" onclick="startNextWeek()" style="width:100%;background:var(--green);margin-top:12px;">
+          Start Week <span id="admin-next-week-btn-num">—</span> →
+        </button>
+        <div id="adminNextWeekStatus" style="font-family:var(--mono);font-size:11px;margin-top:10px;display:none;"></div>
+      </div>
+
+    </div>
+  </div><!-- end admin panel -->
+ </div>
 
 </div><!-- end shell -->
 
@@ -2424,7 +2588,7 @@ function copyShareText() {
 // ══════════════════════════════════════════
 
 function switchTab(id) {
-  const ids = ['predict','live','league','how'];
+  const ids = ['predict','live','league','how','admin'];
   document.querySelectorAll('.tab').forEach((t, i) => {
     t.classList.toggle('active', ids[i] === id);
   });
@@ -2432,8 +2596,9 @@ function switchTab(id) {
     p.classList.toggle('active', p.id === 'panel-' + id);
   });
 
-  if (id === 'live')   updateLivePanel();   // async, fire-and-forget
-  if (id === 'league') renderLeaderboard(); // async, fire-and-forget
+  if (id === 'live')   updateLivePanel();
+  if (id === 'league') renderLeaderboard();
+  if (id === 'admin')  loadAdminDashboard();
 }
 
 // ══════════════════════════════════════════
@@ -2521,6 +2686,236 @@ function renderNews(items) {
       </div>
       <div class="news-item-arrow">↗</div>
     </a>`).join('');
+}
+
+// ══════════════════════════════════════════
+// ADMIN
+// ══════════════════════════════════════════
+
+const ADMIN_PASSWORD = 'pundix123'; // change this to your own password
+const ADMIN_KEY      = 'pundix_admin_unlocked';
+
+function checkAdminPassword() {
+  const input = document.getElementById('adminPasswordInput')?.value || '';
+  if (input === ADMIN_PASSWORD) {
+    sessionStorage.setItem(ADMIN_KEY, '1');
+    document.getElementById('adminGate').style.display      = 'none';
+    document.getElementById('adminDashboard').style.display = 'block';
+    loadAdminDashboard();
+  } else {
+    const err = document.getElementById('adminGateError');
+    if (err) { err.style.display = 'block'; setTimeout(() => err.style.display = 'none', 2000); }
+  }
+}
+
+async function loadAdminDashboard() {
+  // Check if already unlocked this session
+  if (sessionStorage.getItem(ADMIN_KEY) !== '1') return;
+
+  document.getElementById('adminGate').style.display      = 'none';
+  document.getElementById('adminDashboard').style.display = 'block';
+
+  // Update state display
+  document.getElementById('admin-current-week').textContent = CURRENT_WEEK;
+  document.getElementById('admin-week-status').textContent  = WEEK_STATUS;
+  document.getElementById('admin-resolve-week').textContent = CURRENT_WEEK;
+  document.getElementById('admin-next-week-num').textContent    = CURRENT_WEEK + 1;
+  document.getElementById('admin-next-week-btn-num').textContent = CURRENT_WEEK + 1;
+
+  // Show/hide resolve vs next week cards
+  const resolveCard  = document.getElementById('adminResolveCard');
+  const nextWeekCard = document.getElementById('adminNextWeekCard');
+  if (resolveCard)  resolveCard.style.display  = WEEK_STATUS === 'open'     ? 'block' : 'none';
+  if (nextWeekCard) nextWeekCard.style.display = WEEK_STATUS === 'resolved' ? 'block' : 'none';
+
+  // Load predictions
+  try {
+    const preds = await sbGet(
+      'predictions?week=eq.' + CURRENT_WEEK + '&select=name,email,price,score&order=submitted_at.asc'
+    );
+    document.getElementById('admin-prediction-count').textContent = (preds || []).length;
+
+    const listEl = document.getElementById('adminPredictionsList');
+    if (!preds || preds.length === 0) {
+      listEl.innerHTML = '<div class="admin-empty">No predictions yet this week</div>';
+    } else {
+      listEl.innerHTML = preds.map(p => {
+        const fmtPrice = '$' + Math.round(p.price).toLocaleString('en-US');
+        const scoreStr = p.score != null ? p.score + ' pts' : '—';
+        const scoreCls = p.score != null ? 'admin-pred-score scored' : 'admin-pred-score';
+        return `<div class="admin-pred-row">
+          <div>
+            <div class="admin-pred-name">${escHtml(p.name)}</div>
+            <div class="admin-pred-price">${escHtml(p.email || '')}</div>
+          </div>
+          <div class="admin-pred-price">${fmtPrice}</div>
+          <div class="${scoreCls}">${scoreStr}</div>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) {
+    console.error('loadAdminDashboard:', e);
+  }
+}
+
+async function resolveWeek() {
+  const closePrice = parseFloat(document.getElementById('adminClosePrice')?.value || '0');
+  if (!closePrice || closePrice < 10000 || closePrice > 500000) {
+    showToast('Enter a valid BTC closing price.');
+    return;
+  }
+
+  const btn    = document.getElementById('adminResolveBtn');
+  const status = document.getElementById('adminResolveStatus');
+  btn.disabled = true;
+  btn.textContent = 'Resolving…';
+
+  try {
+    // 1. Score all predictions for this week
+    const preds = await sbGet(
+      'predictions?week=eq.' + CURRENT_WEEK + '&select=id,name,price&order=submitted_at.asc'
+    );
+
+    if (!preds || preds.length === 0) {
+      showToast('No predictions to score this week.');
+      btn.disabled = false;
+      btn.textContent = 'Resolve Week & Score All →';
+      return;
+    }
+
+    // Score each prediction
+    for (const p of preds) {
+      const E     = Math.abs(p.price - closePrice) / closePrice;
+      const score = Math.round(100 / (1 + 10 * E * E));
+      await sbFetchAdmin(
+        'predictions?id=eq.' + p.id,
+        { method: 'PATCH', body: JSON.stringify({ score }) }
+      );
+    }
+
+    // 2. Find winner (highest score)
+    const scored = preds.map(p => {
+      const E = Math.abs(p.price - closePrice) / closePrice;
+      return { ...p, score: Math.round(100 / (1 + 10 * E * E)) };
+    }).sort((a, b) => b.score - a.score);
+
+    const winner = scored[0];
+    const errPct = parseFloat(((Math.abs(winner.price - closePrice) / closePrice) * 100).toFixed(2));
+
+    // 3. Insert weekly winner
+    await sbFetchAdmin('weekly_winners', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=minimal',
+      body: JSON.stringify({
+        week:       CURRENT_WEEK,
+        name:       winner.name,
+        prediction: winner.price,
+        actual:     closePrice,
+        error_pct:  errPct,
+        score:      winner.score,
+      })
+    });
+
+    // 4. Set week_status to resolved in config
+    await sbFetchAdmin('config?id=eq.1', {
+      method: 'PATCH',
+      body: JSON.stringify({ week_status: 'resolved' })
+    });
+
+    WEEK_STATUS = 'resolved';
+
+    // Show success
+    status.style.display = 'block';
+    status.style.color   = 'var(--green)';
+    status.textContent   = '✓ Week ' + CURRENT_WEEK + ' resolved. Winner: ' + winner.name +
+                           ' (' + winner.score + ' pts). Leaderboard updated.';
+
+    btn.textContent = '✓ Done';
+    loadAdminDashboard();
+    renderResolvedBanner();
+    renderLeaderboard();
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Resolve Week & Score All →';
+    status.style.display = 'block';
+    status.style.color   = 'var(--red)';
+    status.textContent   = 'Error: ' + e.message;
+    console.error('resolveWeek:', e);
+  }
+}
+
+async function startNextWeek() {
+  const btn    = document.getElementById('adminNextWeekBtn');
+  const status = document.getElementById('adminNextWeekStatus');
+  btn.disabled = true;
+  btn.textContent = 'Starting…';
+
+  try {
+    const nextWeek = CURRENT_WEEK + 1;
+    await sbFetchAdmin('config?id=eq.1', {
+      method: 'PATCH',
+      body: JSON.stringify({ current_week: nextWeek, week_status: 'open' })
+    });
+
+    CURRENT_WEEK = nextWeek;
+    WEEK_STATUS  = 'open';
+
+    status.style.display = 'block';
+    status.style.color   = 'var(--green)';
+    status.textContent   = '✓ Week ' + CURRENT_WEEK + ' is now open.';
+
+    btn.textContent = '✓ Done';
+    loadAdminDashboard();
+    renderResolvedBanner();
+    renderLeaderboard();
+
+    // Update all week displays
+    document.getElementById('lb-week-num').textContent    = CURRENT_WEEK;
+    document.getElementById('live-week-num').textContent  = CURRENT_WEEK;
+    const hdrWeek = document.getElementById('hdr-week');
+    if (hdrWeek) hdrWeek.textContent = 'Week ' + CURRENT_WEEK + ' · Open';
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Start Week ' + (CURRENT_WEEK + 1) + ' →';
+    status.style.display = 'block';
+    status.style.color   = 'var(--red)';
+    status.textContent   = 'Error: ' + e.message;
+  }
+}
+
+// Admin-specific fetch that can PATCH/UPDATE (uses same key — RLS allows it for anon)
+async function sbFetchAdmin(path, opts = {}) {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method:  opts.method || 'GET',
+    headers: {
+      ...HDRS,
+      'Prefer': opts.prefer || 'return=minimal',
+    },
+    body: opts.body || undefined,
+  });
+  if (!r.ok) {
+    const e = await r.text();
+    throw new Error('Supabase ' + r.status + ': ' + e);
+  }
+}
+
+// Secret: triple-tap on the Season badge reveals the admin tab
+let adminTapCount = 0;
+let adminTapTimer = null;
+function handleSeasonBadgeTap() {
+  adminTapCount++;
+  clearTimeout(adminTapTimer);
+  adminTapTimer = setTimeout(() => { adminTapCount = 0; }, 1500);
+  if (adminTapCount >= 3) {
+    adminTapCount = 0;
+    const adminTab = document.getElementById('adminTab');
+    if (adminTab) {
+      adminTab.style.display = 'block';
+      switchTab('admin');
+    }
+  }
 }
 
 // ══════════════════════════════════════════
