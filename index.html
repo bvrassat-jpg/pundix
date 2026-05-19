@@ -225,7 +225,7 @@ body {
   display: inline-block;
 }
 .btc-change.pos { color: var(--green); background: rgba(15,138,82,.2); }
-.btc-change.neg { color: #ff6b6b; background: rgba(214,59,47,.2); }
+.btc-change.neg { color: var(--red); background: rgba(214,59,47,.2); }
 .btc-meta {
   font-family: var(--mono);
   font-size: 11px;
@@ -432,7 +432,7 @@ body {
   cursor: pointer;
   transition: all .2s;
 }
-.submit-btn:hover { background: #1560d4; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(29,111,232,.3); }
+.submit-btn:hover { background: #1858cc; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(29,111,232,.3); }
 .submit-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
 
 /* ── SUCCESS / LOCKED STATE ── */
@@ -505,13 +505,8 @@ body {
   color: var(--navy);
   font-weight: 700;
 }
-.locked-btn-share:hover { background: #d97706; }
-.locked-btn-change {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,.2);
-  color: rgba(255,255,255,.6);
-}
-.locked-btn-change:hover { border-color: rgba(255,255,255,.4); color: #fff; }
+.locked-btn-share:hover { background: var(--orange); filter: brightness(.9); }
+
 
 /* ── SHARE CARD MODAL ── */
 .modal-overlay {
@@ -583,7 +578,7 @@ body {
   border: none;
 }
 .share-modal-btn-copy { background: var(--blue); color: #fff; font-weight: 700; }
-.share-modal-btn-copy:hover { background: #1560d4; }
+.share-modal-btn-copy:hover { background: #1858cc; }
 .share-modal-btn-close { background: transparent; border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.6); }
 .share-modal-btn-close:hover { color: #fff; border-color: rgba(255,255,255,.4); }
 
@@ -673,8 +668,8 @@ body {
   font-weight: 700;
   color: #fff;
 }
-.consensus-band-value.above { color: var(--green); }
-.consensus-band-value.below { color: #ff8585; }
+.consensus-band-value.above { color: var(--orange); }
+.consensus-band-value.below { color: var(--red); }
 .consensus-band-value.inline-c { color: rgba(255,255,255,.7); }
 
 /* countdown card */
@@ -1148,6 +1143,99 @@ body {
   .share-modal-btns { flex-direction: column; }
   .btc-input-field { font-size: 28px; }
 }
+
+/* ── NEWS ─────────────────────────────── */
+.news-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.news-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.news-card-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.news-card-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--orange);
+  flex-shrink: 0;
+}
+.news-card-refresh {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.news-card-refresh:hover { color: var(--blue); }
+.news-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  transition: background .12s;
+}
+.news-item:last-child { border-bottom: none; }
+.news-item:hover { background: var(--surface); }
+.news-item-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--orange);
+  flex-shrink: 0;
+  min-width: 14px;
+  margin-top: 1px;
+}
+.news-item-body { flex: 1; min-width: 0; }
+.news-item-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+.news-item-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.news-loading {
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+}
+.news-item-arrow {
+  font-size: 10px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 </style>
 </head>
 <body>
@@ -1195,12 +1283,15 @@ body {
     </div>
 
     <!-- News Section -->
-    <div class="news-section">
-      <div class="news-header">
-        <div class="news-dot"></div>
-        <div class="news-header-title">BTC &amp; Crypto Headlines</div>
+    <div class="news-card">
+      <div class="news-card-header">
+        <div class="news-card-title">
+          <div class="news-card-dot"></div>
+          BTC &amp; Crypto Headlines
+        </div>
+        <button class="news-card-refresh" onclick="fetchNews()" title="Refresh">↻ refresh</button>
       </div>
-      <div id="newsList" class="news-list">
+      <div id="newsList">
         <div class="news-loading">Loading headlines…</div>
       </div>
     </div>
@@ -1248,7 +1339,7 @@ body {
         </button>
 
         <!-- Submit -->
-        <button class="submit-btn" id="submitBtn" onclick="submitPrediction()">
+        <button class="submit-btn" id="submitBtn" onclick="handleSubmitClick()">
           Lock in my prediction →
         </button>
       </div>
@@ -1265,7 +1356,6 @@ body {
       </div>
       <div class="locked-btns">
         <button class="locked-btn locked-btn-share" onclick="openShareModal('prediction')">↗ Share my prediction</button>
-        <button class="locked-btn locked-btn-change" onclick="changeMyPrediction()">Edit prediction</button>
       </div>
     </div>
 
@@ -1827,10 +1917,13 @@ function updatePreview() {
 // SUBMIT
 // ══════════════════════════════════════════
 
-async function submitPrediction() {
+let submitConfirmPending = false;
+
+function handleSubmitClick() {
   const name  = (document.getElementById('playerName')?.value || '').trim();
   const price = parseFloat(document.getElementById('btcPrediction')?.value || '0');
 
+  // Validate first
   let ok = true;
   if (!name) {
     document.getElementById('playerName').classList.add('error');
@@ -1844,11 +1937,44 @@ async function submitPrediction() {
   }
   if (!ok) return;
 
+  const btn = document.getElementById('submitBtn');
+
+  if (!submitConfirmPending) {
+    // First click — show confirmation state
+    submitConfirmPending = true;
+    const fmtPrice = '$' + Math.round(price).toLocaleString('en-US');
+    btn.textContent = '✓ Confirm ' + fmtPrice + ' — tap again to lock in';
+    btn.style.background = 'var(--orange)';
+    btn.style.color = 'var(--navy)';
+
+    // Reset after 4 seconds if user doesn't confirm
+    setTimeout(() => {
+      if (submitConfirmPending) {
+        submitConfirmPending = false;
+        btn.textContent = 'Lock in my prediction →';
+        btn.style.background = '';
+        btn.style.color = '';
+      }
+    }, 4000);
+  } else {
+    // Second click — actually submit
+    submitConfirmPending = false;
+    btn.style.background = '';
+    btn.style.color = '';
+    submitPrediction();
+  }
+}
+
+async function submitPrediction() {
+  const name  = (document.getElementById('playerName')?.value || '').trim();
+  const price = parseFloat(document.getElementById('btcPrediction')?.value || '0');
+
   const { isOpen } = getWindowState();
   if (!isOpen) { showToast('Predictions are closed for this week.'); return; }
 
   const submitBtn = document.getElementById('submitBtn');
   submitBtn.disabled = true;
+
   submitBtn.textContent = 'Saving…';
 
   const entry = { name, price, week: CURRENT_WEEK, ts: Date.now(), live: liveBTC };
@@ -1873,15 +1999,7 @@ async function submitPrediction() {
   }
 }
 
-async function changeMyPrediction() {
-  const { isOpen } = getWindowState();
-  if (!isOpen) { showToast('Window is closed — predictions are locked.'); return; }
-  clearMyPrediction();
-  myPrediction = null;
-  document.getElementById('lockedCard').classList.remove('show');
-  document.getElementById('predictForm').style.display = 'block';
-  renderLeaderboard(); // async, fire-and-forget
-}
+// changeMyPrediction removed — predictions are permanent once submitted
 
 // ══════════════════════════════════════════
 // LEADERBOARD
@@ -2160,68 +2278,50 @@ async function fetchNews() {
   const el = document.getElementById('newsList');
   if (!el) return;
 
-  const sources = [
-    // Source 1: CoinGecko news API — no key, CORS enabled
-    {
-      url: 'https://api.coingecko.com/api/v3/news?per_page=5',
-      parse: d => Array.isArray(d) && d.length
-        ? d.slice(0,5).map(item => ({
-            title:  item.title,
-            url:    item.url,
-            source: item.author || 'CoinGecko',
-            age:    timeAgo(item.updated_at ? new Date(item.updated_at * 1000) : new Date()),
-          }))
-        : null
-    },
-    // Source 2: Messari news — public RSS via allorigins proxy
-    {
-      url: 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://messari.io/rss/news/category/bitcoin'),
-      parse: d => {
-        if (!d?.contents) return null;
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(d.contents, 'text/xml');
-        const items = [...xml.querySelectorAll('item')].slice(0,5);
-        if (!items.length) return null;
-        return items.map(item => ({
-          title:  item.querySelector('title')?.textContent || '',
-          url:    item.querySelector('link')?.textContent || '#',
-          source: 'Messari',
-          age:    timeAgo(new Date(item.querySelector('pubDate')?.textContent || Date.now())),
-        }));
+  // Binance Square news — same domain already used for BTC price, no CORS issue
+  try {
+    const r = await fetch(
+      'https://www.binance.com/bapi/composite/v1/public/cms/article/list/query' +
+      '?type=1&pageNo=1&pageSize=5&tag=Bitcoin'
+    );
+    if (r.ok) {
+      const d = await r.json();
+      const rows = d?.data?.articles?.rows || d?.data?.rows || [];
+      if (rows.length) {
+        renderNews(rows.map(item => ({
+          title:  item.title,
+          url:    'https://www.binance.com/en/square/news/' + item.id,
+          source: 'Binance News',
+          age:    timeAgo(new Date(item.releaseDate || item.publishDate || Date.now())),
+        })));
+        return;
       }
-    },
-    // Source 3: CoinDesk RSS via allorigins proxy
-    {
-      url: 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://www.coindesk.com/arc/outboundfeeds/rss/?category=markets'),
-      parse: d => {
-        if (!d?.contents) return null;
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(d.contents, 'text/xml');
-        const items = [...xml.querySelectorAll('item')].slice(0,5);
-        if (!items.length) return null;
-        return items.map(item => ({
-          title:  item.querySelector('title')?.textContent?.replace('<![CDATA[','').replace(']]>','').trim() || '',
-          url:    item.querySelector('link')?.textContent || '#',
-          source: 'CoinDesk',
-          age:    timeAgo(new Date(item.querySelector('pubDate')?.textContent || Date.now())),
-        }));
-      }
-    },
-  ];
-
-  for (const src of sources) {
-    try {
-      const r = await fetch(src.url);
-      if (!r.ok) continue;
-      const data = await r.json();
-      const items = src.parse(data);
-      if (!items || items.length === 0) continue;
-      renderNews(items);
-      return;
-    } catch(e) {
-      console.warn('News source failed:', src.url, e.message);
     }
-  }
+  } catch(e) { console.warn('Binance news failed:', e.message); }
+
+  // Fallback: CoinTelegraph via allorigins
+  try {
+    const r = await fetch(
+      'https://api.allorigins.win/get?url=' + encodeURIComponent('https://cointelegraph.com/rss/tag/bitcoin')
+    );
+    if (r.ok) {
+      const d = await r.json();
+      if (d?.contents) {
+        const xml = new DOMParser().parseFromString(d.contents, 'text/xml');
+        const items = [...xml.querySelectorAll('item')].slice(0, 5);
+        if (items.length) {
+          renderNews(items.map(item => ({
+            title:  item.querySelector('title')?.textContent?.trim() || '',
+            url:    item.querySelector('link')?.nextSibling?.nodeValue?.trim()
+                    || item.querySelector('link')?.textContent?.trim() || '#',
+            source: 'CoinTelegraph',
+            age:    timeAgo(new Date(item.querySelector('pubDate')?.textContent || Date.now())),
+          })));
+          return;
+        }
+      }
+    }
+  } catch(e) { console.warn('CoinTelegraph RSS failed:', e.message); }
 
   el.innerHTML = '<div class="news-loading">Headlines unavailable — check back later</div>';
 }
@@ -2239,11 +2339,12 @@ function renderNews(items) {
   if (!el) return;
   el.innerHTML = items.map((item, i) => `
     <a class="news-item" href="${escHtml(item.url)}" target="_blank" rel="noopener">
-      <div class="news-item-num">${i + 1}</div>
+      <div class="news-item-num">0${i + 1}</div>
       <div class="news-item-body">
         <div class="news-item-title">${escHtml(item.title)}</div>
         <div class="news-item-meta">${escHtml(item.source)} · ${escHtml(item.age)}</div>
       </div>
+      <div class="news-item-arrow">↗</div>
     </a>`).join('');
 }
 
