@@ -1538,26 +1538,28 @@ let myPrediction = null;
 // SUPABASE HELPERS
 // ══════════════════════════════════════════
 
-async function sbFetch(path, opts = {}) {
-  const url = SUPABASE_URL + '/rest/v1/' + path;
-  const headers = {
-    'apikey':        SUPABASE_ANON,
-    'Authorization': 'Bearer ' + SUPABASE_ANON,
-    'Content-Type':  'application/json',
-  };
-  if (opts.prefer) headers['Prefer'] = opts.prefer;
-  const res = await fetch(url, {
-    method:  opts.method || 'GET',
-    headers,
-    body:    opts.body || undefined,
+// Exact same pattern as CRM — proven to work
+const HDRS = {
+  'Content-Type':  'application/json',
+  'apikey':        SUPABASE_ANON,
+  'Authorization': 'Bearer ' + SUPABASE_ANON,
+};
+
+async function sbGet(path) {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    headers: { ...HDRS, 'Accept': 'application/json' }
   });
-  if (!res.ok) {
-    const err = await res.text();
-    console.error('Supabase error', res.status, err);
-    throw new Error('Supabase ' + res.status + ': ' + err);
-  }
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
+  if (!r.ok) { console.error('sbGet', r.status, await r.text()); return []; }
+  return r.json();
+}
+
+async function sbPost(path, body, prefer) {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method:  'POST',
+    headers: { ...HDRS, 'Prefer': prefer || 'return=minimal' },
+    body:    JSON.stringify(body),
+  });
+  if (!r.ok) { const e = await r.text(); console.error('sbPost', r.status, e); throw new Error(e); }
 }
 
 // ══════════════════════════════════════════
@@ -1566,10 +1568,9 @@ async function sbFetch(path, opts = {}) {
 
 async function getAllPredictions() {
   try {
-    const rows = await sbFetch(
+    const rows = await sbGet(
       'predictions?week=eq.' + CURRENT_WEEK + '&select=name,price,week,submitted_at,score&order=submitted_at.asc'
     );
-    // Normalise shape to match legacy { name, price, week, ts, score }
     return (rows || []).map(r => ({
       name:  r.name,
       price: r.price,
@@ -1578,25 +1579,24 @@ async function getAllPredictions() {
       score: r.score ?? null,
     }));
   } catch(e) {
-    console.warn('getAllPredictions fallback to localStorage:', e);
+    console.warn('getAllPredictions fallback:', e);
     const raw = localStorage.getItem('pundix_all_predictions_w' + CURRENT_WEEK);
     return raw ? JSON.parse(raw) : [];
   }
 }
 
 async function savePrediction(entry) {
-  // Upsert on (name, week) — last write wins if player edits
-  await sbFetch('predictions', {
-    method: 'POST',
-    prefer: 'resolution=merge-duplicates,return=minimal',
-    body: JSON.stringify({
+  await sbPost(
+    'predictions',
+    {
       name:         entry.name,
       price:        entry.price,
       week:         entry.week,
       btc_at_entry: entry.live || null,
       submitted_at: new Date(entry.ts).toISOString(),
-    }),
-  });
+    },
+    'resolution=merge-duplicates,return=minimal'
+  );
 }
 
 function getMyPrediction() {
@@ -1614,10 +1614,7 @@ function clearMyPrediction() {
 
 async function getHOF() {
   try {
-    const rows = await sbFetch(
-      'hof?select=season,name,week,prediction,score&order=season.asc'
-    );
-    return rows || [];
+    return await sbGet('hof?select=season,name,week,prediction,score&order=season.asc') || [];
   } catch(e) {
     console.warn('getHOF fallback:', e);
     const raw = localStorage.getItem('pundix_hof');
@@ -1627,9 +1624,7 @@ async function getHOF() {
 
 async function getWeeklyWinner() {
   try {
-    const rows = await sbFetch(
-      'weekly_winners?week=eq.' + CURRENT_WEEK + '&select=*&limit=1'
-    );
+    const rows = await sbGet('weekly_winners?week=eq.' + CURRENT_WEEK + '&select=*&limit=1');
     return rows && rows[0] ? rows[0] : null;
   } catch(e) {
     console.warn('getWeeklyWinner fallback:', e);
