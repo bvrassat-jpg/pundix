@@ -1197,6 +1197,17 @@ body {
     <!-- Prediction window status -->
     <div class="window-status" id="window-status">
       <div class="window-status-left">
+    <!-- News Section -->
+    <div class="news-section">
+      <div class="news-header">
+        <div class="news-dot"></div>
+        <div class="news-header-title">BTC &amp; Crypto Headlines</div>
+      </div>
+      <div id="newsList" class="news-list">
+        <div class="news-loading">Loading headlines…</div>
+      </div>
+    </div>
+
         <div class="window-dot-open" id="window-dot"></div>
         <div class="window-text" id="window-text">
           Predictions <strong>open</strong> · Closes Friday 23:59 UTC
@@ -2142,6 +2153,76 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════
+// NEWS
+// ══════════════════════════════════════════
+
+async function fetchNews() {
+  const el = document.getElementById('newsList');
+  if (!el) return;
+
+  // Try CoinGecko news (no key, CORS enabled)
+  const sources = [
+    {
+      url: 'https://api.coingecko.com/api/v3/news?per_page=5',
+      parse: d => (d || []).slice(0,5).map(item => ({
+        title: item.title,
+        url:   item.url,
+        source: item.author || 'CoinGecko',
+        age:   timeAgo(item.updated_at ? new Date(item.updated_at * 1000) : new Date()),
+      }))
+    },
+    // Fallback: Binance square news (public, no key)
+    {
+      url: 'https://www.binance.com/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=5',
+      parse: d => ((d?.data?.articles?.rows) || []).slice(0,5).map(item => ({
+        title:  item.title,
+        url:    'https://www.binance.com/en/square/news/' + item.id,
+        source: 'Binance',
+        age:    timeAgo(new Date(item.releaseDate)),
+      }))
+    }
+  ];
+
+  for (const src of sources) {
+    try {
+      const r = await fetch(src.url);
+      if (!r.ok) continue;
+      const data = await r.json();
+      const items = src.parse(data);
+      if (!items || items.length === 0) continue;
+      renderNews(items);
+      return;
+    } catch(e) {
+      console.warn('News source failed:', src.url, e);
+    }
+  }
+
+  // All sources failed — show static placeholder
+  el.innerHTML = '<div class="news-loading">Headlines unavailable — check back later</div>';
+}
+
+function timeAgo(date) {
+  const diff = Math.floor((Date.now() - date) / 60000);
+  if (diff < 1)   return 'just now';
+  if (diff < 60)  return diff + 'm ago';
+  if (diff < 1440) return Math.floor(diff/60) + 'h ago';
+  return Math.floor(diff/1440) + 'd ago';
+}
+
+function renderNews(items) {
+  const el = document.getElementById('newsList');
+  if (!el) return;
+  el.innerHTML = items.map((item, i) => `
+    <a class="news-item" href="${escHtml(item.url)}" target="_blank" rel="noopener">
+      <div class="news-item-num">${i + 1}</div>
+      <div class="news-item-body">
+        <div class="news-item-title">${escHtml(item.title)}</div>
+        <div class="news-item-meta">${escHtml(item.source)} · ${escHtml(item.age)}</div>
+      </div>
+    </a>`).join('');
+}
+
+// ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
 
@@ -2165,6 +2246,8 @@ function showToast(msg) {
 
   updateWindowStatus();
   fetchBTCPrice();
+  fetchNews();
+  setInterval(fetchNews, 5 * 60 * 1000); // refresh every 5 min
 
   setInterval(updateWindowStatus, 1000);
   setInterval(fetchBTCPrice, 60000);
