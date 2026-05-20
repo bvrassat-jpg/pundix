@@ -2944,28 +2944,27 @@ function handleSeasonBadgeTap() {
   await loadConfig();
 // ==================== DEMO DATA ====================
 const DEMO_PREDICTIONS = [
-  {"name": "SatoshiFan95", "price": 83699, "week": 1, "ts": 1778923643634, "score": null},
-  {"name": "StackSats", "price": 87358, "week": 1, "ts": 1778851643634, "score": null},
-  {"name": "LaserEyes", "price": 83223, "week": 1, "ts": 1779164843634, "score": null},
-  {"name": "LaserEyes", "price": 84721, "week": 1, "ts": 1779251243634, "score": null},
-  {"name": "StackSats", "price": 80877, "week": 1, "ts": 1779161243634, "score": null},
-  {"name": "MoonMission", "price": 79634, "week": 1, "ts": 1778891243634, "score": null},
-  {"name": "DiamondHands21", "price": 82886, "week": 1, "ts": 1779193643634, "score": null},
-  {"name": "DiamondHands", "price": 80311, "week": 1, "ts": 1779107243634, "score": null},
-  {"name": "ChainLinkGod", "price": 91364, "week": 1, "ts": 1778984843634, "score": null},
-  {"name": "SatoshiFan", "price": 89182, "week": 1, "ts": 1778927243634, "score": null},
-  {"name": "BTCOracle", "price": 88526, "week": 1, "ts": 1779010043634, "score": null},
-  {"name": "DegenTrader", "price": 83462, "week": 1, "ts": 1778977643634, "score": null},
-  {"name": "BitBull74", "price": 84806, "week": 1, "ts": 1778959643634, "score": null},
-  {"name": "MoonMission", "price": 85797, "week": 1, "ts": 1779226043634, "score": null},
-  {"name": "BlockBuster13", "price": 80591, "week": 1, "ts": 1778880443634, "score": null},
-  {"name": "BitBull", "price": 87583, "week": 1, "ts": 1779100043634, "score": null},
-  {"name": "MoonMission", "price": 82164, "week": 1, "ts": 1779229643634, "score": null},
-  {"name": "CryptoWhale4269", "price": 77684, "week": 1, "ts": 1778927243634, "score": null}
+  {"name": "SatoshiFan95", "price": 83699, "week": 1, "ts": Date.now() - 86400000*2, "score": null},
+  {"name": "StackSats", "price": 87358, "week": 1, "ts": Date.now() - 86400000*1.5, "score": null},
+  {"name": "LaserEyes", "price": 83223, "week": 1, "ts": Date.now() - 86400000*3, "score": null},
+  {"name": "MoonMission", "price": 79634, "week": 1, "ts": Date.now() - 86400000*4, "score": null},
+  {"name": "DiamondHands21", "price": 82886, "week": 1, "ts": Date.now() - 86400000*2, "score": null},
+  {"name": "ChainLinkGod", "price": 91364, "week": 1, "ts": Date.now() - 86400000, "score": null},
+  {"name": "BTCOracle", "price": 88526, "week": 1, "ts": Date.now() - 86400000*2.5, "score": null},
+  {"name": "DegenTrader", "price": 83462, "week": 1, "ts": Date.now() - 86400000*1, "score": null},
+  {"name": "BitBull74", "price": 84806, "week": 1, "ts": Date.now() - 86400000*3, "score": null},
+  {"name": "CryptoWhale4269", "price": 77684, "week": 1, "ts": Date.now() - 86400000*2, "score": null},
+  {"name": "BlockBuster13", "price": 80591, "week": 1, "ts": Date.now() - 86400000*1.2, "score": null}
 ];
 
-// Inject demo predictions into localStorage (for immediate demo)
+// Inject demo predictions (other users only)
 localStorage.setItem('pundix_all_predictions_w1', JSON.stringify(DEMO_PREDICTIONS));
+
+console.log(`✅ ${DEMO_PREDICTIONS.length} demo predictions loaded for Week 1`);
+
+// Refresh the UI
+renderLeaderboard();
+updateLivePanel();
   myPrediction = getMyPrediction();
 
   // Pre-fill email if returning player
