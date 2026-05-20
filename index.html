@@ -620,12 +620,12 @@ body {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .consensus-col {
   background: var(--surface);
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 10px;
+  padding: 18px 16px;
   text-align: center;
 }
 .consensus-col-label {
@@ -634,11 +634,11 @@ body {
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-dim);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .consensus-col-value {
   font-family: var(--mono);
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.5px;
@@ -647,10 +647,14 @@ body {
   font-family: var(--mono);
   font-size: 11px;
   color: var(--text-dim);
-  margin-top: 4px;
+  margin-top: 6px;
 }
-.consensus-col.your-call { border: 2px solid var(--blue); background: var(--blue-pale); }
-.consensus-col.your-call .consensus-col-value { color: var(--blue); }
+.consensus-col.your-call {
+  border: 2px solid var(--orange);
+  background: rgba(245,158,11,0.08);
+}
+.consensus-col.your-call .consensus-col-value { color: var(--orange); }
+.consensus-col.your-call .consensus-col-label { color: var(--orange); opacity: 0.8; }
 .consensus-vs {
   font-family: var(--mono);
   font-size: 12px;
@@ -660,23 +664,24 @@ body {
 }
 .consensus-band {
   background: var(--navy);
-  border-radius: 8px;
-  padding: 14px 18px;
+  border-radius: 10px;
+  padding: 20px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border: 1px solid rgba(255,255,255,0.06);
 }
 .consensus-band-label {
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 1.5px;
+  font-size: 10px;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgba(255,255,255,.5);
+  color: rgba(255,255,255,.4);
 }
 .consensus-band-value {
   font-family: var(--sans);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   color: #fff;
 }
 .consensus-band-value.above { color: var(--orange); }
