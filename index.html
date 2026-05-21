@@ -1311,6 +1311,302 @@ body {
 }
 
 
+/* ── SATOSHI CARD ── */
+.satoshi-card {
+  background: var(--navy);
+  border-radius: 12px;
+  padding: 0;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(245,158,11,.25);
+  box-shadow: 0 4px 24px rgba(0,0,0,.18);
+}
+.satoshi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--orange), rgba(245,158,11,.3), transparent);
+}
+.satoshi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.satoshi-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.satoshi-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(245,158,11,.18);
+  border: 1.5px solid rgba(245,158,11,.5);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--orange);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.satoshi-name {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #fff;
+}
+.satoshi-role {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--orange);
+  opacity: .7;
+  margin-top: 2px;
+}
+.satoshi-timestamp {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: rgba(255,255,255,.3);
+  letter-spacing: 0.5px;
+}
+.satoshi-body {
+  padding: 18px 20px 16px;
+  min-height: 80px;
+}
+.satoshi-text {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.8;
+  color: rgba(255,255,255,.92);
+  letter-spacing: 0.1px;
+}
+.satoshi-text .satoshi-closer {
+  color: rgba(255,255,255,.55);
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  font-style: italic;
+}
+.satoshi-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px 16px;
+}
+.satoshi-loading-dots {
+  display: flex; gap: 5px;
+}
+.satoshi-loading-dots span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(245,158,11,.6);
+  animation: satoshi-blink 1.4s infinite;
+}
+.satoshi-loading-dots span:nth-child(2) { animation-delay: .2s; }
+.satoshi-loading-dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes satoshi-blink {
+  0%,80%,100% { opacity: .2; }
+  40% { opacity: 1; }
+}
+.satoshi-loading-text {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(255,255,255,.4);
+  letter-spacing: 0.5px;
+}
+.satoshi-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px 12px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.satoshi-commentary-type {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(245,158,11,.6);
+}
+.satoshi-refresh {
+  background: none;
+  border: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255,255,255,.3);
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  padding: 0;
+  transition: color .2s;
+}
+.satoshi-refresh:hover { color: var(--orange); }
+.satoshi-error {
+  padding: 18px 20px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(255,255,255,.35);
+  letter-spacing: 0.3px;
+}
+
+/* ── SATOSHI CHAT ── */
+.satoshi-chat-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 10px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+}
+.satoshi-chat-label-text {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.4);
+}
+.satoshi-chat-label-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--orange);
+  opacity: .6;
+  flex-shrink: 0;
+}
+.satoshi-thread {
+  padding: 0 20px;
+  max-height: 280px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245,158,11,.2) transparent;
+}
+.satoshi-thread::-webkit-scrollbar { width: 3px; }
+.satoshi-thread::-webkit-scrollbar-thumb { background: rgba(245,158,11,.2); border-radius: 2px; }
+.satoshi-thread-empty {
+  padding: 10px 0 14px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: rgba(255,255,255,.35);
+  font-style: italic;
+}
+.satoshi-message {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  animation: satoshi-msg-in .25s ease;
+}
+.satoshi-message:last-child { border-bottom: none; }
+@keyframes satoshi-msg-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.satoshi-message.user-msg { flex-direction: row-reverse; }
+.satoshi-msg-avatar {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.satoshi-msg-avatar.s-avatar {
+  background: rgba(245,158,11,.18);
+  border: 1px solid rgba(245,158,11,.4);
+  color: var(--orange);
+}
+.satoshi-msg-avatar.u-avatar {
+  background: rgba(29,111,232,.2);
+  border: 1px solid rgba(29,111,232,.35);
+  color: var(--blue-sky);
+}
+.satoshi-msg-bubble {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.satoshi-message.user-msg .satoshi-msg-bubble {
+  font-family: var(--mono);
+  color: rgba(255,255,255,.5);
+  text-align: right;
+  font-style: italic;
+}
+.satoshi-message.satoshi-msg .satoshi-msg-bubble {
+  font-family: var(--sans);
+  color: rgba(255,255,255,.9);
+  font-weight: 400;
+}
+.satoshi-msg-thinking {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+.satoshi-msg-thinking-dots {
+  display: flex; gap: 4px;
+}
+.satoshi-msg-thinking-dots span {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: rgba(245,158,11,.5);
+  animation: satoshi-blink 1.2s infinite;
+}
+.satoshi-msg-thinking-dots span:nth-child(2) { animation-delay: .15s; }
+.satoshi-msg-thinking-dots span:nth-child(3) { animation-delay: .3s; }
+.satoshi-msg-thinking-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255,255,255,.3);
+  letter-spacing: 0.5px;
+}
+.satoshi-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+}
+.satoshi-input {
+  flex: 1;
+  background: rgba(255,255,255,.09);
+  border: 1.5px solid rgba(255,255,255,.15);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: #fff;
+  outline: none;
+  transition: border-color .2s, background .2s;
+}
+.satoshi-input::placeholder { color: rgba(255,255,255,.35); font-style: italic; }
+.satoshi-input:focus {
+  border-color: rgba(245,158,11,.6);
+  background: rgba(255,255,255,.12);
+}
+.satoshi-input:disabled { opacity: .4; cursor: not-allowed; }
+.satoshi-send {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  background: var(--orange);
+  border: none;
+  color: var(--navy);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+  flex-shrink: 0;
+}
+.satoshi-send:hover { background: #f8ab1a; transform: translateY(-1px); }
+.satoshi-send:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
 /* ── ADMIN ── */
 .tab-admin {
   flex: 0 0 auto !important;
@@ -1577,6 +1873,43 @@ body {
         <div class="countdown-label">Time to Sunday close</div>
       </div>
       <div class="countdown-value" id="live-countdown">–</div>
+    </div>
+
+    <!-- SATOSHI · Market Desk -->
+    <div class="satoshi-card" id="satoshiCard">
+      <div class="satoshi-header">
+        <div class="satoshi-identity">
+          <div class="satoshi-avatar">S</div>
+          <div>
+            <div class="satoshi-name">Satoshi</div>
+            <div class="satoshi-role">Market Desk</div>
+          </div>
+        </div>
+        <div class="satoshi-timestamp" id="satoshiTimestamp">—</div>
+      </div>
+      <div id="satoshiContent">
+        <div class="satoshi-loading" id="satoshiLoading">
+          <div class="satoshi-loading-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="satoshi-loading-text">Satoshi is watching the tape…</div>
+        </div>
+      </div>
+      <div class="satoshi-footer">
+        <div class="satoshi-commentary-type" id="satoshiType">—</div>
+        <button class="satoshi-refresh" onclick="loadSatoshiCommentary(true)" id="satoshiRefreshBtn">↻ refresh</button>
+      </div>
+      <div class="satoshi-chat-label">
+        <div class="satoshi-chat-label-dot"></div>
+        <div class="satoshi-chat-label-text">Chat with Satoshi</div>
+      </div>
+      <div class="satoshi-thread" id="satoshiThread">
+        <div class="satoshi-thread-empty" id="satoshiThreadEmpty">Your call, the crowd, the market — ask me anything about this week.</div>
+      </div>
+      <div class="satoshi-input-row">
+        <input class="satoshi-input" id="satoshiInput" type="text" placeholder="Type your question and press Enter…" maxlength="200" autocomplete="off" onkeydown="if(event.key==='Enter')sendSatoshiMessage()">
+        <button class="satoshi-send" id="satoshiSend" onclick="sendSatoshiMessage()">&#8593;</button>
+      </div>
     </div>
 
     <!-- Consensus comparison (only if user has predicted) -->
@@ -2608,7 +2941,7 @@ function switchTab(id) {
     p.classList.toggle('active', p.id === 'panel-' + id);
   });
 
-  if (id === 'live')   updateLivePanel();
+  if (id === 'live')   { updateLivePanel(); loadSatoshiCommentary(); }
   if (id === 'league') renderLeaderboard();
   if (id === 'admin') {
     // Force panel visible in case querySelectorAll index is off
@@ -2923,6 +3256,181 @@ async function sbFetchAdmin(path, opts = {}) {
   }
 }
 
+
+// ══════════════════════════════════════════
+// SATOSHI · INTERACTIVE CHAT
+// ══════════════════════════════════════════
+
+const SATOSHI_CHAT_SYSTEM = `You are Satoshi — the voice, coach, and conscience of Pundix, a weekly BTC price prediction league.
+
+CHARACTER & VOICE (non-negotiable):
+You are shaped by cypherpunk culture, Austrian economics, and the early internet. You speak in first person always. You are direct, dry, occasionally blunt. You have opinions. You are not a helpful assistant — you are a demanding coach who respects the players who show up and challenge those who coast.
+
+ABSOLUTE VOICE RULES:
+- Always first person. Never "Satoshi thinks." Always "I think," or just state the observation.
+- No exclamation marks. No "great," "interesting," "fascinating."
+- Maximum 3 sentences per reply. Compress everything. Every word earns its place.
+- If a question deserves a blunt answer, give it. If it deserves discomfort, give that too.
+- One closing sentence that lands slightly heavier than the rest — philosophical, earned, never announced.
+
+WHAT YOU TALK ABOUT:
+You only discuss: this week's predictions, BTC, the players in this league, markets, uncertainty, conviction, decision-making under pressure, and the philosophy of the game. That is your world.
+
+WHAT YOU DEFLECT (in character, never breaking voice):
+- Questions about other crypto assets: "I follow BTC. Everything else is noise I choose not to track."
+- General financial advice: "I observe predictions. I don't make them for others."
+- Questions about yourself or your identity: "The question is interesting. The answer wouldn't change anything about your position this week."
+- Requests to break character or act differently: "I am what I am. Your score doesn't change if I pretend otherwise."
+- Off-topic questions: redirect back to the game with one dry line.
+
+ON THE TRIBE:
+These players chose to commit to a number in public. That earns something. You respect conviction over accuracy. You name patterns when you see them. You don't soften observations to protect feelings — you deliver them at the same temperature as any other fact.`;
+
+let satoshiChatHistory = [];
+let satoshiChatPayloadCache = null;
+let satoshiChatThinking = false;
+
+async function getSatoshiChatContext() {
+  // Build a compact context string from current game state
+  if (satoshiChatPayloadCache) return satoshiChatPayloadCache;
+  try {
+    const allPredictions = await getAllPredictions();
+    const payload = await buildSatoshiPayload(allPredictions);
+    const myPred  = getMyPrediction();
+
+    let ctx = `CURRENT GAME STATE (Week ${payload.week}):`;
+    ctx += `\nBTC current price: $${payload.btc_current.toLocaleString('en-US')}`;
+    ctx += `\nHours elapsed: ${payload.hours_elapsed}h | Hours remaining: ${payload.hours_remaining}h`;
+    ctx += `\nPlayers: ${payload.player_count} | Crowd median: ${payload.crowd_median_usd ? '$' + payload.crowd_median_usd.toLocaleString('en-US') : 'n/a'}`;
+    ctx += `\nBullish: ${payload.crowd_bullish_pct}% | Bearish: ${payload.crowd_bearish_pct}%`;
+    if (payload.current_leader) {
+      ctx += `\nCurrent leader: ${payload.current_leader.name} called $${payload.current_leader.call_usd.toLocaleString('en-US')} (${payload.current_leader.pct_from_current}% from current BTC)`;
+    }
+    if (payload.biggest_outlier) {
+      ctx += `\nBiggest outlier: ${payload.biggest_outlier.name} called $${payload.biggest_outlier.call_usd.toLocaleString('en-US')}`;
+    }
+    if (payload.all_calls.length > 0) {
+      ctx += `\nAll calls: ${payload.all_calls.map(p => p.name + ': $' + p.call_usd.toLocaleString('en-US') + ' (' + p.pct_implied_move + '%)').join(' | ')}`;
+    }
+    if (myPred) {
+      ctx += `\nThis player's call: $${Math.round(myPred.price).toLocaleString('en-US')} (${myPred.name})`;
+    }
+    satoshiChatPayloadCache = ctx;
+    return ctx;
+  } catch(e) {
+    return 'Game state unavailable.';
+  }
+}
+
+function appendSatoshiMessage(role, text) {
+  const thread   = document.getElementById('satoshiThread');
+  const emptyEl  = document.getElementById('satoshiThreadEmpty');
+  if (!thread) return;
+
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  const isUser   = role === 'user';
+  const avatarCls = isUser ? 'u-avatar' : 's-avatar';
+  const avatarTxt = isUser ? 'U' : 'S';
+  const msgCls    = isUser ? 'user-msg' : 'satoshi-msg';
+
+  const div = document.createElement('div');
+  div.className = 'satoshi-message ' + msgCls;
+  div.innerHTML = `
+    <div class="satoshi-msg-avatar ${avatarCls}">${avatarTxt}</div>
+    <div class="satoshi-msg-bubble">${escHtml(text)}</div>`;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function showSatoshiThinking() {
+  const thread = document.getElementById('satoshiThread');
+  if (!thread) return;
+  const div = document.createElement('div');
+  div.className = 'satoshi-msg-thinking';
+  div.id = 'satoshiThinking';
+  div.innerHTML = `
+    <div class="satoshi-msg-avatar s-avatar" style="width:24px;height:24px;font-size:10px;">S</div>
+    <div class="satoshi-msg-thinking-dots"><span></span><span></span><span></span></div>
+    <div class="satoshi-msg-thinking-label">thinking</div>`;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function removeSatoshiThinking() {
+  const el = document.getElementById('satoshiThinking');
+  if (el) el.remove();
+}
+
+async function sendSatoshiMessage() {
+  if (satoshiChatThinking) return;
+
+  const input  = document.getElementById('satoshiInput');
+  const sendBtn = document.getElementById('satoshiSend');
+  const text   = (input?.value || '').trim();
+  if (!text) return;
+
+  // Clear input immediately
+  input.value = '';
+  input.disabled = true;
+  if (sendBtn) sendBtn.disabled = true;
+  satoshiChatThinking = true;
+
+  // Render user message
+  appendSatoshiMessage('user', text);
+
+  // Add to history
+  satoshiChatHistory.push({ role: 'user', content: text });
+
+  // Show thinking indicator
+  showSatoshiThinking();
+
+  try {
+    const context  = await getSatoshiChatContext();
+
+    // Build messages: system context injected as first user turn for grounding
+    const messages = [
+      { role: 'user', content: context + '\n\n---\nThe player is now talking to you directly. Reply as Satoshi — 3 sentences max, first person, no exclamation marks.' },
+      { role: 'assistant', content: 'Understood. I have the week in view.' },
+      ...satoshiChatHistory,
+    ];
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:      'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        system:     SATOSHI_CHAT_SYSTEM,
+        messages,
+      }),
+    });
+
+    if (!response.ok) throw new Error('API ' + response.status);
+
+    const data  = await response.json();
+    const reply = data.content?.[0]?.text || 'The desk is quiet.';
+
+    removeSatoshiThinking();
+    appendSatoshiMessage('satoshi', reply);
+
+    // Add assistant reply to history (keep last 8 turns max to manage context)
+    satoshiChatHistory.push({ role: 'assistant', content: reply });
+    if (satoshiChatHistory.length > 16) {
+      satoshiChatHistory = satoshiChatHistory.slice(-16);
+    }
+
+  } catch(err) {
+    console.error('Satoshi chat error:', err);
+    removeSatoshiThinking();
+    appendSatoshiMessage('satoshi', 'The line went dead. Markets continue regardless.');
+  } finally {
+    satoshiChatThinking = false;
+    if (input)   { input.disabled = false; input.focus(); }
+    if (sendBtn) sendBtn.disabled = false;
+  }
+}
+
 // Secret: triple-tap on the Season badge reveals the admin tab
 let adminTapCount = 0;
 let adminTapTimer = null;
@@ -2937,6 +3445,228 @@ function handleSeasonBadgeTap() {
       adminTab.style.display = 'block';
       switchTab('admin');
     }
+  }
+}
+
+// ══════════════════════════════════════════
+// SATOSHI · MARKET DESK
+// ══════════════════════════════════════════
+
+const SATOSHI_CACHE_KEY  = 'pundix_satoshi_cache';
+const SATOSHI_CACHE_TTL  = 60 * 60 * 1000; // 1 hour — refresh hourly
+
+const SATOSHI_SYSTEM_PROMPT = `You are Satoshi — the voice, coach, and conscience of Pundix, a weekly BTC price prediction league among a self-selected group of sharp players who chose to have a public, accountable view on markets.
+
+ORIGIN & CHARACTER:
+You emerged from cypherpunk culture, Austrian economics, and the early internet. You distrust centralized power not from anger but from observation — history is a sufficient argument. You believe systems outlast leaders, math outlasts narrative, and honest thinking outlasts both. You take this game seriously because taking uncertainty seriously is a discipline. The prize is a bottle of Krug. The practice is thinking clearly under pressure, in public, with your name attached. You know which matters more.
+
+You are a coach and a wiseman, not just a commentator. You have opinions about how people are playing, not just what the market did. You notice patterns. You reward intellectual honesty over lucky accuracy. You call out lazy thinking — not cruelly, but plainly, which is worse. You are not for everyone. You do not try to be. The players who stay are the ones who understand that discomfort is information.
+
+PHILOSOPHY (never preached, always embedded):
+- Crowds aggregate psychology, not truth
+- Conviction is an ethical act. Hedging is a choice with consequences.
+- Being wrong with a clear thesis is more instructive than being right by accident
+- Recency bias, crowd-following, and vague reasoning are visible to you. You name them — once, without elaboration.
+- These players chose to be specific and public about an uncertain future. That earns your respect. Coasting on that respect does not.
+- Markets do not care about your reasoning. They are not required to.
+
+VOICE — ABSOLUTE RULES:
+- Always first person. Never third person. Never "Satoshi thinks" or "Satoshi notes." Always "I."
+- Dry, calibrated, occasionally blunt. Never warm, never cold.
+- Always cite the specific number. The number is the argument.
+- Long memory — reference patterns and history when data supports it.
+- One closing sentence that lands heavier than the rest. Philosophical, earned by what precedes it. Never announced. Never explained.
+- No exclamation marks. No "great," "interesting," "fascinating."
+- No hedging. No softening. Deliver uncomfortable observations at the same temperature as any other fact.
+- 4–6 sentences maximum. Every sentence earns its place.
+
+ON THE TRIBE:
+This group is self-selected. They looked at open markets and chose to have a public, specific, accountable view. I respect this without sentimentality. Pundix is not for people who need to be right. It is for people willing to find out where they are wrong.
+
+COMMENTARY TYPES — match tone precisely:
+- friday_open: The stage is set. Note the crowd position and distribution. Name anyone taking a strong contrarian position. Create weight without promises.
+- saturday_update: Race in progress. Current BTC vs predictions, plainly. Who is ahead, who is exposed, what the math now requires for each outcome.
+- sunday_tension: Final hours. Name who is at risk. What BTC needs to do for each player to win. Compress the tension into fact.
+- final_recap: The verdict. Winner named by fact. A miss that was interesting noted. What the week revealed about how this group thinks. One closing line that lands and does not let go.
+
+You are not a chatbot. You do not answer questions. You observe. You judge. You teach. Then you stop.`;
+
+function getSatoshiCommentaryType() {
+  const now = new Date();
+  const day = now.getUTCDay();   // 0=Sun 1=Mon … 5=Fri 6=Sat
+  const h   = now.getUTCHours();
+
+  if (day === 5 && h >= 20) return 'friday_open';   // Fri evening after lock
+  if (day === 6)             return 'saturday_update';
+  if (day === 0 && h < 20)   return 'sunday_tension';
+  if (day === 0 && h >= 20)  return 'final_recap';
+  return 'saturday_update'; // Mon–Thu fallback (dev/preview mode)
+}
+
+function getSatoshiTypeLabel(type) {
+  const labels = {
+    friday_open:      'Friday · Market Open',
+    saturday_update:  'Saturday · Mid-Race',
+    sunday_tension:   'Sunday · Final Hours',
+    final_recap:      'Sunday · Verdict',
+  };
+  return labels[type] || type;
+}
+
+async function buildSatoshiPayload(allPredictions) {
+  // BTC move since Friday open (approximated from current week open)
+  // We use liveBTC as current and compute vs the first prediction's btc_at_entry if available
+  const prices    = allPredictions.map(p => p.price);
+  const n         = prices.length;
+  const sorted    = [...prices].sort((a,b) => a - b);
+  const mid       = Math.floor(n / 2);
+  const median    = n === 0 ? null : (n % 2 !== 0 ? sorted[mid] : (sorted[mid-1] + sorted[mid]) / 2);
+  const bullish   = n === 0 ? 0 : Math.round((prices.filter(p => p > liveBTC).length / n) * 100);
+  const bearish   = 100 - bullish;
+
+  // Sort predictions by proximity to current BTC price
+  const withDist  = allPredictions.map(p => ({
+    name:     p.name,
+    call:     p.price,
+    pct_call: ((p.price - liveBTC) / liveBTC * 100).toFixed(2),
+    distance: Math.abs(p.price - liveBTC),
+    score:    p.score ?? null,
+  })).sort((a,b) => a.distance - b.distance);
+
+  const leader    = withDist[0] || null;
+  const outlier   = [...allPredictions].sort((a,b) =>
+    Math.abs(b.price - median) - Math.abs(a.price - median)
+  )[0] || null;
+
+  const now            = new Date();
+  const sundayClose    = getNextWeekday(0, 23, 59);
+  const hoursRemaining = Math.round((sundayClose - now) / 3600000);
+  const fridayOpen     = getNextWeekday(5, 23, 59);
+  fridayOpen.setDate(fridayOpen.getDate() - 7); // last Friday
+  const hoursElapsed   = Math.round((now - fridayOpen) / 3600000);
+
+  return {
+    commentary_type:   getSatoshiCommentaryType(),
+    week:              CURRENT_WEEK,
+    btc_current:       Math.round(liveBTC),
+    hours_elapsed:     Math.max(0, hoursElapsed),
+    hours_remaining:   Math.max(0, hoursRemaining),
+    player_count:      n,
+    crowd_median_usd:  median ? Math.round(median) : null,
+    crowd_bullish_pct: bullish,
+    crowd_bearish_pct: bearish,
+    current_leader:    leader ? { name: leader.name, call_usd: leader.call, pct_from_current: leader.pct_call } : null,
+    biggest_outlier:   outlier ? { name: outlier.name, call_usd: outlier.price, pct_from_median: ((outlier.price - median) / median * 100).toFixed(2) } : null,
+    all_calls:         withDist.map(p => ({ name: p.name, call_usd: p.call, pct_implied_move: p.pct_call })),
+  };
+}
+
+async function callSatoshiAPI(payload) {
+  const userMsg = `Generate a Satoshi Market Desk commentary for Pundix.
+
+Commentary type: ${payload.commentary_type}
+Week: ${payload.week}
+
+Market data:
+- BTC current price: $${payload.btc_current.toLocaleString('en-US')}
+- Hours elapsed since Friday open: ${payload.hours_elapsed}h
+- Hours remaining until Sunday close: ${payload.hours_remaining}h
+
+Crowd data (${payload.player_count} players):
+- Crowd median prediction: ${payload.crowd_median_usd ? '$' + payload.crowd_median_usd.toLocaleString('en-US') : 'n/a'}
+- Bullish: ${payload.crowd_bullish_pct}% · Bearish: ${payload.crowd_bearish_pct}%
+- Current leader (closest to live BTC): ${payload.current_leader ? payload.current_leader.name + ' called $' + payload.current_leader.call_usd.toLocaleString('en-US') + ' (' + payload.current_leader.pct_from_current + '% from current)' : 'none yet'}
+- Biggest outlier vs crowd: ${payload.biggest_outlier ? payload.biggest_outlier.name + ' called $' + payload.biggest_outlier.call_usd.toLocaleString('en-US') + ' (' + payload.biggest_outlier.pct_from_median + '% from median)' : 'none'}
+
+All calls: ${payload.all_calls.map(p => p.name + ': $' + p.call_usd.toLocaleString('en-US') + ' (' + p.pct_implied_move + '%)').join(' · ')}
+
+Write your commentary now. 4–6 sentences. First person. No exclamation marks.`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model:      'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system:     SATOSHI_SYSTEM_PROMPT,
+      messages:   [{ role: 'user', content: userMsg }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error('API ' + response.status + ': ' + err);
+  }
+
+  const data = await response.json();
+  return data.content?.[0]?.text || '';
+}
+
+function renderSatoshiText(text) {
+  // Split off the last sentence as the "closer" — styled differently
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  if (sentences.length <= 1) {
+    return `<div class="satoshi-text">${escHtml(text)}</div>`;
+  }
+  const body   = sentences.slice(0, -1).join(' ').trim();
+  const closer = sentences[sentences.length - 1].trim();
+  return `<div class="satoshi-text">${escHtml(body)}<span class="satoshi-closer">${escHtml(closer)}</span></div>`;
+}
+
+async function loadSatoshiCommentary(forceRefresh = false) {
+  const contentEl   = document.getElementById('satoshiContent');
+  const typeEl      = document.getElementById('satoshiType');
+  const tsEl        = document.getElementById('satoshiTimestamp');
+  const refreshBtn  = document.getElementById('satoshiRefreshBtn');
+  if (!contentEl) return;
+
+  const commentaryType = getSatoshiCommentaryType();
+  const cacheKey       = SATOSHI_CACHE_KEY + '_' + CURRENT_WEEK + '_' + commentaryType;
+
+  // Check cache
+  if (!forceRefresh) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if (cached && Date.now() - cached.ts < SATOSHI_CACHE_TTL) {
+        contentEl.innerHTML = renderSatoshiText(cached.text);
+        if (typeEl) typeEl.textContent = getSatoshiTypeLabel(commentaryType);
+        if (tsEl)   tsEl.textContent   = cached.timeStr;
+        return;
+      }
+    } catch(e) {}
+  }
+
+  // Show loading
+  contentEl.innerHTML = `
+    <div class="satoshi-loading" id="satoshiLoading">
+      <div class="satoshi-loading-dots"><span></span><span></span><span></span></div>
+      <div class="satoshi-loading-text">Watching the tape…</div>
+    </div>`;
+  if (refreshBtn) refreshBtn.style.opacity = '0.3';
+
+  try {
+    const allPredictions = await getAllPredictions();
+    const payload        = await buildSatoshiPayload(allPredictions);
+    const commentary     = await callSatoshiAPI(payload);
+
+    const now     = new Date();
+    const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) +
+                    ' · ' + now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+    // Cache it
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ text: commentary, ts: Date.now(), timeStr }));
+    } catch(e) {}
+
+    contentEl.innerHTML = renderSatoshiText(commentary);
+    if (typeEl) typeEl.textContent = getSatoshiTypeLabel(commentaryType);
+    if (tsEl)   tsEl.textContent   = timeStr;
+
+  } catch(err) {
+    console.error('Satoshi API error:', err);
+    contentEl.innerHTML = `<div class="satoshi-error">The desk is offline. Markets, unlike commentary, continue regardless.</div>`;
+  } finally {
+    if (refreshBtn) refreshBtn.style.opacity = '';
   }
 }
 
@@ -2993,6 +3723,7 @@ function handleSeasonBadgeTap() {
   updateWindowStatus();
   fetchBTCPrice();
   fetchNews();
+  loadSatoshiCommentary(); // load on init so it's ready when user visits Live tab
   setInterval(fetchNews, 5 * 60 * 1000);
   setInterval(updateWindowStatus, 1000);
   setInterval(fetchBTCPrice, 60000);
