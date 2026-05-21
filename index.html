@@ -1373,7 +1373,7 @@ body {
 .satoshi-timestamp {
   font-family: var(--mono);
   font-size: 10px;
-  color: rgba(255,255,255,.3);
+  color: rgba(255,255,255,.5);
   letter-spacing: 0.5px;
 }
 .satoshi-body {
@@ -1382,21 +1382,21 @@ body {
 }
 .satoshi-text {
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 400;
-  line-height: 1.8;
-  color: rgba(255,255,255,.92);
+  line-height: 1.85;
+  color: #ffffff;
   letter-spacing: 0.1px;
 }
 .satoshi-text .satoshi-closer {
-  color: rgba(16,185,129,.75);
+  color: #6ee7b7;
   display: block;
   margin-top: 12px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   font-style: normal;
   letter-spacing: 0.3px;
-  border-left: 2px solid rgba(16,185,129,.3);
+  border-left: 2px solid rgba(16,185,129,.5);
   padding-left: 10px;
 }
 .satoshi-loading {
@@ -1421,10 +1421,10 @@ body {
   40% { opacity: 1; }
 }
 .satoshi-loading-text {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: rgba(255,255,255,.4);
-  letter-spacing: 0.5px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: rgba(255,255,255,.6);
+  letter-spacing: 0.3px;
 }
 .satoshi-footer {
   display: flex;
@@ -1454,10 +1454,10 @@ body {
 .satoshi-refresh:hover { color: var(--orange); }
 .satoshi-error {
   padding: 18px 20px;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: rgba(255,255,255,.35);
-  letter-spacing: 0.3px;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: rgba(255,255,255,.6);
+  letter-spacing: 0.2px;
 }
 
 /* ── SATOSHI CHAT ── */
@@ -1502,10 +1502,9 @@ body {
 .satoshi-thread::-webkit-scrollbar-thumb { background: rgba(245,158,11,.2); border-radius: 2px; }
 .satoshi-thread-empty {
   padding: 12px 0 14px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: rgba(255,255,255,.25);
-  letter-spacing: 0.3px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: rgba(255,255,255,.55);
   line-height: 1.6;
 }
 .satoshi-message {
@@ -1547,15 +1546,17 @@ body {
   line-height: 1.7;
 }
 .satoshi-message.user-msg .satoshi-msg-bubble {
-  font-family: var(--mono);
-  color: rgba(255,255,255,.5);
+  font-family: var(--sans);
+  color: rgba(255,255,255,.7);
   text-align: right;
   font-style: italic;
+  font-size: 13px;
 }
 .satoshi-message.satoshi-msg .satoshi-msg-bubble {
-  font-family: var(--mono);
-  color: rgba(255,255,255,.88);
-  font-size: 12.5px;
+  font-family: var(--sans);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 400;
   line-height: 1.8;
 }
 .satoshi-msg-thinking {
@@ -1576,10 +1577,10 @@ body {
 .satoshi-msg-thinking-dots span:nth-child(2) { animation-delay: .15s; }
 .satoshi-msg-thinking-dots span:nth-child(3) { animation-delay: .3s; }
 .satoshi-msg-thinking-label {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: rgba(255,255,255,.3);
-  letter-spacing: 0.5px;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: rgba(255,255,255,.5);
+  letter-spacing: 0.3px;
 }
 .satoshi-input-row {
   display: flex;
@@ -3423,7 +3424,7 @@ async function sendSatoshiMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model:      'claude-sonnet-4-20250514',
+        model:      'claude-sonnet-4-5',
         max_tokens: 300,
         system:     SATOSHI_CHAT_SYSTEM,
         messages,
@@ -3610,7 +3611,7 @@ Write your commentary now. 4–6 sentences. First person. No exclamation marks.`
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model:      'claude-sonnet-4-20250514',
+      model:      'claude-sonnet-4-5',
       max_tokens: 1000,
       system:     SATOSHI_SYSTEM_PROMPT,
       messages:   [{ role: 'user', content: userMsg }],
