@@ -2994,7 +2994,7 @@ function copyShareText() {
 // ══════════════════════════════════════════
 
 function switchTab(id) {
-  const ids = ['predict','live','league','how','admin'];
+  const ids = ['live','predict','league','how','admin'];
   document.querySelectorAll('.tab').forEach((t, i) => {
     t.classList.toggle('active', ids[i] === id);
   });
