@@ -595,28 +595,36 @@ body {
 
 /* ── LIVE WEEK PANEL ── */
 .consensus-card {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--navy);
+  border: 1px solid rgba(245,158,11,.18);
   border-radius: 14px;
   padding: 24px;
   margin-bottom: 24px;
   overflow: hidden;
   position: relative;
+  box-shadow: 0 4px 24px rgba(0,0,0,.15);
+}
+.consensus-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--orange), rgba(245,158,11,.2), transparent);
 }
 .consensus-title {
   font-family: var(--sans);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
-  color: var(--text);
+  color: #fff;
   margin-bottom: 4px;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 .consensus-sub {
-  font-family: var(--sans);
-  font-size: 13px;
-  color: var(--text-dim);
-  margin-bottom: 22px;
-  opacity: .75;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255,255,255,.45);
+  margin-bottom: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 .consensus-comparison {
   display: grid;
@@ -626,11 +634,11 @@ body {
   margin-bottom: 14px;
 }
 .consensus-col {
-  background: var(--surface);
+  background: rgba(255,255,255,.05);
   border-radius: 12px;
   padding: 20px 14px;
   text-align: center;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255,255,255,.08);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -642,59 +650,56 @@ body {
   font-size: 10px;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--text-dim);
-  opacity: .8;
+  color: rgba(255,255,255,.5);
 }
 .consensus-col-value {
-  font-family: var(--sans);
+  font-family: var(--mono);
   font-size: 24px;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: -1px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
   line-height: 1;
 }
 .consensus-col-sub {
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--text-dim);
-  opacity: .7;
+  color: rgba(255,255,255,.4);
 }
 .consensus-col.your-call {
-  border: 2px solid var(--orange);
-  background: rgba(245,158,11,0.07);
-  box-shadow: 0 0 20px rgba(245,158,11,.08);
+  border: 1.5px solid rgba(245,158,11,.5);
+  background: rgba(245,158,11,.1);
+  box-shadow: 0 0 24px rgba(245,158,11,.12);
 }
 .consensus-col.your-call .consensus-col-value { color: var(--orange); }
 .consensus-col.your-call .consensus-col-label {
-  color: var(--orange);
-  opacity: .9;
+  color: rgba(245,158,11,.8);
   font-weight: 700;
 }
 .consensus-vs {
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--text-dim);
+  color: rgba(255,255,255,.25);
   letter-spacing: 1px;
   text-align: center;
-  opacity: .5;
   align-self: center;
 }
 .consensus-band {
-  background: var(--navy);
-  border-radius: 12px;
-  padding: 18px 20px;
+  background: rgba(255,255,255,.06);
+  border-radius: 10px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,.08);
   gap: 12px;
+  margin-top: 4px;
 }
 .consensus-band-label {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: rgba(255,255,255,.55);
+  color: rgba(255,255,255,.5);
   flex-shrink: 0;
 }
 .consensus-band-value {
@@ -1779,15 +1784,15 @@ body {
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('predict')">Predict</button>
-    <button class="tab" onclick="switchTab('live')">Live Week</button>
+    <button class="tab active" onclick="switchTab('live')">Live Week</button>
+    <button class="tab" onclick="switchTab('predict')">Predict</button>
     <button class="tab" onclick="switchTab('league')">League</button>
     <button class="tab" onclick="switchTab('how')">How it works</button>
     <button class="tab tab-admin" id="adminTab" onclick="switchTab('admin')" style="display:none">⚙ Admin</button>
   </div>
 
   <!-- ══ PREDICT PANEL ══ -->
-  <div class="panel active" id="panel-predict">
+  <div class="panel" id="panel-predict">
 
     <!-- BTC Live Price -->
     <div class="sec-label"><span class="live-dot"></span>Bitcoin · Live price</div>
@@ -1904,7 +1909,7 @@ body {
   </div>
 
   <!-- ══ LIVE WEEK PANEL ══ -->
-  <div class="panel" id="panel-live">
+  <div class="panel active" id="panel-live">
 
     <div class="sec-label">Live week · Week <span id="live-week-num">1</span></div>
 
@@ -3786,7 +3791,8 @@ async function loadSatoshiCommentary(forceRefresh = false) {
   updateWindowStatus();
   fetchBTCPrice();
   fetchNews();
-  loadSatoshiCommentary(); // load on init so it's ready when user visits Live tab
+  updateLivePanel();
+  loadSatoshiCommentary(); // live tab is default — load immediately
   setInterval(fetchNews, 5 * 60 * 1000);
   setInterval(updateWindowStatus, 1000);
   setInterval(fetchBTCPrice, 60000);
