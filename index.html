@@ -3419,7 +3419,7 @@ async function sendSatoshiMessage() {
       ...satoshiChatHistory,
     ];
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://satoshi.bvrassat.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3606,7 +3606,7 @@ All calls: ${payload.all_calls.map(p => p.name + ': $' + p.call_usd.toLocaleStri
 
 Write your commentary now. 4–6 sentences. First person. No exclamation marks.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('https://satoshi.bvrassat.workers.dev', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
