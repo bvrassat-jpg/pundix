@@ -1319,14 +1319,14 @@ body {
   margin-bottom: 24px;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(245,158,11,.25);
-  box-shadow: 0 4px 24px rgba(0,0,0,.18);
+  border: 1px solid rgba(74,158,255,.18);
+  box-shadow: 0 4px 32px rgba(0,0,0,.28), 0 0 0 1px rgba(74,158,255,.06);
 }
 .satoshi-card::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, var(--orange), rgba(245,158,11,.3), transparent);
+  background: linear-gradient(90deg, rgba(74,158,255,.7), rgba(245,158,11,.4), transparent);
 }
 .satoshi-header {
   display: flex;
@@ -1343,30 +1343,32 @@ body {
 .satoshi-avatar {
   width: 36px; height: 36px;
   border-radius: 50%;
-  background: rgba(245,158,11,.18);
-  border: 1.5px solid rgba(245,158,11,.5);
+  background: rgba(16,185,129,.08);
+  border: 1.5px solid rgba(16,185,129,.35);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--mono);
   font-size: 15px;
-  color: var(--orange);
+  color: #10b981;
   font-weight: 700;
   flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(16,185,129,.15), inset 0 0 8px rgba(16,185,129,.06);
+  text-shadow: 0 0 8px rgba(16,185,129,.6);
 }
 .satoshi-name {
-  font-family: var(--sans);
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -0.2px;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
   color: #fff;
+  text-transform: uppercase;
 }
 .satoshi-role {
   font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 1.5px;
+  font-size: 9px;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--orange);
-  opacity: .7;
-  margin-top: 2px;
+  color: rgba(16,185,129,.7);
+  margin-top: 3px;
 }
 .satoshi-timestamp {
   font-family: var(--mono);
@@ -1387,11 +1389,15 @@ body {
   letter-spacing: 0.1px;
 }
 .satoshi-text .satoshi-closer {
-  color: rgba(255,255,255,.55);
+  color: rgba(16,185,129,.75);
   display: block;
-  margin-top: 10px;
-  font-size: 13px;
-  font-style: italic;
+  margin-top: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-style: normal;
+  letter-spacing: 0.3px;
+  border-left: 2px solid rgba(16,185,129,.3);
+  padding-left: 10px;
 }
 .satoshi-loading {
   display: flex;
@@ -1458,24 +1464,32 @@ body {
 .satoshi-chat-label {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding: 12px 20px 10px;
-  border-top: 1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.03);
+  padding: 11px 20px 9px;
+  border-top: 1px solid rgba(74,158,255,.1);
+  background: rgba(0,0,0,.15);
 }
 .satoshi-chat-label-text {
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgba(255,255,255,.4);
+  color: rgba(255,255,255,.35);
 }
 .satoshi-chat-label-dot {
   width: 5px; height: 5px;
   border-radius: 50%;
-  background: var(--orange);
-  opacity: .6;
+  background: #10b981;
+  box-shadow: 0 0 5px #10b981;
   flex-shrink: 0;
+  animation: pulse 2s infinite;
+}
+.satoshi-chat-label-hash {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: rgba(255,255,255,.15);
+  letter-spacing: 0.5px;
 }
 .satoshi-thread {
   padding: 0 20px;
@@ -1487,11 +1501,12 @@ body {
 .satoshi-thread::-webkit-scrollbar { width: 3px; }
 .satoshi-thread::-webkit-scrollbar-thumb { background: rgba(245,158,11,.2); border-radius: 2px; }
 .satoshi-thread-empty {
-  padding: 10px 0 14px;
-  font-family: var(--sans);
-  font-size: 13px;
-  color: rgba(255,255,255,.35);
-  font-style: italic;
+  padding: 12px 0 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255,255,255,.25);
+  letter-spacing: 0.3px;
+  line-height: 1.6;
 }
 .satoshi-message {
   display: flex;
@@ -1538,9 +1553,10 @@ body {
   font-style: italic;
 }
 .satoshi-message.satoshi-msg .satoshi-msg-bubble {
-  font-family: var(--sans);
-  color: rgba(255,255,255,.9);
-  font-weight: 400;
+  font-family: var(--mono);
+  color: rgba(255,255,255,.88);
+  font-size: 12.5px;
+  line-height: 1.8;
 }
 .satoshi-msg-thinking {
   display: flex;
@@ -1575,37 +1591,39 @@ body {
 }
 .satoshi-input {
   flex: 1;
-  background: rgba(255,255,255,.09);
-  border: 1.5px solid rgba(255,255,255,.15);
-  border-radius: 8px;
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(74,158,255,.2);
+  border-radius: 6px;
   padding: 12px 16px;
-  font-family: var(--sans);
-  font-size: 14px;
-  color: #fff;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: rgba(255,255,255,.9);
   outline: none;
   transition: border-color .2s, background .2s;
 }
-.satoshi-input::placeholder { color: rgba(255,255,255,.35); font-style: italic; }
+.satoshi-input::placeholder { color: rgba(255,255,255,.22); }
 .satoshi-input:focus {
-  border-color: rgba(245,158,11,.6);
-  background: rgba(255,255,255,.12);
+  border-color: rgba(16,185,129,.5);
+  background: rgba(0,0,0,.4);
+  box-shadow: 0 0 0 2px rgba(16,185,129,.08);
 }
 .satoshi-input:disabled { opacity: .4; cursor: not-allowed; }
 .satoshi-send {
-  width: 40px; height: 40px;
-  border-radius: 8px;
-  background: var(--orange);
-  border: none;
-  color: var(--navy);
-  font-size: 18px;
+  width: 38px; height: 38px;
+  border-radius: 6px;
+  background: rgba(16,185,129,.15);
+  border: 1px solid rgba(16,185,129,.4);
+  color: #10b981;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: all .2s;
   flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(16,185,129,.1);
 }
-.satoshi-send:hover { background: #f8ab1a; transform: translateY(-1px); }
-.satoshi-send:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.satoshi-send:hover { background: rgba(16,185,129,.25); box-shadow: 0 0 12px rgba(16,185,129,.2); }
+.satoshi-send:disabled { opacity: .25; cursor: not-allowed; box-shadow: none; }
 
 /* ── ADMIN ── */
 .tab-admin {
@@ -1897,17 +1915,23 @@ body {
       </div>
       <div class="satoshi-footer">
         <div class="satoshi-commentary-type" id="satoshiType">—</div>
-        <button class="satoshi-refresh" onclick="loadSatoshiCommentary(true)" id="satoshiRefreshBtn">↻ refresh</button>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div id="satoshiNodeLine" style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.1);letter-spacing:0.5px;">node://satoshi · v0.1.0</div>
+          <button class="satoshi-refresh" onclick="loadSatoshiCommentary(true)" id="satoshiRefreshBtn">↻ refresh</button>
+        </div>
       </div>
       <div class="satoshi-chat-label">
-        <div class="satoshi-chat-label-dot"></div>
-        <div class="satoshi-chat-label-text">Chat with Satoshi</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="satoshi-chat-label-dot"></div>
+          <div class="satoshi-chat-label-text">Chat with Satoshi</div>
+        </div>
+        <div class="satoshi-chat-label-hash" id="satoshiHash">0x4a7f…c91b</div>
       </div>
       <div class="satoshi-thread" id="satoshiThread">
-        <div class="satoshi-thread-empty" id="satoshiThreadEmpty">Your call, the crowd, the market — ask me anything about this week.</div>
+        <div class="satoshi-thread-empty" id="satoshiThreadEmpty">Your call. The crowd. The market.<br>I am watching all three. Ask.</div>
       </div>
       <div class="satoshi-input-row">
-        <input class="satoshi-input" id="satoshiInput" type="text" placeholder="Type your question and press Enter…" maxlength="200" autocomplete="off" onkeydown="if(event.key==='Enter')sendSatoshiMessage()">
+        <input class="satoshi-input" id="satoshiInput" type="text" placeholder="ask_ " maxlength="200" autocomplete="off" onkeydown="if(event.key==='Enter')sendSatoshiMessage()">
         <button class="satoshi-send" id="satoshiSend" onclick="sendSatoshiMessage()">&#8593;</button>
       </div>
     </div>
@@ -3619,6 +3643,13 @@ async function loadSatoshiCommentary(forceRefresh = false) {
   const tsEl        = document.getElementById('satoshiTimestamp');
   const refreshBtn  = document.getElementById('satoshiRefreshBtn');
   if (!contentEl) return;
+
+  // Rotate the cryptographic fragment in the header
+  const hashEl = document.getElementById('satoshiHash');
+  if (hashEl) {
+    const h = () => Math.floor(Math.random()*0xffff).toString(16).padStart(4,'0');
+    hashEl.textContent = '0x' + h() + '…' + h();
+  }
 
   const commentaryType = getSatoshiCommentaryType();
   const cacheKey       = SATOSHI_CACHE_KEY + '_' + CURRENT_WEEK + '_' + commentaryType;
