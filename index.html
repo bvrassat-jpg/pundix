@@ -3148,17 +3148,21 @@ async function runSentimentScan(force) {
 }
 
 function sentimentBg(score) {
+  // Same 3 stops as consensus bar: red #D63B2F → amber #F59E0B → green #0F8A52
+  // Darkened ~20% so white text stays readable
   const s = Math.max(0, Math.min(100, score));
   function lerp(a, b, t) { return Math.round(a + (b-a)*t); }
   var r, g, b;
-  if (s <= 35) {
-    var t = s/35; r=lerp(110,200,t); g=lerp(15,40,t); b=lerp(15,40,t);
-  } else if (s < 50) {
-    var t = (s-35)/15; r=lerp(200,22,t); g=lerp(40,35,t); b=lerp(40,62,t);
-  } else if (s <= 65) {
-    var t = (s-50)/15; r=lerp(22,10,t); g=lerp(35,90,t); b=lerp(62,50,t);
+  if (s <= 50) {
+    var t = s / 50;
+    r = lerp(160, 155, t);
+    g = lerp(35,  90,  t);
+    b = lerp(25,  5,   t);
   } else {
-    var t = (s-65)/35; r=lerp(10,5,t); g=lerp(90,150,t); b=lerp(50,55,t);
+    var t = (s - 50) / 50;
+    r = lerp(155, 10,  t);
+    g = lerp(90,  100, t);
+    b = lerp(5,   55,  t);
   }
   return 'rgb('+r+','+g+','+b+')';
 }
