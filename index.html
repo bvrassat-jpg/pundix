@@ -3564,7 +3564,7 @@ Respond ONLY with valid JSON after searching — no preamble, no markdown:
 }`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('https://satoshi.bvrassat.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3575,7 +3575,7 @@ Respond ONLY with valid JSON after searching — no preamble, no markdown:
       })
     });
     const data = await resp.json();
-    // Final text block comes after tool_use/tool_result content
+    // Final text block comes after tool_use/tool_result blocks
     const textBlock = (data.content || []).filter(b => b.type === 'text').pop();
     const raw = (textBlock && textBlock.text || '').trim();
     const jsonMatch = raw.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
@@ -3945,7 +3945,7 @@ Based strictly on these values, respond ONLY with valid JSON:
       <div>Interpreting real market data…</div>
     </div>`;
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('https://satoshi.bvrassat.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
