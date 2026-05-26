@@ -986,22 +986,6 @@ body {
 .score-example-value.mid  { color: var(--blue); }
 .score-example-value.low  { color: var(--text-dim); }
 
-/* ── DIRECTION PILLS ── */
-.dir-bull {
-  font-size: 9px;
-  color: var(--green);
-  font-weight: 700;
-  margin-left: 4px;
-  vertical-align: middle;
-}
-.dir-bear {
-  font-size: 9px;
-  color: var(--red);
-  font-weight: 700;
-  margin-left: 4px;
-  vertical-align: middle;
-}
-
 /* ── FOUNDER BADGE ── */
 .founder-badge {
   font-family: var(--mono);
@@ -1203,516 +1187,101 @@ body {
 }
 
 /* ── SENTIMENT HEATMAP ─────────────────── */
-.sentiment-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  margin-bottom: 20px;
-  overflow: hidden;
-}
-.sentiment-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px 10px;
-  border-bottom: 1px solid var(--border);
-  background: var(--navy);
-}
-.sentiment-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.sentiment-header-title {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,.6);
-}
-.sentiment-header-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--orange);
-  flex-shrink: 0;
-  animation: pulse-dot 2s infinite;
-}
-@keyframes pulse-dot {
-  0%,100% { opacity:1; transform:scale(1); }
-  50% { opacity:.5; transform:scale(.7); }
-}
-.sentiment-refresh-btn {
-  font-family: var(--mono);
-  font-size: 9px;
-  color: rgba(255,255,255,.4);
-  cursor: pointer;
-  background: none;
-  border: 1px solid rgba(255,255,255,.12);
-  padding: 4px 8px;
-  border-radius: 3px;
-  letter-spacing: 1px;
-  transition: all .15s;
-}
-.sentiment-refresh-btn:hover { color: var(--orange); border-color: rgba(245,158,11,.4); }
-.sentiment-refresh-btn:disabled { opacity: .4; cursor: not-allowed; }
-
-/* consensus bar */
-.sentiment-consensus-row {
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid var(--border);
-}
-.sentiment-consensus-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.sentiment-bar-track {
-  height: 8px;
-  border-radius: 4px;
-  background: var(--surface);
-  overflow: hidden;
-  margin-bottom: 6px;
-  position: relative;
-}
-.sentiment-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width .8s cubic-bezier(.4,0,.2,1);
-  background: linear-gradient(90deg, #D63B2F, #F59E0B, #0F8A52);
-}
-.sentiment-bar-labels {
-  display: flex;
-  justify-content: space-between;
-  font-family: var(--mono);
-  font-size: 9px;
-  color: var(--text-dim);
-}
-.sentiment-verdict {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-.sentiment-verdict-pill {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 3px 10px;
-  border-radius: 20px;
-}
-.sentiment-verdict-pill.bearish   { background: #FDECEA; color: #D63B2F; border: 1px solid rgba(214,59,47,.2); }
-.sentiment-verdict-pill.neutral   { background: var(--orange-dim); color: #92400E; border: 1px solid rgba(245,158,11,.2); }
-.sentiment-verdict-pill.bullish   { background: #D0F0E2; color: #0F8A52; border: 1px solid rgba(15,138,82,.2); }
-.sentiment-verdict-pill.very-bull { background: #0F8A52; color: #fff; border: none; }
-.sentiment-verdict-score {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-mid);
-}
-
-/* heatmap grid */
-.sentiment-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.sentiment-cell {
-  padding: 10px 12px;
-  background: var(--card);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.sentiment-cell-source {
-  font-family: var(--mono);
-  font-size: 8px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sentiment-cell-score {
-  font-family: var(--mono);
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1;
-}
-.sentiment-cell-label {
-  font-family: var(--mono);
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-/* color coding */
-/* Sentiment cells use inline background set by JS — all text white */
-.sentiment-cell { color: #fff; }
-.sentiment-cell .sentiment-cell-source { color: rgba(255,255,255,.6); }
-.sentiment-cell .sentiment-cell-score  { color: #fff; }
-.sentiment-cell .sentiment-cell-label  { color: rgba(255,255,255,.9); }
-
-/* key signals */
-.sentiment-signals {
-  padding: 12px 16px;
-}
-.sentiment-signals-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 8px;
-}
-.sentiment-signal-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--border);
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-mid);
-  line-height: 1.5;
-}
-.sentiment-signal-row:last-child { border-bottom: none; }
-.sentiment-signal-bullet {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 4px;
-}
-.bull-bullet { background: var(--green); }
-.bear-bullet { background: var(--red); }
-.neut-bullet { background: var(--orange); }
-
-.sentiment-loading {
-  padding: 28px 16px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-dim);
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-.sentiment-loading-dots {
-  display: flex;
-  gap: 6px;
-}
-.sentiment-loading-dots span {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--orange);
-  animation: bounce-dot .8s ease-in-out infinite;
-}
-.sentiment-loading-dots span:nth-child(2) { animation-delay: .15s; }
-.sentiment-loading-dots span:nth-child(3) { animation-delay: .3s; }
-@keyframes bounce-dot {
-  0%,80%,100% { transform:translateY(0); opacity:.4; }
-  40% { transform:translateY(-6px); opacity:1; }
-}
+.sentiment-card { background:var(--card); border:1px solid var(--border); border-radius:12px; margin-bottom:20px; overflow:hidden; }
+.sentiment-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px 10px; border-bottom:1px solid rgba(255,255,255,.08); background:var(--navy); }
+.sentiment-header-left { display:flex; align-items:center; gap:8px; }
+.sentiment-header-title { font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.6); }
+.sentiment-header-dot { width:7px; height:7px; border-radius:50%; background:var(--orange); flex-shrink:0; animation:pulse-dot 2s infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.7)} }
+.sentiment-refresh-btn { font-family:var(--mono); font-size:9px; color:rgba(255,255,255,.4); cursor:pointer; background:none; border:1px solid rgba(255,255,255,.12); padding:4px 8px; border-radius:3px; letter-spacing:1px; transition:all .15s; }
+.sentiment-refresh-btn:hover { color:var(--orange); border-color:rgba(245,158,11,.4); }
+.sentiment-refresh-btn:disabled { opacity:.4; cursor:not-allowed; }
+.sentiment-consensus-row { padding:14px 16px 10px; border-bottom:1px solid var(--border); }
+.sentiment-consensus-label { font-family:var(--mono); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+.sentiment-bar-track { height:8px; border-radius:4px; background:var(--surface); overflow:hidden; margin-bottom:6px; }
+.sentiment-bar-fill { height:100%; border-radius:4px; transition:width .8s cubic-bezier(.4,0,.2,1); background:linear-gradient(90deg,#D63B2F,#F59E0B,#0F8A52); }
+.sentiment-bar-labels { display:flex; justify-content:space-between; font-family:var(--mono); font-size:9px; color:var(--text-dim); }
+.sentiment-verdict { display:flex; align-items:center; gap:8px; margin-top:8px; }
+.sentiment-verdict-pill { font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:3px 10px; border-radius:20px; }
+.sentiment-verdict-pill.bearish { background:#FDECEA; color:#D63B2F; border:1px solid rgba(214,59,47,.2); }
+.sentiment-verdict-pill.neutral { background:var(--orange-dim); color:#92400E; border:1px solid rgba(245,158,11,.2); }
+.sentiment-verdict-pill.bullish { background:#D0F0E2; color:#0F8A52; border:1px solid rgba(15,138,82,.2); }
+.sentiment-verdict-pill.very-bull { background:#0F8A52; color:#fff; border:none; }
+.sentiment-verdict-score { font-family:var(--mono); font-size:11px; color:var(--text-mid); }
+.sentiment-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border-bottom:1px solid var(--border); }
+.sentiment-cell { padding:10px 12px; display:flex; flex-direction:column; gap:3px; color:#fff; }
+.sentiment-cell-source { font-family:var(--mono); font-size:8px; letter-spacing:1px; text-transform:uppercase; color:rgba(255,255,255,.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sentiment-cell-score { font-family:var(--mono); font-size:16px; font-weight:700; line-height:1; color:#fff; }
+.sentiment-cell-label { font-family:var(--mono); font-size:8px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:rgba(255,255,255,.9); }
+.sentiment-signals { padding:12px 16px; }
+.sentiment-signals-label { font-family:var(--mono); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; }
+.sentiment-signal-row { display:flex; align-items:flex-start; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); font-family:var(--mono); font-size:11px; color:var(--text-mid); line-height:1.5; }
+.sentiment-signal-row:last-child { border-bottom:none; }
+.sentiment-signal-bullet { width:6px; height:6px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+.bull-bullet { background:var(--green); }
+.bear-bullet { background:var(--red); }
+.sentiment-loading { padding:28px 16px; font-family:var(--mono); font-size:11px; color:var(--text-dim); text-align:center; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.sentiment-loading-dots { display:flex; gap:6px; }
+.sentiment-loading-dots span { width:7px; height:7px; border-radius:50%; background:var(--orange); animation:bounce-dot .8s ease-in-out infinite; }
+.sentiment-loading-dots span:nth-child(2){animation-delay:.15s}
+.sentiment-loading-dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce-dot{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-6px);opacity:1}}
 
 /* ── TA WINDOW ─────────────────────────── */
-.ta-float-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 20px;
-  background: var(--navy);
-  border: 1px solid rgba(245,158,11,.5);
-  color: var(--orange);
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 10px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  box-shadow: 0 4px 20px rgba(0,0,0,.3);
-  z-index: 90;
-  transition: all .2s;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.ta-float-btn:hover { background: rgba(245,158,11,.1); box-shadow: 0 4px 28px rgba(245,158,11,.25); }
-.ta-float-btn-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--orange);
-  animation: pulse-dot 2s infinite;
-}
+.ta-float-btn { position:fixed; bottom:24px; right:20px; background:var(--navy); border:1px solid rgba(245,158,11,.5); color:var(--orange); font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:10px 16px; border-radius:6px; cursor:pointer; box-shadow:0 4px 20px rgba(0,0,0,.3); z-index:90; transition:all .2s; display:flex; align-items:center; gap:7px; }
+.ta-float-btn:hover { background:rgba(245,158,11,.1); }
+.ta-float-btn-dot { width:6px; height:6px; border-radius:50%; background:var(--orange); animation:pulse-dot 2s infinite; }
+.ta-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(3px); z-index:95; display:flex; align-items:flex-end; justify-content:stretch; padding:0; opacity:0; pointer-events:none; transition:opacity .25s; }
+.ta-modal-overlay.open { opacity:1; pointer-events:all; }
+.ta-window { background:var(--navy); width:100%; max-height:92vh; border-radius:16px 16px 0 0; border:1px solid rgba(255,255,255,.1); border-bottom:none; overflow-y:auto; transform:translateY(40px); transition:transform .3s cubic-bezier(.4,0,.2,1); }
+.ta-modal-overlay.open .ta-window { transform:translateY(0); }
+@media(min-width:600px){.ta-modal-overlay{align-items:center;justify-content:center;padding:20px}.ta-window{max-width:620px;max-height:88vh;border-radius:16px;border-bottom:1px solid rgba(255,255,255,.1)}}
+.ta-window-header { position:sticky; top:0; background:var(--navy); padding:18px 22px 14px; border-bottom:1px solid rgba(255,255,255,.08); display:flex; align-items:center; justify-content:space-between; z-index:2; }
+.ta-window-title { font-family:var(--sans); font-size:16px; font-weight:800; color:#fff; letter-spacing:-0.2px; }
+.ta-window-title span { color:var(--orange); }
+.ta-window-close { background:none; border:none; color:rgba(255,255,255,.4); font-size:20px; cursor:pointer; padding:4px; line-height:1; transition:color .15s; }
+.ta-window-close:hover { color:#fff; }
+.ta-window-body { padding:20px 22px 28px; }
+.ta-refresh-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+.ta-timestamp { font-family:var(--mono); font-size:10px; color:rgba(255,255,255,.3); letter-spacing:0.5px; }
+.ta-refresh-btn { font-family:var(--mono); font-size:9px; color:rgba(255,255,255,.4); cursor:pointer; background:none; border:1px solid rgba(255,255,255,.12); padding:4px 10px; border-radius:3px; letter-spacing:1px; transition:all .15s; }
+.ta-refresh-btn:hover { color:var(--orange); border-color:rgba(245,158,11,.4); }
+.ta-refresh-btn:disabled { opacity:.4; cursor:not-allowed; }
+.ta-consensus { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:18px 20px; margin-bottom:20px; }
+.ta-consensus-title { font-family:var(--mono); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.4); margin-bottom:10px; }
+.ta-consensus-main { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+.ta-consensus-verdict { font-family:var(--sans); font-size:22px; font-weight:800; color:#fff; }
+.ta-consensus-score-pill { font-family:var(--mono); font-size:13px; font-weight:700; padding:5px 12px; border-radius:20px; }
+.ta-score-bull { background:rgba(15,138,82,.25); color:#3ECF8E; border:1px solid rgba(15,138,82,.3); }
+.ta-score-bear { background:rgba(214,59,47,.2); color:#FC8181; border:1px solid rgba(214,59,47,.3); }
+.ta-score-neut { background:rgba(245,158,11,.15); color:#FBBF24; border:1px solid rgba(245,158,11,.25); }
+.ta-bar-track { height:6px; border-radius:3px; background:rgba(255,255,255,.1); overflow:hidden; }
+.ta-bar-fill { height:100%; border-radius:3px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+.ta-section-label { font-family:var(--mono); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.3); margin:16px 0 8px; }
+.ta-indicator-row { display:flex; align-items:center; gap:12px; padding:10px 14px; background:rgba(255,255,255,.04); border-radius:8px; margin-bottom:6px; border:1px solid rgba(255,255,255,.06); }
+.ta-indicator-name { font-family:var(--mono); font-size:11px; font-weight:700; color:rgba(255,255,255,.7); min-width:90px; flex-shrink:0; }
+.ta-indicator-value { font-family:var(--mono); font-size:11px; color:rgba(255,255,255,.45); flex:1; }
+.ta-indicator-signal { font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:2px 8px; border-radius:3px; flex-shrink:0; }
+.ta-sig-bull { background:rgba(15,138,82,.2); color:#3ECF8E; }
+.ta-sig-bear { background:rgba(214,59,47,.2); color:#FC8181; }
+.ta-sig-neut { background:rgba(245,158,11,.15); color:#FBBF24; }
+.ta-targets { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:14px 16px; margin-top:16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.ta-target-col { text-align:center; }
+.ta-target-label { font-family:var(--mono); font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:rgba(255,255,255,.35); margin-bottom:5px; }
+.ta-target-value { font-family:var(--mono); font-size:13px; font-weight:700; }
+.ta-target-value.support { color:#FC8181; }
+.ta-target-value.current { color:var(--orange); }
+.ta-target-value.resist  { color:#3ECF8E; }
+.ta-loading { padding:32px 20px; font-family:var(--mono); font-size:11px; color:rgba(255,255,255,.4); text-align:center; display:flex; flex-direction:column; align-items:center; gap:12px; }
+.ta-loading-dots { display:flex; gap:7px; }
+.ta-loading-dots span { width:7px; height:7px; border-radius:50%; background:var(--orange); animation:bounce-dot .8s ease-in-out infinite; }
+.ta-loading-dots span:nth-child(2){animation-delay:.15s}
+.ta-loading-dots span:nth-child(3){animation-delay:.3s}
+.ta-narrative { margin-top:16px; padding:14px 16px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); border-radius:10px; font-family:var(--mono); font-size:11px; color:rgba(255,255,255,.6); line-height:1.75; letter-spacing:0.3px; }
 
-.ta-modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.6);
-  backdrop-filter: blur(3px);
-  z-index: 95;
-  display: flex;
-  align-items: flex-end;
-  justify-content: stretch;
-  padding: 0;
-  opacity: 0; pointer-events: none;
-  transition: opacity .25s;
-}
-.ta-modal-overlay.open { opacity: 1; pointer-events: all; }
-.ta-window {
-  background: var(--navy);
-  width: 100%;
-  max-height: 92vh;
-  border-radius: 16px 16px 0 0;
-  border: 1px solid rgba(255,255,255,.1);
-  border-bottom: none;
-  overflow-y: auto;
-  transform: translateY(40px);
-  transition: transform .3s cubic-bezier(.4,0,.2,1);
-}
-.ta-modal-overlay.open .ta-window { transform: translateY(0); }
-@media (min-width: 600px) {
-  .ta-modal-overlay { align-items: center; justify-content: center; padding: 20px; }
-  .ta-window {
-    max-width: 620px;
-    max-height: 88vh;
-    border-radius: 16px;
-    border-bottom: 1px solid rgba(255,255,255,.1);
-  }
-}
-.ta-window-header {
-  position: sticky;
-  top: 0;
-  background: var(--navy);
-  padding: 18px 22px 14px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  z-index: 2;
-}
-.ta-window-title {
-  font-family: var(--sans);
-  font-size: 16px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.2px;
-}
-.ta-window-title span { color: var(--orange); }
-.ta-window-close {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,.4);
-  font-size: 20px;
-  cursor: pointer;
-  padding: 4px;
-  line-height: 1;
-  transition: color .15s;
-}
-.ta-window-close:hover { color: #fff; }
-.ta-window-body { padding: 20px 22px 28px; }
-.ta-refresh-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-.ta-timestamp {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: rgba(255,255,255,.3);
-  letter-spacing: 0.5px;
-}
-.ta-refresh-btn {
-  font-family: var(--mono);
-  font-size: 9px;
-  color: rgba(255,255,255,.4);
-  cursor: pointer;
-  background: none;
-  border: 1px solid rgba(255,255,255,.12);
-  padding: 4px 10px;
-  border-radius: 3px;
-  letter-spacing: 1px;
-  transition: all .15s;
-}
-.ta-refresh-btn:hover { color: var(--orange); border-color: rgba(245,158,11,.4); }
-.ta-refresh-btn:disabled { opacity: .4; cursor: not-allowed; }
-
-/* TA consensus bar */
-.ta-consensus {
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 12px;
-  padding: 18px 20px;
-  margin-bottom: 20px;
-}
-.ta-consensus-title {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,.4);
-  margin-bottom: 10px;
-}
-.ta-consensus-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.ta-consensus-verdict {
-  font-family: var(--sans);
-  font-size: 22px;
-  font-weight: 800;
-  color: #fff;
-}
-.ta-consensus-score-pill {
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 700;
-  padding: 5px 12px;
-  border-radius: 20px;
-}
-.ta-score-bull  { background: rgba(15,138,82,.25); color: #3ECF8E; border: 1px solid rgba(15,138,82,.3); }
-.ta-score-bear  { background: rgba(214,59,47,.2); color: #FC8181; border: 1px solid rgba(214,59,47,.3); }
-.ta-score-neut  { background: rgba(245,158,11,.15); color: #FBBF24; border: 1px solid rgba(245,158,11,.25); }
-.ta-bar-track {
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(255,255,255,.1);
-  overflow: hidden;
-}
-.ta-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width .8s cubic-bezier(.4,0,.2,1);
-}
-
-/* TA indicator rows */
-.ta-section-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,.3);
-  margin: 16px 0 8px;
-}
-.ta-indicator-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: rgba(255,255,255,.04);
-  border-radius: 8px;
-  margin-bottom: 6px;
-  border: 1px solid rgba(255,255,255,.06);
-}
-.ta-indicator-name {
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(255,255,255,.7);
-  min-width: 90px;
-  flex-shrink: 0;
-}
-.ta-indicator-value {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: rgba(255,255,255,.45);
-  flex: 1;
-}
-.ta-indicator-signal {
-  font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 2px 8px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-.ta-sig-bull  { background: rgba(15,138,82,.2); color: #3ECF8E; }
-.ta-sig-bear  { background: rgba(214,59,47,.2); color: #FC8181; }
-.ta-sig-neut  { background: rgba(245,158,11,.15); color: #FBBF24; }
-
-/* TA price targets */
-.ta-targets {
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 10px;
-  padding: 14px 16px;
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px;
-}
-.ta-target-col { text-align: center; }
-.ta-target-label {
-  font-family: var(--mono);
-  font-size: 8px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,.35);
-  margin-bottom: 5px;
-}
-.ta-target-value {
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 700;
-}
-.ta-target-value.support  { color: #FC8181; }
-.ta-target-value.current  { color: var(--orange); }
-.ta-target-value.resist   { color: #3ECF8E; }
-
-/* TA loading */
-.ta-loading {
-  padding: 32px 20px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: rgba(255,255,255,.4);
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-.ta-loading-dots {
-  display: flex; gap: 7px;
-}
-.ta-loading-dots span {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--orange);
-  animation: bounce-dot .8s ease-in-out infinite;
-}
-.ta-loading-dots span:nth-child(2) { animation-delay: .15s; }
-.ta-loading-dots span:nth-child(3) { animation-delay: .3s; }
-
-/* TA narrative */
-.ta-narrative {
-  margin-top: 16px;
-  padding: 14px 16px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 10px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: rgba(255,255,255,.6);
-  line-height: 1.75;
-  letter-spacing: 0.3px;
-}
+/* ── DIRECTION PILLS ── */
+.dir-bull { font-size:9px; color:var(--green); font-weight:700; margin-left:4px; vertical-align:middle; }
+.dir-bear { font-size:9px; color:var(--red); font-weight:700; margin-left:4px; vertical-align:middle; }
 
 
 /* ── RESOLVED BANNER ── */
@@ -2258,27 +1827,27 @@ body {
       <div class="sentiment-header">
         <div class="sentiment-header-left">
           <div class="sentiment-header-dot"></div>
-          <div class="sentiment-header-title">BTC Market Sentiment · AI Scan</div>
+          <div class="sentiment-header-title">BTC Market Sentiment · AI</div>
         </div>
-        <button class="sentiment-refresh-btn" id="sentimentRefreshBtn" onclick="runSentimentScan()">↻ scan</button>
+        <button class="sentiment-refresh-btn" id="sentimentRefreshBtn" onclick="runSentimentScan(true)">↻ refresh</button>
       </div>
       <div id="sentimentBody">
         <div class="sentiment-loading">
           <div class="sentiment-loading-dots"><span></span><span></span><span></span></div>
-          <div>Initialising sentiment scan…</div>
+          <div>Analysing market sentiment…</div>
         </div>
       </div>
     </div>
 
     <!-- TA Float Button -->
-    <button class="ta-float-btn" id="taFloatBtn" onclick="openTAWindow()">
+    <button class="ta-float-btn" onclick="openTAWindow()">
       <div class="ta-float-btn-dot"></div>
       7-Day TA
     </button>
 
     <!-- TA Modal -->
     <div class="ta-modal-overlay" id="taModalOverlay" onclick="closeTAWindowOnBg(event)">
-      <div class="ta-window" id="taWindow">
+      <div class="ta-window">
         <div class="ta-window-header">
           <div class="ta-window-title">₿ <span>7-Day Technical Analysis</span></div>
           <button class="ta-window-close" onclick="closeTAWindow()">✕</button>
@@ -2286,7 +1855,7 @@ body {
         <div class="ta-window-body">
           <div class="ta-refresh-row">
             <div class="ta-timestamp" id="taTimestamp">—</div>
-            <button class="ta-refresh-btn" id="taRefreshBtn" onclick="runTA()">↻ refresh</button>
+            <button class="ta-refresh-btn" id="taRefreshBtn" onclick="runTA(true)">↻ refresh</button>
           </div>
           <div id="taBody">
             <div class="ta-loading">
@@ -3231,10 +2800,7 @@ async function renderLeaderboard() {
     const scoreCls  = p.score == null ? 'lb-score' : p.score >= 80 ? 'lb-score high' : p.score >= 50 ? 'lb-score mid' : 'lb-score low';
     const founderTag = isFounder ? '<span class="founder-badge">Founder</span>' : '';
     const youTag     = isMe ? ' <span style="color:var(--blue);font-size:11px;font-family:var(--mono);">(you)</span>' : '';
-    const dir        = p.direction;
-    const dirTag     = dir === 'bull' ? '<span class="dir-bull">▲</span>'
-                     : dir === 'bear' ? '<span class="dir-bear">▼</span>'
-                     : '';
+    const dirTag     = p.direction === 'bull' ? '<span class="dir-bull">▲</span>' : p.direction === 'bear' ? '<span class="dir-bear">▼</span>' : '';
 
     return `<div class="leaderboard-row ${isMe ? 'your-row' : ''}">
       <div class="${rankCls}">${rankStr}</div>
@@ -3505,115 +3071,98 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════
-// SENTIMENT HEATMAP
 // ══════════════════════════════════════════
-
-let sentimentCache = null;
-let sentimentRunning = false;
+// UTILS
+// ══════════════════════════════════════════
 
 function timeAgo(date) {
   const diff = Math.floor((Date.now() - date) / 60000);
-  if (diff < 1)   return 'just now';
-  if (diff < 60)  return diff + 'm ago';
+  if (diff < 1)    return 'just now';
+  if (diff < 60)   return diff + 'm ago';
   if (diff < 1440) return Math.floor(diff/60) + 'h ago';
   return Math.floor(diff/1440) + 'd ago';
 }
 
+// ══════════════════════════════════════════
+// SENTIMENT HEATMAP
+// ══════════════════════════════════════════
+
+const WORKER = 'https://satoshi.bvrassat.workers.dev';
+let sentimentCache = null;
+let sentimentRunning = false;
+
 async function runSentimentScan(force) {
   if (sentimentRunning) return;
   if (sentimentCache && !force) { renderSentiment(sentimentCache); return; }
-
   sentimentRunning = true;
   const btn = document.getElementById('sentimentRefreshBtn');
   if (btn) { btn.disabled = true; btn.textContent = '… thinking'; }
-
   const el = document.getElementById('sentimentBody');
-  if (el) el.innerHTML = `<div class="sentiment-loading">
-    <div class="sentiment-loading-dots"><span></span><span></span><span></span></div>
-    <div>Analysing market sentiment…</div>
-  </div>`;
+  if (el) el.innerHTML = '<div class="sentiment-loading"><div class="sentiment-loading-dots"><span></span><span></span><span></span></div><div>Analysing market sentiment…</div></div>';
 
-  const btcPrice = liveBTC || 84000;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0,10);
+  const price = liveBTC || 84000;
 
-  const prompt = `You are a crypto market analyst. Today is ${today}. BTC spot: $${Math.round(btcPrice).toLocaleString('en-US')}.
-
-Based on your training knowledge up to your cutoff, assess the current Bitcoin market sentiment as accurately as possible. BTC is currently trading at $\${Math.round(btcPrice).toLocaleString('en-US')} — use this live price as your anchor and calibrate your scores accordingly. Be honest and specific, not generic.
-
-Respond ONLY with valid JSON after searching — no preamble, no markdown:
-
-{
-  "sources": [
-    {"name": "X / Twitter",  "score": <0-100>, "label": "<Bear|Neutral|Bull>", "note": "<10 words from real findings>"},
-    {"name": "Reddit",       "score": <0-100>, "label": "<Bear|Neutral|Bull>", "note": "<10 words>"},
-    {"name": "News Flow",    "score": <0-100>, "label": "<Bear|Neutral|Bull>", "note": "<10 words>"},
-    {"name": "On-chain",     "score": <0-100>, "label": "<Bear|Neutral|Bull>", "note": "<10 words>"},
-    {"name": "ETF/Inst.",    "score": <0-100>, "label": "<Bear|Neutral|Bull>", "note": "<10 words>"},
-    {"name": "Macro",        "score": <0-100>, "label": "<Bear|Neutral|Bull>", "note": "<10 words>"},
-    {"name": "Derivatives",  "score": <0-100>, "label": "<Bear|Neutral|Bull>", "note": "<10 words>"},
-    {"name": "Fear & Greed", "score": <0-100>, "label": "<Bear|Neutral|Bull>", "note": "<actual index value if found>"}
-  ],
-  "bull_signals": ["<real finding 1>", "<real finding 2>", "<real finding 3>"],
-  "bear_signals": ["<real finding 1>", "<real finding 2>"],
-  "consensus_summary": "<2 sentences grounded in search results>"
-}`;
+  var promptParts = [
+    'You are a crypto market analyst. Today: ' + today + '. BTC: $' + Math.round(price).toLocaleString('en-US') + '.',
+    'Assess current Bitcoin market sentiment based on your training knowledge. Use the live BTC price as your anchor. Be honest and calibrated.',
+    'Respond ONLY with valid JSON, no markdown:',
+    '{',
+    '  "sources": [',
+    '    {"name":"X / Twitter","score":<0-100>,"label":"<Bear|Neutral|Bull>","note":"<10 words>"},',
+    '    {"name":"Reddit","score":<0-100>,"label":"<Bear|Neutral|Bull>","note":"<10 words>"},',
+    '    {"name":"News Flow","score":<0-100>,"label":"<Bear|Neutral|Bull>","note":"<10 words>"},',
+    '    {"name":"On-chain","score":<0-100>,"label":"<Bear|Neutral|Bull>","note":"<10 words>"},',
+    '    {"name":"ETF/Inst.","score":<0-100>,"label":"<Bear|Neutral|Bull>","note":"<10 words>"},',
+    '    {"name":"Macro","score":<0-100>,"label":"<Bear|Neutral|Bull>","note":"<10 words>"},',
+    '    {"name":"Derivatives","score":<0-100>,"label":"<Bear|Neutral|Bull>","note":"<10 words>"},',
+    '    {"name":"Fear & Greed","score":<0-100>,"label":"<Bear|Neutral|Bull>","note":"<actual index value>"}',
+    '  ],',
+    '  "bull_signals": ["<signal 1>","<signal 2>","<signal 3>"],',
+    '  "bear_signals": ["<signal 1>","<signal 2>"],',
+    '  "consensus_summary": "<2 sentences plain text>"',
+    '}'
+  ];
+  var prompt = promptParts.join('\n');
 
   try {
-    const resp = await fetch('https://satoshi.bvrassat.workers.dev', {
+    const resp = await fetch(WORKER, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await resp.json();
     const raw = (data?.content?.[0]?.text || '').trim();
-    const jsonMatch = raw.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No JSON found');
-    const parsed = JSON.parse(jsonMatch[0]);
+    const m = raw.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('No JSON');
+    const parsed = JSON.parse(m[0]);
     parsed._ts = Date.now();
     sentimentCache = parsed;
     renderSentiment(parsed);
   } catch(e) {
     console.error('sentiment scan:', e);
-    if (el) el.innerHTML = '<div class="sentiment-loading">Scan failed — tap scan to retry</div>';
+    if (el) el.innerHTML = '<div class="sentiment-loading">Scan failed — tap refresh to retry</div>';
   }
-
   sentimentRunning = false;
-  if (btn) { btn.disabled = false; btn.textContent = '\u21bb scan'; }
+  if (btn) { btn.disabled = false; btn.textContent = '↻ refresh'; }
 }
-
 
 function sentimentBg(score) {
-  // Same 3 hue stops as the consensus bar: red → amber → green
-  // Each stop darkened so white text stays readable
-  // score  0  = dark red    rgb(160, 35, 25)   matches #D63B2F family
-  // score 50  = dark amber  rgb(150, 85,  5)   matches #F59E0B family
-  // score 100 = dark green  rgb( 12,108, 55)   matches #0F8A52 family
   const s = Math.max(0, Math.min(100, score));
-  function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
+  function lerp(a, b, t) { return Math.round(a + (b-a)*t); }
   var r, g, b;
-  // 4-stop for clean separation: red → amber → teal-transition → green
-  if (s <= 50) {
-    var t = s / 50;
-    r = lerp(160, 150, t);   // deep red → amber (stays warm)
-    g = lerp(35,  85,  t);   // rises to amber green
-    b = lerp(25,  5,   t);   // blue fades out
+  if (s <= 35) {
+    var t = s/35; r=lerp(110,200,t); g=lerp(15,40,t); b=lerp(15,40,t);
+  } else if (s < 50) {
+    var t = (s-35)/15; r=lerp(200,22,t); g=lerp(40,35,t); b=lerp(40,62,t);
   } else if (s <= 65) {
-    var t = (s - 50) / 15;
-    r = lerp(150, 20,  t);   // rapid red drop once past amber
-    g = lerp(85,  95,  t);
-    b = lerp(5,   40,  t);
+    var t = (s-50)/15; r=lerp(22,10,t); g=lerp(35,90,t); b=lerp(62,50,t);
   } else {
-    var t = (s - 65) / 35;
-    r = lerp(20,  10,  t);   // settled into green family
-    g = lerp(95,  115, t);
-    b = lerp(40,  55,  t);
+    var t = (s-65)/35; r=lerp(10,5,t); g=lerp(90,150,t); b=lerp(50,55,t);
   }
-  return 'rgb(' + r + ',' + g + ',' + b + ')';
+  return 'rgb('+r+','+g+','+b+')';
 }
+
 function verdictPillClass(label) {
   const l = (label||'').toLowerCase();
   if (l.includes('extreme greed')) return 'very-bull';
@@ -3625,71 +3174,45 @@ function verdictPillClass(label) {
 function renderSentiment(data) {
   const el = document.getElementById('sentimentBody');
   if (!el) return;
-
-  // Recompute from source scores so bar always matches the cells
   const sources = data.sources || [];
-  const score = sources.length
-    ? Math.round(sources.reduce(function(sum,s){ return sum+(s.score||50); }, 0) / sources.length)
-    : (data.overall_score || 50);
-  const label = score >= 75 ? 'Extreme Greed'
-              : score >= 60 ? 'Greed'
-              : score >= 42 ? 'Neutral'
-              : score >= 27 ? 'Fear'
-              : 'Extreme Fear';
-  const pct   = score + '%';
+  const score = sources.length ? Math.round(sources.reduce(function(s,x){return s+(x.score||50);},0)/sources.length) : 50;
+  const label = score>=75?'Extreme Greed':score>=60?'Greed':score>=42?'Neutral':score>=27?'Fear':'Extreme Fear';
   const pillCls = verdictPillClass(label);
-
-  const cells = (data.sources || []).map(s => {
-    const bg = sentimentBg(s.score);
-    return `<div class="sentiment-cell" style="background:${bg}">
-      <div class="sentiment-cell-source">${escHtml(s.name)}</div>
-      <div class="sentiment-cell-score">${s.score}</div>
-      <div class="sentiment-cell-label">${escHtml(s.label)}</div>
-      <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,.6);margin-top:1px;line-height:1.3;">${escHtml(s.note||'')}</div>
-    </div>`;
-  }).join('');
-
-  const bullRows = (data.bull_signals || []).map(s =>
-    `<div class="sentiment-signal-row"><div class="sentiment-signal-bullet bull-bullet"></div>${escHtml(s)}</div>`
-  ).join('');
-
-  const bearRows = (data.bear_signals || []).map(s =>
-    `<div class="sentiment-signal-row"><div class="sentiment-signal-bullet bear-bullet"></div>${escHtml(s)}</div>`
-  ).join('');
-
   const ts = data._ts ? timeAgo(new Date(data._ts)) : 'now';
 
-  el.innerHTML = `
-    <div class="sentiment-consensus-row">
-      <div class="sentiment-consensus-label">
-        <span>Consensus Score</span>
-        <span style="color:var(--text-mid);font-size:9px;">${ts}</span>
-      </div>
-      <div class="sentiment-bar-track">
-        <div class="sentiment-bar-fill" style="width:${pct}"></div>
-      </div>
-      <div class="sentiment-bar-labels">
-        <span>0 · Extreme Fear</span>
-        <span>50 · Neutral</span>
-        <span>100 · Extreme Greed</span>
-      </div>
-      <div class="sentiment-verdict">
-        <div class="sentiment-verdict-pill ${pillCls}">${escHtml(label)}</div>
-        <div class="sentiment-verdict-score">${score}/100</div>
-      </div>
-    </div>
-    <div class="sentiment-grid">${cells}</div>
-    <div class="sentiment-signals">
-      <div class="sentiment-signals-label">Key signals</div>
-      ${bullRows}${bearRows}
-      ${data.consensus_summary ? `<div style="font-family:var(--mono);font-size:10px;color:var(--text-mid);padding:8px 0 2px;line-height:1.6;">${escHtml(data.consensus_summary)}</div>` : ''}
-    </div>`;
+  const cells = sources.map(function(s) {
+    return '<div class="sentiment-cell" style="background:'+sentimentBg(s.score)+'">' +
+      '<div class="sentiment-cell-source">'+escHtml(s.name)+'</div>' +
+      '<div class="sentiment-cell-score">'+s.score+'</div>' +
+      '<div class="sentiment-cell-label">'+escHtml(s.label)+'</div>' +
+      '<div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,.6);margin-top:1px;line-height:1.3;">'+escHtml(s.note||'')+'</div>' +
+    '</div>';
+  }).join('');
+
+  const bullRows = (data.bull_signals||[]).map(function(s){
+    return '<div class="sentiment-signal-row"><div class="sentiment-signal-bullet bull-bullet"></div>'+escHtml(s)+'</div>';
+  }).join('');
+  const bearRows = (data.bear_signals||[]).map(function(s){
+    return '<div class="sentiment-signal-row"><div class="sentiment-signal-bullet bear-bullet"></div>'+escHtml(s)+'</div>';
+  }).join('');
+
+  el.innerHTML =
+    '<div class="sentiment-consensus-row">' +
+      '<div class="sentiment-consensus-label"><span>Consensus Score</span><span style="color:var(--text-mid);font-size:9px;">'+ts+'</span></div>' +
+      '<div class="sentiment-bar-track"><div class="sentiment-bar-fill" style="width:'+score+'%"></div></div>' +
+      '<div class="sentiment-bar-labels"><span>0 · Extreme Fear</span><span>50 · Neutral</span><span>100 · Extreme Greed</span></div>' +
+      '<div class="sentiment-verdict"><div class="sentiment-verdict-pill '+pillCls+'">'+escHtml(label)+'</div><div class="sentiment-verdict-score">'+score+'/100</div></div>' +
+    '</div>' +
+    '<div class="sentiment-grid">'+cells+'</div>' +
+    '<div class="sentiment-signals">' +
+      '<div class="sentiment-signals-label">Key signals</div>' +
+      bullRows + bearRows +
+      (data.consensus_summary ? '<div style="font-family:var(--mono);font-size:10px;color:var(--text-mid);padding:8px 0 2px;line-height:1.6;">'+escHtml(data.consensus_summary)+'</div>' : '') +
+    '</div>';
 }
 
 // ══════════════════════════════════════════
-// TECHNICAL ANALYSIS WINDOW — REAL DATA
-// Candles from Binance public API, indicators
-// computed client-side, Claude interprets.
+// TECHNICAL ANALYSIS WINDOW
 // ══════════════════════════════════════════
 
 let taCache = null;
@@ -3708,380 +3231,254 @@ function closeTAWindowOnBg(e) {
   if (e.target === document.getElementById('taModalOverlay')) closeTAWindow();
 }
 
-// ── Indicator math ────────────────────────
-
 function calcEMA(closes, period) {
-  const k = 2 / (period + 1);
-  let ema = closes[0];
-  for (let i = 1; i < closes.length; i++) ema = closes[i] * k + ema * (1 - k);
+  var k = 2/(period+1), ema = closes[0];
+  for (var i=1;i<closes.length;i++) ema = closes[i]*k + ema*(1-k);
   return ema;
 }
-
 function calcRSI(closes, period) {
-  if (closes.length < period + 1) return null;
-  let gains = 0, losses = 0;
-  for (let i = closes.length - period; i < closes.length; i++) {
-    const d = closes[i] - closes[i - 1];
-    if (d >= 0) gains += d; else losses -= d;
+  if (closes.length < period+1) return null;
+  var gains=0, losses=0;
+  for (var i=closes.length-period;i<closes.length;i++) {
+    var d=closes[i]-closes[i-1];
+    if (d>=0) gains+=d; else losses-=d;
   }
-  const avgG = gains / period, avgL = losses / period;
-  if (avgL === 0) return 100;
-  return 100 - 100 / (1 + avgG / avgL);
+  var avgG=gains/period, avgL=losses/period;
+  if (avgL===0) return 100;
+  return 100 - 100/(1+avgG/avgL);
 }
-
 function calcMACD(closes) {
-  // Uses last N closes; returns { macd, signal, hist }
-  const ema12 = calcEMA(closes, 12);
-  const ema26 = calcEMA(closes, 26);
-  const macd  = ema12 - ema26;
-  // Signal = EMA9 of macd — approximate with last value since we have one point
-  // For a proper signal line we need a series; use a simple proxy here
-  const macdSeries = [];
-  for (let i = 26; i <= closes.length; i++) {
-    const s = closes.slice(0, i);
-    macdSeries.push(calcEMA(s, 12) - calcEMA(s, 26));
+  var macdSeries = [];
+  for (var i=26;i<=closes.length;i++) {
+    macdSeries.push(calcEMA(closes.slice(0,i),12) - calcEMA(closes.slice(0,i),26));
   }
-  const signal = calcEMA(macdSeries, 9);
-  return { macd, signal, hist: macd - signal };
+  var macd = macdSeries[macdSeries.length-1];
+  var signal = calcEMA(macdSeries, 9);
+  return { macd: macd, signal: signal, hist: macd-signal };
 }
-
 function calcBB(closes, period, mult) {
-  const slice = closes.slice(-period);
-  const mean  = slice.reduce((a,b) => a+b, 0) / period;
-  const std   = Math.sqrt(slice.reduce((s,v) => s + (v-mean)**2, 0) / period);
-  return { upper: mean + mult*std, lower: mean - mult*std, mid: mean, width: (mult*2*std/mean)*100 };
+  var slice=closes.slice(-period);
+  var mean=slice.reduce(function(a,b){return a+b;},0)/period;
+  var std=Math.sqrt(slice.reduce(function(s,v){return s+(v-mean)*(v-mean);},0)/period);
+  return { upper:mean+mult*std, lower:mean-mult*std, width:(mult*2*std/mean)*100 };
 }
-
 function calcOBV(closes, volumes) {
-  let obv = 0;
-  const series = [0];
-  for (let i = 1; i < closes.length; i++) {
-    if (closes[i] > closes[i-1]) obv += volumes[i];
-    else if (closes[i] < closes[i-1]) obv -= volumes[i];
-    series.push(obv);
+  var obv=0, mid=0;
+  for (var i=1;i<closes.length;i++) {
+    if (closes[i]>closes[i-1]) obv+=volumes[i];
+    else if (closes[i]<closes[i-1]) obv-=volumes[i];
+    if (i===Math.floor(closes.length/2)) mid=obv;
   }
-  return { current: obv, trend: obv > series[Math.floor(series.length/2)] ? 'Rising' : 'Falling' };
+  return obv>mid?'Rising':'Falling';
 }
-
 function calcStochRSI(closes, rsiPeriod, stochPeriod) {
-  // Build RSI series
-  const rsiArr = [];
-  for (let i = rsiPeriod; i <= closes.length; i++) {
-    rsiArr.push(calcRSI(closes.slice(0, i), rsiPeriod));
-  }
-  if (rsiArr.length < stochPeriod) return { k: 50, d: 50 };
-  const slice = rsiArr.slice(-stochPeriod);
-  const minR = Math.min(...slice), maxR = Math.max(...slice);
-  const k = maxR === minR ? 50 : ((rsiArr[rsiArr.length-1] - minR) / (maxR - minR)) * 100;
-  return { k: Math.round(k), d: Math.round(k * 0.9) }; // d approx
+  var rsiArr=[];
+  for (var i=rsiPeriod;i<=closes.length;i++) rsiArr.push(calcRSI(closes.slice(0,i),rsiPeriod));
+  if (rsiArr.length<stochPeriod) return {k:50,d:50};
+  var slice=rsiArr.slice(-stochPeriod);
+  var minR=Math.min.apply(null,slice), maxR=Math.max.apply(null,slice);
+  var k=maxR===minR?50:((rsiArr[rsiArr.length-1]-minR)/(maxR-minR))*100;
+  return {k:Math.round(k), d:Math.round(k*0.9)};
 }
-
-// ── Fetch + compute ───────────────────────
 
 async function fetchBinanceCandles() {
-  // 7 days of 4h candles = 42 candles; fetch 200 for indicator warmup
-  const url = 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=200';
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('Binance ' + r.status);
-  const raw = await r.json();
-  // Each candle: [openTime, open, high, low, close, volume, ...]
-  return raw.map(c => ({
-    t: c[0], o: +c[1], h: +c[2], l: +c[3], c: +c[4], v: +c[5]
-  }));
+  var r = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=200');
+  if (!r.ok) throw new Error('Binance '+r.status);
+  var raw = await r.json();
+  return raw.map(function(c){return {t:c[0],o:+c[1],h:+c[2],l:+c[3],c:+c[4],v:+c[5]};});
 }
 
 function computeIndicators(candles) {
-  const closes  = candles.map(c => c.c);
-  const highs   = candles.map(c => c.h);
-  const lows    = candles.map(c => c.l);
-  const volumes = candles.map(c => c.v);
-  const last    = closes[closes.length - 1];
-
-  // 7-day window (42 x 4h candles)
-  const week = candles.slice(-42);
-  const wCloses = week.map(c => c.c);
-  const wHigh   = Math.max(...week.map(c => c.h));
-  const wLow    = Math.min(...week.map(c => c.l));
-
-  const rsi     = calcRSI(closes, 14);
-  const macd    = calcMACD(closes);
-  const stoch   = calcStochRSI(closes, 14, 14);
-  const ema20   = calcEMA(closes, 20);
-  const ema50   = calcEMA(closes, 50);
-  const ema200  = calcEMA(closes.length >= 200 ? closes : closes, Math.min(200, closes.length));
-  const bb      = calcBB(closes, 20, 2);
-  const obv     = calcOBV(closes, volumes);
-
-  // Weekly price change
-  const weekOpen = wCloses[0];
-  const weekChg  = ((last - weekOpen) / weekOpen * 100).toFixed(2);
-
-  // Volume trend: avg last 7d vs prior 7d
-  const volRecent = week.map(c => c.v).reduce((a,b) => a+b,0) / week.length;
-  const volPrior  = candles.slice(-84,-42).map(c => c.v).reduce((a,b) => a+b,0) / 42;
-  const volRatio  = volRecent / volPrior;
-
-  // Support/resistance: recent swing highs/lows
-  const recent = candles.slice(-20);
-  const suppLevels = recent.map(c => c.l).sort((a,b) => a-b);
-  const resLevels  = recent.map(c => c.h).sort((a,b) => b-a);
-
+  var closes=candles.map(function(c){return c.c;});
+  var volumes=candles.map(function(c){return c.v;});
+  var last=closes[closes.length-1];
+  var week=candles.slice(-42);
+  var wCloses=week.map(function(c){return c.c;});
+  var wHigh=Math.max.apply(null,week.map(function(c){return c.h;}));
+  var wLow=Math.min.apply(null,week.map(function(c){return c.l;}));
+  var rsi=calcRSI(closes,14);
+  var macd=calcMACD(closes);
+  var stoch=calcStochRSI(closes,14,14);
+  var ema20=calcEMA(closes,20);
+  var ema50=calcEMA(closes,50);
+  var ema200=calcEMA(closes,Math.min(200,closes.length));
+  var bb=calcBB(closes,20,2);
+  var obvTrend=calcOBV(closes,volumes);
+  var weekChg=((last-wCloses[0])/wCloses[0]*100).toFixed(2);
+  var volRecent=week.map(function(c){return c.v;}).reduce(function(a,b){return a+b;},0)/week.length;
+  var volPrior=candles.slice(-84,-42).map(function(c){return c.v;}).reduce(function(a,b){return a+b;},0)/42;
+  var recent=candles.slice(-20);
+  var suppLevels=recent.map(function(c){return c.l;}).sort(function(a,b){return a-b;});
+  var resLevels=recent.map(function(c){return c.h;}).sort(function(a,b){return b-a;});
   return {
-    price:    last,
-    weekChg,
-    weekHigh: wHigh,
-    weekLow:  wLow,
-    rsi:      rsi != null ? rsi.toFixed(1) : 'N/A',
-    macd:     macd.macd.toFixed(0),
-    macdSig:  macd.signal.toFixed(0),
-    macdHist: macd.hist.toFixed(0),
-    stochK:   stoch.k,
-    stochD:   stoch.d,
-    ema20:    Math.round(ema20),
-    ema50:    Math.round(ema50),
-    ema200:   Math.round(ema200),
-    bbUpper:  Math.round(bb.upper),
-    bbLower:  Math.round(bb.lower),
-    bbWidth:  bb.width.toFixed(1),
-    obvTrend: obv.trend,
-    volRatio: volRatio.toFixed(2),
-    sup1:     Math.round(suppLevels[2]),
-    sup2:     Math.round(suppLevels[5]),
-    res1:     Math.round(resLevels[2]),
-    res2:     Math.round(resLevels[5]),
+    price:last, weekChg:weekChg, weekHigh:wHigh, weekLow:wLow,
+    rsi:rsi!=null?rsi.toFixed(1):'N/A',
+    macd:macd.macd.toFixed(0), macdSig:macd.signal.toFixed(0), macdHist:macd.hist.toFixed(0),
+    stochK:stoch.k, stochD:stoch.d,
+    ema20:Math.round(ema20), ema50:Math.round(ema50), ema200:Math.round(ema200),
+    bbUpper:Math.round(bb.upper), bbLower:Math.round(bb.lower), bbWidth:bb.width.toFixed(1),
+    obvTrend:obvTrend, volRatio:(volRecent/volPrior).toFixed(2),
+    sup1:Math.round(suppLevels[2]), sup2:Math.round(suppLevels[5]),
+    res1:Math.round(resLevels[2]), res2:Math.round(resLevels[5])
   };
 }
 
 async function runTA(force) {
   if (taRunning) return;
   if (taCache && !force) { renderTA(taCache); return; }
-
   taRunning = true;
-  const btn = document.getElementById('taRefreshBtn');
-  if (btn) { btn.disabled = true; btn.textContent = '… loading'; }
-
-  const el = document.getElementById('taBody');
-  if (el) el.innerHTML = `<div class="ta-loading">
-    <div class="ta-loading-dots"><span></span><span></span><span></span></div>
-    <div>Fetching 7-day Binance candles…</div>
-  </div>`;
+  var btn = document.getElementById('taRefreshBtn');
+  if (btn) { btn.disabled=true; btn.textContent='… loading'; }
+  var el = document.getElementById('taBody');
+  if (el) el.innerHTML = '<div class="ta-loading"><div class="ta-loading-dots"><span></span><span></span><span></span></div><div>Fetching 7-day Binance candles…</div></div>';
 
   try {
-    // Step 1: real market data
-    const candles = await fetchBinanceCandles();
-    const ind     = computeIndicators(candles);
+    var candles = await fetchBinanceCandles();
+    var ind = computeIndicators(candles);
+    if (el) el.innerHTML = '<div class="ta-loading"><div class="ta-loading-dots"><span></span><span></span><span></span></div><div>Interpreting real market data…</div></div>';
 
+    var today = new Date().toISOString().slice(0,10);
+    var promptLines = [
+      'You are a professional BTC technical analyst. Today: '+today+'. All values below are REAL from live Binance 4h candles. Do NOT modify them.',
+      '',
+      'Price: $'+ind.price.toLocaleString('en-US'),
+      '7D change: '+ind.weekChg+'%  |  High: $'+ind.weekHigh.toLocaleString('en-US')+'  |  Low: $'+ind.weekLow.toLocaleString('en-US'),
+      'RSI(14): '+ind.rsi+'  |  MACD: '+ind.macd+' Sig:'+ind.macdSig+' Hist:'+ind.macdHist,
+      'StochRSI K:'+ind.stochK+' D:'+ind.stochD,
+      'EMA20: $'+ind.ema20.toLocaleString('en-US')+'  EMA50: $'+ind.ema50.toLocaleString('en-US')+'  EMA200: $'+ind.ema200.toLocaleString('en-US'),
+      'BB Upper: $'+ind.bbUpper.toLocaleString('en-US')+'  Lower: $'+ind.bbLower.toLocaleString('en-US')+'  Width: '+ind.bbWidth+'%',
+      'OBV: '+ind.obvTrend+'  |  Vol ratio: '+ind.volRatio+'x',
+      'Support: $'+ind.sup1.toLocaleString('en-US')+' / $'+ind.sup2.toLocaleString('en-US'),
+      'Resistance: $'+ind.res1.toLocaleString('en-US')+' / $'+ind.res2.toLocaleString('en-US'),
+      '',
+      'Respond ONLY with valid JSON:',
+      '{',
+      '  "consensus_direction":"<Strong Buy|Buy|Neutral|Sell|Strong Sell>",',
+      '  "consensus_score":<0-100>,',
+      '  "trend_summary":"<1 sentence>",',
+      '  "indicators":{',
+      '    "momentum":[',
+      '      {"name":"RSI (14)","value":"'+ind.rsi+'","signal":"<Bull|Bear|Neutral>","detail":"<8 words>"},',
+      '      {"name":"MACD","value":"'+ind.macd+' / Sig '+ind.macdSig+'","signal":"<Bull|Bear|Neutral>","detail":"<8 words>"},',
+      '      {"name":"Stoch RSI","value":"K:'+ind.stochK+' D:'+ind.stochD+'","signal":"<Bull|Bear|Neutral>","detail":"<8 words>"}',
+      '    ],',
+      '    "trend":[',
+      '      {"name":"EMA 20","value":"$'+ind.ema20.toLocaleString('en-US')+'","signal":"<Bull|Bear|Neutral>","detail":"<price vs EMA>"},',
+      '      {"name":"EMA 50","value":"$'+ind.ema50.toLocaleString('en-US')+'","signal":"<Bull|Bear|Neutral>","detail":"<price vs EMA>"},',
+      '      {"name":"EMA 200","value":"$'+ind.ema200.toLocaleString('en-US')+'","signal":"<Bull|Bear|Neutral>","detail":"<price vs EMA>"},',
+      '      {"name":"BB Width","value":"'+ind.bbWidth+'%","signal":"<Bull|Bear|Neutral>","detail":"<volatility>"}',
+      '    ],',
+      '    "volume":[',
+      '      {"name":"OBV","value":"'+ind.obvTrend+'","signal":"<Bull|Bear|Neutral>","detail":"<meaning>"},',
+      '      {"name":"Vol Ratio","value":"'+ind.volRatio+'x","signal":"<Bull|Bear|Neutral>","detail":"<meaning>"}',
+      '    ]',
+      '  },',
+      '  "key_levels":{"support_1":'+ind.sup1+',"support_2":'+ind.sup2+',"resistance_1":'+ind.res1+',"resistance_2":'+ind.res2+'},',
+      '  "weekly_target_bull":<price>,',
+      '  "weekly_target_bear":<price>,',
+      '  "narrative":"<3-4 sentences>"',
+      '}'
+    ];
+    var prompt = promptLines.join('\n');
 
-    const today = new Date().toISOString().slice(0, 10);
-
-    // Step 2: send real numbers to Claude for interpretation only
-    const prompt = `You are a professional BTC technical analyst. All indicator values below are REAL, computed from 4h Binance candles ending now. Do NOT invent or adjust any values — use them exactly.
-
-REAL 7-DAY DATA (${today}):
-Price: $${ind.price.toLocaleString('en-US')}
-7-day change: ${ind.weekChg}%
-7-day high: $${ind.weekHigh.toLocaleString('en-US')} | low: $${ind.weekLow.toLocaleString('en-US')}
-
-MOMENTUM:
-RSI(14): ${ind.rsi}
-MACD: ${ind.macd} | Signal: ${ind.macdSig} | Hist: ${ind.macdHist}
-Stoch RSI: K=${ind.stochK} D=${ind.stochD}
-
-TREND:
-EMA20: $${ind.ema20.toLocaleString('en-US')} | EMA50: $${ind.ema50.toLocaleString('en-US')} | EMA200: $${ind.ema200.toLocaleString('en-US')}
-Bollinger Bands: Upper $${ind.bbUpper.toLocaleString('en-US')} / Lower $${ind.bbLower.toLocaleString('en-US')} / Width ${ind.bbWidth}%
-
-VOLUME:
-OBV trend: ${ind.obvTrend}
-Volume ratio vs prior week: ${ind.volRatio}x
-
-KEY LEVELS (recent swings):
-Support: $${ind.sup1.toLocaleString('en-US')} / $${ind.sup2.toLocaleString('en-US')}
-Resistance: $${ind.res1.toLocaleString('en-US')} / $${ind.res2.toLocaleString('en-US')}
-
-Based strictly on these values, respond ONLY with valid JSON:
-{
-  "consensus_direction": "<Strong Buy|Buy|Neutral|Sell|Strong Sell>",
-  "consensus_score": <0-100 where 0=Strong Sell, 50=Neutral, 100=Strong Buy>,
-  "trend_summary": "<1 sentence>",
-  "indicators": {
-    "momentum": [
-      {"name": "RSI (14)",  "value": "${ind.rsi}", "signal": "<Bull|Bear|Neutral>", "detail": "<why, max 8 words>"},
-      {"name": "MACD",      "value": "${ind.macd} / Sig ${ind.macdSig}", "signal": "<Bull|Bear|Neutral>", "detail": "<why>"},
-      {"name": "Stoch RSI", "value": "K:${ind.stochK} D:${ind.stochD}", "signal": "<Bull|Bear|Neutral>", "detail": "<why>"}
-    ],
-    "trend": [
-      {"name": "EMA 20",    "value": "$${ind.ema20.toLocaleString('en-US')}", "signal": "<Bull|Bear|Neutral>", "detail": "<price vs EMA>"},
-      {"name": "EMA 50",    "value": "$${ind.ema50.toLocaleString('en-US')}", "signal": "<Bull|Bear|Neutral>", "detail": "<price vs EMA>"},
-      {"name": "EMA 200",   "value": "$${ind.ema200.toLocaleString('en-US')}", "signal": "<Bull|Bear|Neutral>", "detail": "<price vs EMA>"},
-      {"name": "BB Width",  "value": "${ind.bbWidth}%", "signal": "<Bull|Bear|Neutral>", "detail": "<volatility read>"}
-    ],
-    "volume": [
-      {"name": "OBV",       "value": "${ind.obvTrend}", "signal": "<Bull|Bear|Neutral>", "detail": "<what it means>"},
-      {"name": "Vol Ratio", "value": "${ind.volRatio}x vs prior week", "signal": "<Bull|Bear|Neutral>", "detail": "<what it means>"}
-    ]
-  },
-  "key_levels": {
-    "support_1": ${ind.sup1},
-    "support_2": ${ind.sup2},
-    "resistance_1": ${ind.res1},
-    "resistance_2": ${ind.res2}
-  },
-  "weekly_target_bull": <your price target if bullish>,
-  "weekly_target_bear": <your price target if bearish>,
-  "narrative": "<3-4 sentences interpreting these real values. Mention what to watch.>"
-}`;
-
-    if (el) el.innerHTML = `<div class="ta-loading">
-      <div class="ta-loading-dots"><span></span><span></span><span></span></div>
-      <div>Interpreting real market data…</div>
-    </div>`;
-
-    const resp = await fetch('https://satoshi.bvrassat.workers.dev', {
+    var resp = await fetch(WORKER, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1200,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1200, messages: [{ role: 'user', content: prompt }] })
     });
-    const apiData = await resp.json();
-    const raw   = (apiData?.content?.[0]?.text || '').trim();
-    const match = raw.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON');
-    const parsed = JSON.parse(match[0]);
-
-    // Attach real computed values for display
-    parsed._ts  = Date.now();
+    var apiData = await resp.json();
+    var raw = (apiData?.content?.[0]?.text || '').trim();
+    var m = raw.replace(/```json|```/g,'').match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('No JSON');
+    var parsed = JSON.parse(m[0]);
+    parsed._ts = Date.now();
     parsed._ind = ind;
     taCache = parsed;
     renderTA(parsed);
-
   } catch(e) {
     console.error('TA error:', e);
-    if (el) el.innerHTML = `<div class="ta-loading" style="color:rgba(255,255,255,.4);">
-      Failed: ${e.message}<br>Tap refresh to retry.
-    </div>`;
+    if (el) el.innerHTML = '<div class="ta-loading">Failed: '+e.message+'<br>Tap refresh to retry.</div>';
   }
-
   taRunning = false;
-  if (btn) { btn.disabled = false; btn.textContent = '\u21bb refresh'; }
+  if (btn) { btn.disabled=false; btn.textContent='↻ refresh'; }
 }
 
 function taSignalClass(sig) {
-  const s = (sig||'').toLowerCase();
-  if (s === 'bull') return 'ta-sig-bull';
-  if (s === 'bear') return 'ta-sig-bear';
+  var s=(sig||'').toLowerCase();
+  if (s==='bull') return 'ta-sig-bull';
+  if (s==='bear') return 'ta-sig-bear';
   return 'ta-sig-neut';
 }
-
 function taScorePillClass(score) {
-  if (score >= 65) return 'ta-score-bull';
-  if (score <= 35) return 'ta-score-bear';
+  if (score>=65) return 'ta-score-bull';
+  if (score<=35) return 'ta-score-bear';
   return 'ta-score-neut';
 }
-
 function renderIndicatorGroup(items) {
-  return (items || []).map(ind => `
-    <div class="ta-indicator-row">
-      <div class="ta-indicator-name">${escHtml(ind.name)}</div>
-      <div class="ta-indicator-value">${escHtml(ind.value)}</div>
-      <div class="ta-indicator-signal ${taSignalClass(ind.signal)}">${escHtml(ind.signal)}</div>
-    </div>`).join('');
+  return (items||[]).map(function(ind){
+    return '<div class="ta-indicator-row">'+
+      '<div class="ta-indicator-name">'+escHtml(ind.name)+'</div>'+
+      '<div class="ta-indicator-value">'+escHtml(ind.value)+'</div>'+
+      '<div class="ta-indicator-signal '+taSignalClass(ind.signal)+'">'+escHtml(ind.signal)+'</div>'+
+    '</div>';
+  }).join('');
 }
 
 function renderTA(data) {
-  const el = document.getElementById('taBody');
+  var el = document.getElementById('taBody');
   if (!el) return;
+  var score = data.consensus_score||50;
+  var barColor = score>=65?'#0F8A52':score<=35?'#D63B2F':'#F59E0B';
+  var pillCls = taScorePillClass(score);
+  var ind = data._ind||{};
+  var ts = data._ts ? timeAgo(new Date(data._ts)) : 'now';
+  document.getElementById('taTimestamp').textContent = 'Binance 4h · '+ts;
+  var fmt = function(n){return n?'$'+Number(n).toLocaleString('en-US'):'—';};
+  var inds = data.indicators||{};
+  var kl = data.key_levels||{};
 
-  const score    = data.consensus_score || 50;
-  const barColor = score >= 65 ? '#0F8A52' : score <= 35 ? '#D63B2F' : '#F59E0B';
-  const pillCls  = taScorePillClass(score);
-  const ts       = data._ts ? timeAgo(new Date(data._ts)) : 'now';
-  const ind      = data._ind || {};
+  var weekRow = ind.weekChg != null ?
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px;">'+
+      '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;text-align:center;">'+
+        '<div style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:4px;">7D Change</div>'+
+        '<div style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+(parseFloat(ind.weekChg)>=0?'#3ECF8E':'#FC8181')+';">'+(parseFloat(ind.weekChg)>=0?'+':'')+ind.weekChg+'%</div>'+
+      '</div>'+
+      '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;text-align:center;">'+
+        '<div style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:4px;">7D High</div>'+
+        '<div style="font-family:var(--mono);font-size:13px;font-weight:700;color:#3ECF8E;">'+fmt(ind.weekHigh)+'</div>'+
+      '</div>'+
+      '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;text-align:center;">'+
+        '<div style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:4px;">7D Low</div>'+
+        '<div style="font-family:var(--mono);font-size:13px;font-weight:700;color:#FC8181;">'+fmt(ind.weekLow)+'</div>'+
+      '</div>'+
+    '</div>' : '';
 
-  document.getElementById('taTimestamp').textContent = 'Binance 4h candles · ' + ts;
-
-  const inds = data.indicators || {};
-  const kl   = data.key_levels || {};
-  const fmt  = n => n ? '$' + Number(n).toLocaleString('en-US') : '—';
-
-  // 7-day summary row (real data)
-  const weekRow = ind.weekChg != null ? `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px;">
-      <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:4px;">7D Change</div>
-        <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:${parseFloat(ind.weekChg)>=0?'#3ECF8E':'#FC8181'};">${parseFloat(ind.weekChg)>=0?'+':''}${ind.weekChg}%</div>
-      </div>
-      <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:4px;">7D High</div>
-        <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:#3ECF8E;">${fmt(ind.weekHigh)}</div>
-      </div>
-      <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:4px;">7D Low</div>
-        <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:#FC8181;">${fmt(ind.weekLow)}</div>
-      </div>
-    </div>` : '';
-
-  el.innerHTML = `
-    ${weekRow}
-    <div class="ta-consensus">
-      <div class="ta-consensus-title">Consensus · computed from real candles</div>
-      <div class="ta-consensus-main">
-        <div class="ta-consensus-verdict">${escHtml(data.consensus_direction || 'Neutral')}</div>
-        <div class="ta-consensus-score-pill ${pillCls}">${score}/100</div>
-      </div>
-      <div class="ta-bar-track">
-        <div class="ta-bar-fill" style="width:${score}%;background:${barColor};"></div>
-      </div>
-      ${data.trend_summary ? `<div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.45);margin-top:10px;line-height:1.5;">${escHtml(data.trend_summary)}</div>` : ''}
-    </div>
-
-    <div class="ta-section-label">Momentum</div>
-    ${renderIndicatorGroup(inds.momentum)}
-
-    <div class="ta-section-label">Trend</div>
-    ${renderIndicatorGroup(inds.trend)}
-
-    <div class="ta-section-label">Volume</div>
-    ${renderIndicatorGroup(inds.volume)}
-
-    <div class="ta-section-label">Key Levels</div>
-    <div class="ta-targets">
-      <div class="ta-target-col">
-        <div class="ta-target-label">Support 1</div>
-        <div class="ta-target-value support">${fmt(kl.support_1)}</div>
-      </div>
-      <div class="ta-target-col">
-        <div class="ta-target-label">Support 2</div>
-        <div class="ta-target-value support" style="opacity:.7;">${fmt(kl.support_2)}</div>
-      </div>
-      <div class="ta-target-col">
-        <div class="ta-target-label">Now</div>
-        <div class="ta-target-value current">${fmt(Math.round(ind.price||liveBTC||84000))}</div>
-      </div>
-    </div>
-    <div class="ta-targets" style="margin-top:6px;">
-      <div class="ta-target-col">
-        <div class="ta-target-label">Bear Target</div>
-        <div class="ta-target-value support">${fmt(data.weekly_target_bear)}</div>
-      </div>
-      <div class="ta-target-col">
-        <div class="ta-target-label">Resist 1</div>
-        <div class="ta-target-value resist" style="opacity:.7;">${fmt(kl.resistance_1)}</div>
-      </div>
-      <div class="ta-target-col">
-        <div class="ta-target-label">Bull Target</div>
-        <div class="ta-target-value resist">${fmt(data.weekly_target_bull)}</div>
-      </div>
-    </div>
-
-    ${data.narrative ? `<div class="ta-narrative">${escHtml(data.narrative)}</div>` : ''}
-    <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,.2);margin-top:12px;text-align:center;letter-spacing:1px;">
-      SOURCE: BINANCE BTCUSDT 4H · 200 CANDLES · INDICATORS COMPUTED CLIENT-SIDE
-    </div>
-  `;
+  el.innerHTML = weekRow +
+    '<div class="ta-consensus">'+
+      '<div class="ta-consensus-title">Consensus · real Binance candles</div>'+
+      '<div class="ta-consensus-main">'+
+        '<div class="ta-consensus-verdict">'+escHtml(data.consensus_direction||'Neutral')+'</div>'+
+        '<div class="ta-consensus-score-pill '+pillCls+'">'+score+'/100</div>'+
+      '</div>'+
+      '<div class="ta-bar-track"><div class="ta-bar-fill" style="width:'+score+'%;background:'+barColor+';"></div></div>'+
+      (data.trend_summary?'<div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.45);margin-top:10px;line-height:1.5;">'+escHtml(data.trend_summary)+'</div>':'')+
+    '</div>'+
+    '<div class="ta-section-label">Momentum</div>'+renderIndicatorGroup(inds.momentum)+
+    '<div class="ta-section-label">Trend</div>'+renderIndicatorGroup(inds.trend)+
+    '<div class="ta-section-label">Volume</div>'+renderIndicatorGroup(inds.volume)+
+    '<div class="ta-section-label">Key Levels</div>'+
+    '<div class="ta-targets">'+
+      '<div class="ta-target-col"><div class="ta-target-label">Support 1</div><div class="ta-target-value support">'+fmt(kl.support_1)+'</div></div>'+
+      '<div class="ta-target-col"><div class="ta-target-label">Support 2</div><div class="ta-target-value support" style="opacity:.7;">'+fmt(kl.support_2)+'</div></div>'+
+      '<div class="ta-target-col"><div class="ta-target-label">Now</div><div class="ta-target-value current">'+fmt(Math.round(ind.price||liveBTC||84000))+'</div></div>'+
+    '</div>'+
+    '<div class="ta-targets" style="margin-top:6px;">'+
+      '<div class="ta-target-col"><div class="ta-target-label">Bear Target</div><div class="ta-target-value support">'+fmt(data.weekly_target_bear)+'</div></div>'+
+      '<div class="ta-target-col"><div class="ta-target-label">Resist 1</div><div class="ta-target-value resist" style="opacity:.7;">'+fmt(kl.resistance_1)+'</div></div>'+
+      '<div class="ta-target-col"><div class="ta-target-label">Bull Target</div><div class="ta-target-value resist">'+fmt(data.weekly_target_bull)+'</div></div>'+
+    '</div>'+
+    (data.narrative?'<div class="ta-narrative">'+escHtml(data.narrative)+'</div>':'')+
+    '<div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,.2);margin-top:12px;text-align:center;letter-spacing:1px;">SOURCE: BINANCE BTCUSDT 4H · 200 CANDLES</div>';
 }
 
 // ══════════════════════════════════════════
