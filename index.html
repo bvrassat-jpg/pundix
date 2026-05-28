@@ -1064,6 +1064,235 @@ body::before {
 .consensus-band-value.inline-c { color: var(--text-mid); }
 
 /* countdown card */
+/* ══ WAR BOARD ══ */
+.war-board {
+  background: var(--card);
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  position: relative;
+}
+.war-board::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--orange), var(--green) 50%, transparent);
+}
+.war-board-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--navy);
+}
+.war-board-title {
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+.war-board-sub {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.war-board-btc {
+  text-align: right;
+}
+.war-board-btc-label {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+.war-board-btc-price {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: 1px;
+}
+.war-board-btc-change {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+.war-board-btc-change.pos { color: var(--green); }
+.war-board-btc-change.neg { color: var(--red); }
+
+/* countdown strip */
+.war-board-countdown {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 18px;
+  background: rgba(245,158,11,0.05);
+  border-bottom: 1px solid var(--border);
+}
+.war-board-countdown-label {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.war-board-countdown-value {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: 2px;
+}
+
+/* player rows */
+.war-board-rows { padding: 4px 0; }
+.war-board-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-bottom: 1px solid rgba(30,45,66,0.6);
+  transition: background .1s;
+  position: relative;
+}
+.war-board-row:last-child { border-bottom: none; }
+.war-board-row:hover { background: var(--surface); }
+.war-board-row.war-leading {
+  background: rgba(16,185,129,0.05);
+  border-left: 2px solid var(--green);
+}
+.war-board-row.war-mine {
+  background: var(--orange-dim);
+  border-left: 2px solid var(--orange);
+}
+.war-board-row.war-mine.war-leading {
+  background: rgba(16,185,129,0.08);
+  border-left: 2px solid var(--green);
+}
+.war-rank {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-align: center;
+}
+.war-rank.war-rank-1 { color: var(--green); font-size: 13px; }
+.war-player { min-width: 0; }
+.war-player-name {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.war-player-call {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 1px;
+  letter-spacing: 0.3px;
+}
+.war-distance {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+.war-distance.winning { color: var(--green); }
+.war-distance.losing  { color: var(--text-dim); }
+.war-distance.close   { color: var(--orange); }
+.war-bar-wrap {
+  width: 44px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.war-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--text-dim);
+  transition: width .4s ease;
+}
+.war-bar.winning { background: var(--green); }
+.war-bar.close   { background: var(--orange); }
+
+/* empty state */
+.war-board-empty {
+  text-align: center;
+  padding: 32px 20px;
+}
+.war-board-empty-icon {
+  font-size: 28px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+.war-board-empty-text {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-mid);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 5px;
+}
+.war-board-empty-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* CTA bar for non-predicted users */
+.war-board-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: rgba(245,158,11,0.06);
+  border-top: 1px solid rgba(245,158,11,0.2);
+  gap: 12px;
+}
+.war-board-cta-text {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-mid);
+  letter-spacing: .3px;
+  font-style: italic;
+}
+.war-board-cta-btn {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: var(--orange);
+  color: var(--navy);
+  border: none;
+  border-radius: 3px;
+  padding: 8px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter .15s;
+}
+.war-board-cta-btn:hover { filter: brightness(1.1); }
+
 .countdown-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -2479,8 +2708,6 @@ body::before {
   <!-- ══ LIVE WEEK PANEL ══ -->
   <div class="panel active" id="panel-live">
 
-    <div class="sec-label">Live week · Week <span id="live-week-num">1</span></div>
-
     <!-- ── EARLY-BIRD CTA BANNER (hidden once user has predicted) ── -->
     <div class="earlybird-banner" id="earlybirdBanner" onclick="switchTab('predict')">
       <div class="eb-header">
@@ -2504,21 +2731,40 @@ body::before {
       </div>
     </div>
 
-    <!-- BTC ticker (smaller) -->
-    <div class="btc-ticker" style="margin-bottom:20px;">
-      <div class="btc-ticker-label">₿ BTC / USD · Live</div>
-      <div class="btc-price-row">
-        <div class="btc-price" style="font-size:42px;" id="live-btc-price">$84,200</div>
+    <!-- ══ WAR BOARD ══ -->
+    <div class="war-board" id="warBoard">
+      <div class="war-board-header">
+        <div class="war-board-header-left">
+          <div class="war-board-title">War Board</div>
+          <div class="war-board-sub">Week <span id="war-week-num">1</span> · live positions</div>
+        </div>
+        <div class="war-board-btc">
+          <div class="war-board-btc-label">BTC NOW</div>
+          <div class="war-board-btc-price" id="war-btc-price">$84,200</div>
+          <div class="war-board-btc-change" id="war-btc-change">—</div>
+        </div>
       </div>
-      <div class="btc-meta" id="live-btc-meta">—</div>
-    </div>
 
-    <!-- Countdown to close -->
-    <div class="countdown-card">
-      <div>
-        <div class="countdown-label">Time to Sunday close</div>
+      <!-- Countdown strip -->
+      <div class="war-board-countdown">
+        <div class="war-board-countdown-label">closes sunday</div>
+        <div class="war-board-countdown-value" id="war-countdown">–</div>
       </div>
-      <div class="countdown-value" id="live-countdown">–</div>
+
+      <!-- Player rows — populated by JS -->
+      <div class="war-board-rows" id="warBoardRows">
+        <div class="war-board-empty">
+          <div class="war-board-empty-icon">◈</div>
+          <div class="war-board-empty-text">No calls yet this week</div>
+          <div class="war-board-empty-sub">Be first — Monday carries a 1.5× bonus</div>
+        </div>
+      </div>
+
+      <!-- No-prediction nudge (shown when user hasn't called) -->
+      <div class="war-board-cta" id="warBoardCta" style="display:none">
+        <span class="war-board-cta-text">You're watching. They're playing.</span>
+        <button class="war-board-cta-btn" onclick="switchTab('predict')">Make your call →</button>
+      </div>
     </div>
 
     <!-- SATOSHI · Market Desk -->
@@ -2564,13 +2810,12 @@ body::before {
       </div>
     </div>
 
-    <!-- Consensus comparison (only if user has predicted) -->
+    <!-- Your call vs crowd (only if user has predicted) -->
     <div id="liveComparisonSection" style="display:none">
       <div class="sec-label">Your call vs crowd</div>
       <div class="consensus-card">
         <div class="consensus-title">Where you stand</div>
         <div class="consensus-sub">Based on predictions submitted this week</div>
-
         <div class="consensus-comparison">
           <div class="consensus-col your-call">
             <div class="consensus-col-label">Your call</div>
@@ -2584,21 +2829,10 @@ body::before {
             <div class="consensus-col-sub" id="live-n-players">— players</div>
           </div>
         </div>
-
         <div class="consensus-band">
           <div class="consensus-band-label">Your position</div>
           <div class="consensus-band-value" id="live-position">—</div>
         </div>
-      </div>
-    </div>
-
-    <!-- No prediction yet nudge -->
-    <div id="liveNoPrediction" style="display:none">
-      <div class="predict-form-card" style="text-align:center;padding:32px;">
-        <div style="font-size:28px;margin-bottom:14px;color:var(--orange);">◈</div>
-        <div class="predict-form-title" style="margin-bottom:8px;">You haven't predicted yet</div>
-        <div class="predict-form-sub" style="margin-bottom:20px;">Submit your BTC forecast to see how you compare to the crowd.</div>
-        <button class="submit-btn" onclick="switchTab('predict')">Make my prediction →</button>
       </div>
     </div>
 
@@ -3185,16 +3419,19 @@ function updateBTCDisplay(price, chg24) {
   const hintEl = document.getElementById('btc-current-hint');
   if (hintEl) hintEl.textContent = '$' + Math.round(price).toLocaleString('en-US');
 
-  const liveEl = document.getElementById('live-btc-price');
-  if (liveEl) liveEl.textContent = '$' + Math.round(price).toLocaleString('en-US');
-
-  const liveMeta = document.getElementById('live-btc-meta');
-  if (liveMeta && chg24 !== null) {
+  // War board live price
+  const warPrice = document.getElementById('war-btc-price');
+  if (warPrice) warPrice.textContent = '$' + Math.round(price).toLocaleString('en-US');
+  const warChange = document.getElementById('war-btc-change');
+  if (warChange && chg24 !== null) {
     const sign = chg24 >= 0 ? '+' : '';
-    liveMeta.textContent = sign + chg24.toFixed(2) + '% past 24h';
+    warChange.textContent = sign + chg24.toFixed(2) + '% 24h';
+    warChange.className = 'war-board-btc-change ' + (chg24 >= 0 ? 'pos' : 'neg');
   }
 
   updatePreview();
+  // Re-render war board distances live as BTC price moves
+  renderWarBoard();
 }
 
 // ══════════════════════════════════════════
@@ -3267,8 +3504,8 @@ function updateWindowStatus() {
     if (submitBtn) submitBtn.disabled = true;
   }
 
-  const liveCd = document.getElementById('live-countdown');
-  if (liveCd) liveCd.textContent = WEEK_STATUS === 'resolved' ? '—' : formatCountdown(resolveDate - now);
+  const warCd = document.getElementById('war-countdown');
+  if (warCd) warCd.textContent = WEEK_STATUS === 'resolved' ? 'resolved' : formatCountdown(resolveDate - now);
 
   const hdrWeek = document.getElementById('hdr-week');
   if (hdrWeek) {
@@ -3592,7 +3829,8 @@ async function renderLeaderboard() {
   if (countEl) countEl.textContent = n;
 
   document.getElementById('lb-week-num').textContent   = CURRENT_WEEK;
-  document.getElementById('live-week-num').textContent = CURRENT_WEEK;
+  const warWkEl = document.getElementById('war-week-num');
+  if (warWkEl) warWkEl.textContent = CURRENT_WEEK;
 
   const metaEl = document.getElementById('lb-meta');
   if (metaEl) {
@@ -3669,6 +3907,103 @@ async function renderLeaderboard() {
 }
 
 // ══════════════════════════════════════════
+// WAR BOARD
+// ══════════════════════════════════════════
+
+async function renderWarBoard() {
+  const allPreds = await getAllPredictions();
+  const myPred   = getMyPrediction();
+  const hasPredictedThisWeek = myPred && parseInt(myPred.week) === parseInt(CURRENT_WEEK);
+
+  // Update week number
+  const wkEl = document.getElementById('war-week-num');
+  if (wkEl) wkEl.textContent = CURRENT_WEEK;
+
+  // Update BTC price in header
+  const priceEl  = document.getElementById('war-btc-price');
+  const changeEl = document.getElementById('war-btc-change');
+  if (priceEl) priceEl.textContent = '$' + Math.round(liveBTC).toLocaleString('en-US');
+
+  const rowsEl = document.getElementById('warBoardRows');
+  const ctaEl  = document.getElementById('warBoardCta');
+  if (!rowsEl) return;
+
+  // Show CTA if user hasn't predicted
+  if (ctaEl) ctaEl.style.display = hasPredictedThisWeek ? 'none' : 'flex';
+
+  if (allPreds.length === 0) {
+    rowsEl.innerHTML = `
+      <div class="war-board-empty">
+        <div class="war-board-empty-icon">◈</div>
+        <div class="war-board-empty-text">No calls yet this week</div>
+        <div class="war-board-empty-sub">Be first — Monday carries a 1.5× bonus</div>
+      </div>`;
+    return;
+  }
+
+  // Sort by proximity to current BTC (ascending distance = leading)
+  const sorted = [...allPreds].map(p => ({
+    ...p,
+    dist: Math.abs(p.price - liveBTC),
+    distPct: Math.abs((p.price - liveBTC) / liveBTC * 100),
+  })).sort((a, b) => a.dist - b.dist);
+
+  // Max distance for bar scaling
+  const maxDist = sorted[sorted.length - 1]?.dist || 1;
+
+  const rows = sorted.map((p, i) => {
+    const isMe      = hasPredictedThisWeek && p.name === myPred.name;
+    const isLeading = i === 0;
+    const rank      = i + 1;
+
+    const pct     = p.distPct.toFixed(2);
+    const barW    = Math.max(4, Math.round((1 - p.dist / maxDist) * 44));
+    const isClose = p.distPct < 1.0;
+    const distCls = isLeading ? 'winning' : isClose ? 'close' : 'losing';
+
+    const rankStr = rank === 1 ? '◆' : rank === 2 ? '◇' : rank === 3 ? '◈' : '#' + rank;
+    const rankCls = rank === 1 ? 'war-rank war-rank-1' : 'war-rank';
+
+    // Direction indicator
+    const above = p.price > liveBTC;
+    const dirLabel = above ? '▲' : '▼';
+    const dirStyle = above ? 'color:var(--green)' : 'color:var(--red)';
+
+    // You tag
+    const youTag = isMe
+      ? ' <span style="font-family:var(--mono);font-size:9px;color:var(--orange);letter-spacing:1px;">YOU</span>'
+      : '';
+
+    // Early-bird badge
+    const submittedDay = p.submitted_at ? new Date(p.submitted_at).getUTCDay() : null;
+    const ebInfo = submittedDay != null ? EARLYBIRD_MULTIPLIERS[submittedDay] : null;
+    const ebTag  = (ebInfo && ebInfo.badge && ebInfo.mult > 1.0)
+      ? ` <span class="eb-badge ${ebInfo.badge}" style="font-size:7px;padding:1px 4px;">⚡</span>`
+      : '';
+
+    let rowCls = 'war-board-row';
+    if (isLeading) rowCls += ' war-leading';
+    if (isMe)      rowCls += ' war-mine';
+
+    return `<div class="${rowCls}">
+      <div class="${rankCls}">${rankStr}</div>
+      <div class="war-player">
+        <div class="war-player-name">${escHtml(p.name)}${youTag}${ebTag}</div>
+        <div class="war-player-call">called $${Math.round(p.price).toLocaleString('en-US')} <span style="${dirStyle}">${dirLabel}</span></div>
+      </div>
+      <div class="war-distance ${distCls}">${pct}% off</div>
+      <div>
+        <div class="war-bar-wrap">
+          <div class="war-bar ${distCls}" style="width:${barW}px"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  rowsEl.innerHTML = rows;
+}
+
+// ══════════════════════════════════════════
 // LIVE PANEL
 // ══════════════════════════════════════════
 
@@ -3676,55 +4011,57 @@ async function updateLivePanel() {
   const myPred   = getMyPrediction();
   const allPreds = await getAllPredictions();
 
-  const noSection  = document.getElementById('liveNoPrediction');
+  const noSection  = null; // removed — war board CTA handles unpredicted state
   const yesSection = document.getElementById('liveComparisonSection');
 
   // Only show comparison if user has predicted THIS week
   const hasPredictedThisWeek = myPred && parseInt(myPred.week) === parseInt(CURRENT_WEEK);
 
   if (!hasPredictedThisWeek) {
-    if (noSection)  noSection.style.display  = 'block';
+    if (noSection)  noSection.style.display  = 'none';
     if (yesSection) yesSection.style.display = 'none';
-    return;
-  }
-
-  if (noSection)  noSection.style.display  = 'none';
-  if (yesSection) yesSection.style.display = 'block';
-
-  const yourCallEl = document.getElementById('live-your-call');
-  if (yourCallEl) yourCallEl.textContent = '$' + Math.round(myPred.price).toLocaleString('en-US');
-
-  if (allPreds.length > 0) {
-    const prices = allPreds.map(p => p.price).sort((a,b) => a - b);
-    const mid    = Math.floor(prices.length / 2);
-    const median = prices.length % 2 !== 0
-      ? prices[mid]
-      : (prices[mid - 1] + prices[mid]) / 2;
-
-    const medEl = document.getElementById('live-median');
-    const nEl   = document.getElementById('live-n-players');
-    if (medEl) medEl.textContent = '$' + Math.round(median).toLocaleString('en-US');
-    if (nEl)   nEl.textContent   = allPreds.length + ' players';
-
-    const posEl = document.getElementById('live-position');
-    if (posEl) {
-      if (myPred.price > median) {
-        posEl.textContent = 'Above median · Higher than ' + allPreds.filter(p => p.price < myPred.price).length + ' players';
-        posEl.className   = 'consensus-band-value above';
-      } else if (myPred.price < median) {
-        posEl.textContent = 'Below median · Lower than ' + allPreds.filter(p => p.price > myPred.price).length + ' players';
-        posEl.className   = 'consensus-band-value below';
-      } else {
-        posEl.textContent = 'At crowd median';
-        posEl.className   = 'consensus-band-value inline-c';
-      }
-    }
   } else {
-    const medEl = document.getElementById('live-median');
-    if (medEl) medEl.textContent = 'No others yet';
-    const posEl = document.getElementById('live-position');
-    if (posEl) { posEl.textContent = 'First prediction in!'; posEl.className = 'consensus-band-value above'; }
+    if (noSection)  noSection.style.display  = 'none';
+    if (yesSection) yesSection.style.display = 'block';
+
+    const yourCallEl = document.getElementById('live-your-call');
+    if (yourCallEl) yourCallEl.textContent = '$' + Math.round(myPred.price).toLocaleString('en-US');
+
+    if (allPreds.length > 0) {
+      const prices = allPreds.map(p => p.price).sort((a,b) => a - b);
+      const mid    = Math.floor(prices.length / 2);
+      const median = prices.length % 2 !== 0
+        ? prices[mid]
+        : (prices[mid - 1] + prices[mid]) / 2;
+
+      const medEl = document.getElementById('live-median');
+      const nEl   = document.getElementById('live-n-players');
+      if (medEl) medEl.textContent = '$' + Math.round(median).toLocaleString('en-US');
+      if (nEl)   nEl.textContent   = allPreds.length + ' players';
+
+      const posEl = document.getElementById('live-position');
+      if (posEl) {
+        if (myPred.price > median) {
+          posEl.textContent = 'Above median · Higher than ' + allPreds.filter(p => p.price < myPred.price).length + ' players';
+          posEl.className   = 'consensus-band-value above';
+        } else if (myPred.price < median) {
+          posEl.textContent = 'Below median · Lower than ' + allPreds.filter(p => p.price > myPred.price).length + ' players';
+          posEl.className   = 'consensus-band-value below';
+        } else {
+          posEl.textContent = 'At crowd median';
+          posEl.className   = 'consensus-band-value inline-c';
+        }
+      }
+    } else {
+      const medEl = document.getElementById('live-median');
+      if (medEl) medEl.textContent = 'No others yet';
+      const posEl = document.getElementById('live-position');
+      if (posEl) { posEl.textContent = 'First prediction in!'; posEl.className = 'consensus-band-value above'; }
+    }
   }
+
+  // Always render the war board regardless of prediction status
+  await renderWarBoard();
 }
 
 // ══════════════════════════════════════════
@@ -4804,7 +5141,8 @@ async function startNextWeek() {
 
     // Update all week displays
     document.getElementById('lb-week-num').textContent    = CURRENT_WEEK;
-    document.getElementById('live-week-num').textContent  = CURRENT_WEEK;
+    const warWkEl2 = document.getElementById('war-week-num');
+    if (warWkEl2) warWkEl2.textContent = CURRENT_WEEK;
     const closedWk = document.getElementById('closed-week-num');
     const nextWkEl = document.getElementById('next-week-num');
     if (closedWk) closedWk.textContent = CURRENT_WEEK;
@@ -5297,7 +5635,8 @@ async function loadSatoshiCommentary(forceRefresh = false) {
 
   // Update all week number displays
   document.getElementById('lb-week-num').textContent    = CURRENT_WEEK;
-  document.getElementById('live-week-num').textContent  = CURRENT_WEEK;
+  const warWkInit = document.getElementById('war-week-num');
+  if (warWkInit) warWkInit.textContent = CURRENT_WEEK;
   const closedWk = document.getElementById('closed-week-num');
   const nextWk   = document.getElementById('next-week-num');
   if (closedWk) closedWk.textContent = CURRENT_WEEK;
