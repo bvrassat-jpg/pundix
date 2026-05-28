@@ -3230,6 +3230,9 @@ body::before {
 const SUPABASE_URL    = 'https://ukgvfahozidwilcqsjcu.supabase.co';
 const SUPABASE_ANON   = 'sb_publishable_SdUKAiao-DPQwnUbe0bjMA_gEGhCnGn';
 
+// Claude model — update this one line when a new model is released
+const CLAUDE_MODEL    = 'claude-sonnet-4-6';
+
 // Week config — loaded dynamically from Supabase config table
 // These are fallback defaults only, overwritten on load
 let CURRENT_WEEK = 1;
@@ -4615,7 +4618,7 @@ async function runSentimentScan(force) {
     const resp = await fetch(WORKER, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await resp.json();
     const raw = (data?.content?.[0]?.text || '').trim();
@@ -4874,7 +4877,7 @@ async function runTA(force) {
     var resp = await fetch(WORKER, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1200, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1200, messages: [{ role: 'user', content: prompt }] })
     });
     var apiData = await resp.json();
     var raw = (apiData?.content?.[0]?.text || '').trim();
@@ -5372,7 +5375,7 @@ async function sendSatoshiMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model:      'claude-sonnet-4-5',
+        model:      CLAUDE_MODEL,
         max_tokens: 300,
         system:     SATOSHI_CHAT_SYSTEM,
         messages,
@@ -5559,7 +5562,7 @@ Write your commentary now. Exactly 4 sentences maximum — no more under any cir
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model:      'claude-sonnet-4-5',
+      model:      CLAUDE_MODEL,
       max_tokens: 1000,
       system:     SATOSHI_SYSTEM_PROMPT,
       messages:   [{ role: 'user', content: userMsg }],
