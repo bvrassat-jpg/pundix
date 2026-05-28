@@ -910,11 +910,11 @@ body::before {
   border-radius: 6px;
   overflow: hidden;
   border: 1px solid var(--border-hi);
-  background: #0A1628;
+  background: #080D14;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 220px;
+  min-height: 280px;
 }
 .share-canvas-wrap canvas {
   max-width: 100%;
@@ -4227,7 +4227,7 @@ let shareType         = 'prediction';
 
 // Hidden div for QR rendering
 const _qrDiv = document.createElement('div');
-_qrDiv.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:56px;height:56px;';
+_qrDiv.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:84px;height:84px;';
 document.body.appendChild(_qrDiv);
 
 function buildQR(url) {
@@ -4236,8 +4236,8 @@ function buildQR(url) {
     try {
       const qr = new QRCode(_qrDiv, {
         text: url,
-        width: 56,
-        height: 56,
+        width: 84,
+        height: 84,
         colorDark: '#000000',
         colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.M
@@ -4251,93 +4251,106 @@ function buildQR(url) {
 }
 
 async function renderShareCard(name, fmtPrice, sign, diffPct, fmtLive, type, week) {
-  const canvas  = document.getElementById('shareCanvas');
-  const W = 540, H = 280;
+  const canvas = document.getElementById('shareCanvas');
+  const W = 540, H = 360;
   canvas.width  = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // ── background
-  ctx.fillStyle = '#0A1628';
+  // ── background — deep navy
+  ctx.fillStyle = '#080D14';
   ctx.fillRect(0, 0, W, H);
 
-  // ── subtle grid texture
-  ctx.strokeStyle = 'rgba(30,45,66,0.55)';
+  // ── subtle grid
+  ctx.strokeStyle = 'rgba(30,45,66,0.4)';
   ctx.lineWidth = 1;
-  for (let x = 0; x < W; x += 40) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-  }
-  for (let y = 0; y < H; y += 40) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-  }
+  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
 
-  // ── orange top stripe
+  // ── orange left accent bar
   ctx.fillStyle = '#F59E0B';
-  ctx.fillRect(0, 0, W, 3);
+  ctx.fillRect(0, 0, 4, H);
 
-  // ── PUNDIX wordmark — top left
+  // ── top stripe
+  ctx.fillStyle = 'rgba(245,158,11,0.15)';
+  ctx.fillRect(4, 0, W - 4, 56);
+
+  // ── PUNDIX wordmark — big and clear
   ctx.fillStyle = '#F59E0B';
-  ctx.font = '700 12px "Space Mono", monospace';
-  ctx.fillText('₿ PUNDIX', 28, 36);
+  ctx.font = '800 28px "Barlow Condensed", sans-serif';
+  ctx.letterSpacing = '2px';
+  ctx.fillText('PUNDIX', 22, 36);
 
-  ctx.fillStyle = '#3D5A73';
-  ctx.font = '400 9px "Space Mono", monospace';
-  ctx.fillText('BTC WEEKLY LEAGUE · WEEK ' + week + ' · SEASON 1', 28, 52);
+  // ── tagline right of wordmark
+  ctx.fillStyle = '#A8BCCE';
+  ctx.font = '400 12px "Space Mono", monospace';
+  ctx.fillText('BTC Weekly Prediction League', 116, 36);
+
+  // ── week badge — top right
+  ctx.fillStyle = 'rgba(245,158,11,0.2)';
+  roundRect(ctx, W - 112, 12, 100, 28, 4);
+  ctx.fill();
+  ctx.fillStyle = '#F59E0B';
+  ctx.font = '700 11px "Space Mono", monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText('WEEK ' + week + ' · S1', W - 16, 31);
+  ctx.textAlign = 'left';
+
+  // ── divider
+  ctx.strokeStyle = 'rgba(245,158,11,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(22, 58); ctx.lineTo(W - 22, 58); ctx.stroke();
 
   // ── player label
-  ctx.fillStyle = '#4A6A85';
-  ctx.font = '400 10px "Space Mono", monospace';
-  ctx.fillText(name.toUpperCase() + ' PREDICTS', 28, 92);
+  ctx.fillStyle = '#6E8BA8';
+  ctx.font = '400 12px "Space Mono", monospace';
+  ctx.fillText(name.toUpperCase() + '  PREDICTS', 22, 88);
 
-  // ── BTC price — dominant hero element
+  // ── BTC price — massive hero
   ctx.fillStyle = '#F0F4FA';
-  ctx.font = '800 62px "Barlow Condensed", sans-serif';
-  ctx.fillText('BTC ' + fmtPrice, 24, 162);
+  ctx.font = '800 72px "Barlow Condensed", sans-serif';
+  ctx.fillText('BTC ' + fmtPrice, 18, 172);
 
   // ── direction pill
   const isUp = parseFloat(diffPct) >= 0;
   const pillColor = isUp ? '#10B981' : '#EF4444';
   const pillLabel = (isUp ? '▲ +' : '▼ ') + diffPct + '%';
-  ctx.fillStyle = isUp ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
-  roundRect(ctx, 28, 174, 102, 24, 3);
+  ctx.fillStyle = isUp ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+  roundRect(ctx, 22, 184, 116, 30, 4);
   ctx.fill();
   ctx.strokeStyle = pillColor;
-  ctx.lineWidth = 1;
-  roundRect(ctx, 28, 174, 102, 24, 3);
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, 22, 184, 116, 30, 4);
   ctx.stroke();
   ctx.fillStyle = pillColor;
-  ctx.font = '700 11px "Space Mono", monospace';
-  ctx.fillText(pillLabel, 37, 191);
+  ctx.font = '700 13px "Space Mono", monospace';
+  ctx.fillText(pillLabel, 32, 204);
 
-  // ── vs current — muted
-  ctx.fillStyle = '#3D5A73';
-  ctx.font = '400 10px "Space Mono", monospace';
-  ctx.fillText('vs current ' + fmtLive, 140, 191);
+  // ── vs current
+  ctx.fillStyle = '#6E8BA8';
+  ctx.font = '400 12px "Space Mono", monospace';
+  ctx.fillText('vs current ' + fmtLive, 148, 204);
 
-  // ── bottom divider
-  ctx.strokeStyle = 'rgba(30,45,66,0.9)';
+  // ── bottom section — light band for QR + CTA
+  ctx.fillStyle = 'rgba(13,21,32,0.95)';
+  ctx.fillRect(0, 234, W, H - 234);
+  ctx.strokeStyle = 'rgba(245,158,11,0.2)';
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(28, 218); ctx.lineTo(W - 28, 218); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 234); ctx.lineTo(W, 234); ctx.stroke();
 
-  // ── bottom CTA — left
-  ctx.fillStyle = '#3D5A73';
-  ctx.font = '400 10px "Space Mono", monospace';
-  ctx.fillText('Think you can beat this call?', 28, H - 18);
-
-  // ── QR watermark — bottom right, small and semi-transparent
-  const QR_SIZE = 52;
+  // ── QR code — proper white box, full opacity, scannable size
+  const QR_SIZE = 80;
   const qrX = W - QR_SIZE - 24;
-  const qrY = H - QR_SIZE - 16;
+  const qrY = 246;
+
+  // White background for QR
+  ctx.fillStyle = '#FFFFFF';
+  roundRect(ctx, qrX - 6, qrY - 6, QR_SIZE + 12, QR_SIZE + 12, 5);
+  ctx.fill();
 
   const qrImg = await buildQR(APP_URL);
   if (qrImg) {
-    // White backing — very subtle
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    roundRect(ctx, qrX - 3, qrY - 3, QR_SIZE + 6, QR_SIZE + 6, 3);
-    ctx.fill();
-
-    // Draw QR at low opacity
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 1.0;
     if (qrImg.tagName === 'IMG') {
       const tmp = new Image();
       tmp.src = qrImg.src;
@@ -4346,15 +4359,36 @@ async function renderShareCard(name, fmtPrice, sign, diffPct, fmtLive, type, wee
     } else {
       ctx.drawImage(qrImg, qrX, qrY, QR_SIZE, QR_SIZE);
     }
-    ctx.globalAlpha = 1.0;
-
-    // Tiny "scan" label — barely visible
-    ctx.fillStyle = 'rgba(110,139,168,0.5)';
-    ctx.font = '400 7px "Space Mono", monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('scan to play', W - 24, qrY - 5);
-    ctx.textAlign = 'left';
   }
+
+  // ── "JOIN THE LEAGUE" label above QR
+  ctx.fillStyle = '#F59E0B';
+  ctx.font = '700 10px "Space Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('JOIN THE LEAGUE', qrX + QR_SIZE/2 + 6, qrY - 12);
+  ctx.textAlign = 'left';
+
+  // ── URL under QR
+  ctx.fillStyle = '#6E8BA8';
+  ctx.font = '400 9px "Space Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('bvrassat-jpg.github.io/pundix', qrX + QR_SIZE/2 + 6, qrY + QR_SIZE + 20);
+  ctx.textAlign = 'left';
+
+  // ── left side of bottom — CTA text
+  ctx.fillStyle = '#A8BCCE';
+  ctx.font = '700 15px "Barlow Condensed", sans-serif';
+  ctx.fillText('Can you beat this call?', 22, 268);
+
+  ctx.fillStyle = '#6E8BA8';
+  ctx.font = '400 11px "Space Mono", monospace';
+  ctx.fillText('Free to play · weekly BTC forecast', 22, 288);
+  ctx.fillText('Scan or visit the link to join', 22, 306);
+
+  // ── small Pundix logo mark bottom-left
+  ctx.fillStyle = 'rgba(245,158,11,0.3)';
+  ctx.font = '800 11px "Barlow Condensed", sans-serif';
+  ctx.fillText('PUNDIX.gg', 22, H - 12);
 }
 
 function roundRect(ctx, x, y, w, h, r) {
