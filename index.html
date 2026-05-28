@@ -107,17 +107,26 @@ body::before {
   background: linear-gradient(90deg, var(--orange), transparent 60%);
 }
 
-.logo { display: flex; flex-direction: column; gap: 3px; }
+.logo { display: flex; flex-direction: column; gap: 4px; }
 .logo-mark {
   font-family: var(--sans);
-  font-size: 32px;
+  font-size: 42px;
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   color: #fff;
   line-height: 1;
   text-transform: uppercase;
 }
 .logo-mark span { color: var(--orange); }
+.logo-mark .logo-btc {
+  color: var(--orange);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  vertical-align: middle;
+  margin-right: 4px;
+  opacity: 0.85;
+}
 .logo-tag {
   font-family: var(--mono);
   font-size: 10px;
@@ -1760,7 +1769,7 @@ body::before {
 
   /* Header */
   .hdr { padding: 18px 14px 14px; margin-left: -14px; margin-right: -14px; }
-  .logo-mark { font-size: 26px; }
+  .logo-mark { font-size: 34px; }
 }
 
 /* ── SENTIMENT HEATMAP ─────────────────── */
@@ -2508,8 +2517,8 @@ body::before {
   <header>
     <div class="hdr">
       <div class="logo">
-        <div class="logo-mark">PUN<span>D</span>IX</div>
-        <div class="logo-tag">BTC Weekly League</div>
+        <div class="logo-mark"><span class="logo-btc">₿</span>PUN<span>D</span>IX</div>
+        <div class="logo-tag">BTC Weekly Prediction League</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -3233,6 +3242,98 @@ const SUPABASE_ANON   = 'sb_publishable_SdUKAiao-DPQwnUbe0bjMA_gEGhCnGn';
 // Claude model — update this one line when a new model is released
 const CLAUDE_MODEL    = 'claude-sonnet-4-6';
 
+// ══════════════════════════════════════════
+// SOUND ENGINE — Web Audio API, no files
+// ══════════════════════════════════════════
+
+const SFX = (() => {
+  let ctx = null;
+
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    return ctx;
+  }
+
+  function play(fn) {
+    try { fn(getCtx()); } catch(e) { /* sound blocked, silently skip */ }
+  }
+
+  return {
+    // Lock in prediction — satisfying double-click confirm
+    lock() {
+      play(ac => {
+        const t = ac.currentTime;
+        [0, 0.08].forEach((delay, i) => {
+          const o = ac.createOscillator();
+          const g = ac.createGain();
+          o.connect(g); g.connect(ac.destination);
+          o.type = 'sine';
+          o.frequency.setValueAtTime(i === 0 ? 520 : 780, t + delay);
+          g.gain.setValueAtTime(0, t + delay);
+          g.gain.linearRampToValueAtTime(0.18, t + delay + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.18);
+          o.start(t + delay);
+          o.stop(t + delay + 0.2);
+        });
+      });
+    },
+
+    // Satoshi responds — soft incoming message tick
+    message() {
+      play(ac => {
+        const t = ac.currentTime;
+        const o = ac.createOscillator();
+        const g = ac.createGain();
+        o.connect(g); g.connect(ac.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(440, t);
+        o.frequency.exponentialRampToValueAtTime(620, t + 0.06);
+        g.gain.setValueAtTime(0.12, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+        o.start(t);
+        o.stop(t + 0.15);
+      });
+    },
+
+    // Week resolved / score lands — ceremonial soft chime
+    resolve() {
+      play(ac => {
+        const t = ac.currentTime;
+        const notes = [523, 659, 784, 1047]; // C5 E5 G5 C6
+        notes.forEach((freq, i) => {
+          const o = ac.createOscillator();
+          const g = ac.createGain();
+          o.connect(g); g.connect(ac.destination);
+          o.type = 'sine';
+          o.frequency.setValueAtTime(freq, t + i * 0.12);
+          g.gain.setValueAtTime(0, t + i * 0.12);
+          g.gain.linearRampToValueAtTime(0.14, t + i * 0.12 + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.5);
+          o.start(t + i * 0.12);
+          o.stop(t + i * 0.12 + 0.55);
+        });
+      });
+    },
+
+    // Leaderboard beat / rank change — brief alert pulse
+    alert() {
+      play(ac => {
+        const t = ac.currentTime;
+        const o = ac.createOscillator();
+        const g = ac.createGain();
+        o.connect(g); g.connect(ac.destination);
+        o.type = 'square';
+        o.frequency.setValueAtTime(330, t);
+        o.frequency.setValueAtTime(220, t + 0.1);
+        g.gain.setValueAtTime(0.07, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        o.start(t);
+        o.stop(t + 0.25);
+      });
+    }
+  };
+})();
+
 // Week config — loaded dynamically from Supabase config table
 // These are fallback defaults only, overwritten on load
 let CURRENT_WEEK = 1;
@@ -3669,6 +3770,8 @@ async function submitPrediction() {
     // Clear Satoshi context cache so next chat has fresh data
     satoshiChatPayloadCache = null;
 
+    SFX.lock(); // ← prediction locked in
+
     renderLeaderboard();
     updateLivePanel();
   } catch(e) {
@@ -3913,6 +4016,8 @@ async function renderLeaderboard() {
 // WAR BOARD
 // ══════════════════════════════════════════
 
+let _lastMyRank = null;
+
 async function renderWarBoard() {
   const allPreds = await getAllPredictions();
   const myPred   = getMyPrediction();
@@ -3958,6 +4063,12 @@ async function renderWarBoard() {
     const isMe      = hasPredictedThisWeek && p.name === myPred.name;
     const isLeading = i === 0;
     const rank      = i + 1;
+
+    // Fire alert sound if user's rank improved
+    if (isMe) {
+      if (_lastMyRank !== null && rank < _lastMyRank) SFX.alert();
+      _lastMyRank = rank;
+    }
 
     const pct     = p.distPct.toFixed(2);
     const barW    = Math.max(4, Math.round((1 - p.dist / maxDist) * 44));
@@ -4085,6 +4196,7 @@ async function renderResolvedBanner() {
   // Show banner
   banner.classList.add('show');
   document.getElementById('resolved-week-num').textContent = CURRENT_WEEK;
+  SFX.resolve(); // ← week resolved, score lands
 
   // Hide predict form — week is over
   if (form && !myPrediction) {
@@ -5389,6 +5501,7 @@ async function sendSatoshiMessage() {
 
     removeSatoshiThinking();
     appendSatoshiMessage('satoshi', reply);
+    SFX.message(); // ← Satoshi responds
 
     // Add assistant reply to history (keep last 8 turns max to manage context)
     satoshiChatHistory.push({ role: 'assistant', content: reply });
