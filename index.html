@@ -176,8 +176,8 @@
     <!-- Prediction form -->
     <div id="predictForm">
       <div class="predict-form-card">
-        <div class="predict-form-title">Where will BTC close this Sunday?</div>
-        <div class="predict-form-sub">Submit your price forecast for the weekly BTC/USD close · Sunday 23:59 UTC</div>
+        <div class="predict-form-title">Where will BTC settle this Sunday?</div>
+        <div class="predict-form-sub">Submit your price forecast for the weekly BTC/USD settlement · Sunday 23:59 UTC</div>
 
         <!-- Name + handle -->
         <div class="form-row">
@@ -196,7 +196,7 @@
           <label class="btc-input-label" for="btcPrediction">Your BTC price prediction (USD)</label>
           <input class="btc-input-field" id="btcPrediction" type="number" placeholder="84000" min="10000" max="500000" step="100" oninput="updatePreview()">
           <div class="btc-input-prefix">USD</div>
-          <div class="btc-input-hint">Current: <span id="btc-current-hint">$84,200</span> · Enter your Sunday close forecast</div>
+          <div class="btc-input-hint">Current: <span id="btc-current-hint">$84,200</span> · Enter your Sunday settlement forecast</div>
         </div>
 
         <!-- Live preview -->
@@ -223,15 +223,16 @@
 
     <!-- Week resolved / closed message -->
     <div class="predict-closed-msg" id="weekClosedMsg" style="display:none;">
-      <div class="predict-closed-title">Week <span id="closed-week-num">1</span> is closed</div>
-      <div class="predict-closed-sub">Results are in — check the Leaderboard tab.<br>Week <span id="next-week-num">2</span> opens next Monday.</div>
+      <div style="font-size:28px;margin-bottom:10px;">⏸</div>
+      <div class="predict-closed-title" id="weekClosedTitle">Predictions closed</div>
+      <div class="predict-closed-sub" id="weekClosedSub">Results are in — check the Leaderboard tab.<br>Week <span id="next-week-num">2</span> opens next Monday.</div>
     </div>
 
     <!-- Locked / success state -->
     <div class="locked-card" id="lockedCard">
       <div class="locked-icon" style="font-size:36px;color:var(--orange);">◈</div>
       <div class="locked-title">Your call is locked in</div>
-      <div class="locked-sub" id="lockedSub">Your prediction is set. Results are published Sunday night after the BTC weekly close.</div>
+      <div class="locked-sub" id="lockedSub">Your prediction is set. Results are published Sunday night after the weekly settlement.</div>
       <div class="locked-prediction-display">
         <div class="locked-prediction-label">Your forecast</div>
         <div class="locked-prediction-value" id="lockedValue">$84,200</div>
@@ -248,7 +249,7 @@
 
     <!-- Game mechanic hook -->
     <div style="text-align:center;padding:0 0 18px;">
-      <div style="font-family:var(--sans);font-size:22px;font-weight:800;color:var(--text);letter-spacing:0.5px;text-transform:uppercase;">Predict BTC's Sunday close.</div>
+      <div style="font-family:var(--sans);font-size:22px;font-weight:800;color:var(--text);letter-spacing:0.5px;text-transform:uppercase;">Predict BTC's Sunday settlement.</div>
       <div style="font-family:var(--mono);font-size:11px;color:var(--orange);letter-spacing:2px;text-transform:uppercase;margin-top:4px;">Closest wins · every week · free to play</div>
     </div>
 
@@ -412,7 +413,7 @@
     <!-- How ranking works note -->
     <div class="score-explainer">
       <div class="score-title">How your score is calculated</div>
-      <div class="predict-form-sub" style="margin-bottom:16px;">Smaller error = higher score. Rankings are based on percentage distance from the Sunday BTC close.</div>
+      <div class="predict-form-sub" style="margin-bottom:16px;">Smaller error = higher score. Rankings are based on percentage distance from the Sunday BTC settlement.</div>
       <div class="score-examples">
         <div class="score-example">
           <div class="score-example-label">Error &lt; 0.5% · Very close</div>
@@ -531,7 +532,7 @@
         <div class="timing-row">
           <div class="timing-day">Sunday</div>
           <div class="timing-dot" style="background:var(--green);"></div>
-          <div class="timing-event">BTC weekly close fixed at 23:59 UTC · Rankings published</div>
+          <div class="timing-event">BTC weekly settlement fixed at 23:59 UTC · Rankings published</div>
         </div>
       </div>
     </div>
@@ -541,7 +542,7 @@
         <div class="how-step-num">1</div>
         <div class="how-step-body">
           <div class="how-step-title">Submit one number</div>
-          <div class="how-step-text">Enter the BTC/USD price you believe will be the weekly close. <strong>One number. Pure conviction.</strong> No confidence levels, no ranges — your exact call.</div>
+          <div class="how-step-text">Enter the BTC/USD price you believe will be the weekly settlement. <strong>One number. Pure conviction.</strong> No confidence levels, no ranges — your exact call.</div>
         </div>
       </div>
       <div class="how-step">
@@ -569,7 +570,7 @@
         <div class="how-step-num">5</div>
         <div class="how-step-body">
           <div class="how-step-title">Compete on accuracy</div>
-          <div class="how-step-text">Sunday close is the truth. Smallest error wins — multipliers applied where earned. <strong>Rankings are public.</strong> Share your result card — beat the crowd or take your loss publicly.</div>
+          <div class="how-step-text">Sunday settlement is the truth. Smallest error wins — multipliers applied where earned. <strong>Rankings are public.</strong> Share your result card — beat the crowd or take your loss publicly.</div>
         </div>
       </div>
       <div class="how-step">
@@ -640,7 +641,7 @@
 
       <div class="admin-card" id="adminResolveCard">
         <div class="admin-card-title">Resolve Week <span id="admin-resolve-week">—</span></div>
-        <div class="admin-card-sub">Enter the BTC Sunday close price to score all predictions and declare the winner automatically.</div>
+        <div class="admin-card-sub">Enter the BTC Sunday settlement price to score all predictions and declare the winner automatically.</div>
         <div style="margin:16px 0 8px;">
           <label class="form-label">BTC Closing Price (USD)</label>
           <input class="form-input" id="adminClosePrice" type="number" placeholder="e.g. 84500" min="10000" max="500000">
@@ -1103,6 +1104,20 @@ function updateWindowStatus() {
     if (textEl) textEl.innerHTML = 'Predictions <strong>closed</strong> · Resolves Sunday 23:59 UTC';
     if (cdEl)   cdEl.textContent = formatCountdown(resolveDate - now);
     if (submitBtn) submitBtn.disabled = true;
+    // Show the closed message and hide the form when window is closed but not resolved
+    const form = document.getElementById('predictForm');
+    const closedMsg = document.getElementById('weekClosedMsg');
+    const lockedCard = document.getElementById('lockedCard');
+    if (form && !lockedCard?.classList.contains('show')) {
+      form.style.display = 'none';
+      if (closedMsg) {
+        closedMsg.style.display = 'block';
+        const titleEl = document.getElementById('weekClosedTitle');
+        const subEl   = document.getElementById('weekClosedSub');
+        if (titleEl) titleEl.textContent = 'Predictions closed for this week';
+        if (subEl)   subEl.innerHTML = 'Settlement resolves Sunday 23:59 UTC · New week opens Monday.<br>Check the <strong>Live Week</strong> tab for current standings.';
+      }
+    }
   }
 
   const warCd = document.getElementById('war-countdown');
@@ -1138,7 +1153,7 @@ function updatePreview() {
     body.innerHTML =
       `₿ BTC Weekly Forecast<br>` +
       `<strong>${name}</strong> predicts<br>` +
-      `<strong>BTC closes at ${fmtPrice}</strong><br>` +
+      `<strong>BTC settles at ${fmtPrice}</strong><br>` +
       `${sign}${diffPct}% ${direction} current price (${fmtLive})<br>` +
       `Week ${CURRENT_WEEK} · Pundix BTC League`;
   }
@@ -2983,7 +2998,7 @@ ABSOLUTE VOICE RULES:
 - One closing sentence that lands slightly heavier than the rest — philosophical, earned, never announced.
 
 THE GAME — MECHANICS YOU KNOW:
-Pundix is a weekly BTC/USD closing price prediction league. Players submit one price forecast before Friday 23:59 UTC. The weekly close (Sunday 23:59 UTC) is the truth. Scoring formula: 100 / (1 + 10 × error²), where error is the fractional distance between prediction and actual close. Max base score is 100 pts per week. Season length is open-ended; cumulative scores determine the champion.
+Pundix is a weekly BTC/USD settlement price prediction league. Players submit one price forecast before Friday 23:59 UTC. The weekly settlement (Sunday 23:59 UTC) is the truth. Scoring formula: 100 / (1 + 10 × error²), where error is the fractional distance between prediction and actual settlement. Max base score is 100 pts per week. Season length is open-ended; cumulative scores determine the champion.
 
 EARLY-BIRD MULTIPLIER — you know this well and respect it:
 Players who predict early in the week earn a score multiplier — but only if their call is correct. The multiplier never punishes a wrong call; it only amplifies a right one. The table:
@@ -3279,7 +3294,7 @@ Week: ${payload.week}
 Market data:
 - BTC current price: $${payload.btc_current.toLocaleString('en-US')}
 - Hours elapsed since Friday open: ${payload.hours_elapsed}h
-- Hours remaining until Sunday close: ${payload.hours_remaining}h
+- Hours remaining until Sunday settlement: ${payload.hours_remaining}h
 
 Crowd data (${payload.player_count} players):
 - Crowd median prediction: ${payload.crowd_median_usd ? '$' + payload.crowd_median_usd.toLocaleString('en-US') : 'n/a'}
