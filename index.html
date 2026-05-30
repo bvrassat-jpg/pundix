@@ -83,34 +83,55 @@
       <div class="resolved-banner-next" id="resolved-next-msg">Next week opens soon</div>
     </div>
 
-    <!-- Sentiment Heatmap -->
-    <div class="sentiment-card">
-      <div class="sentiment-header">
-        <div class="sentiment-header-left">
-          <div class="sentiment-header-dot"></div>
-          <div class="sentiment-header-title">BTC Market Sentiment · AI</div>
+    <!-- Satoshi Pre-game Brief -->
+    <div class="satoshi-card" id="satoshiPredictCard" style="margin-bottom:18px;">
+      <div class="satoshi-header">
+        <div class="satoshi-identity">
+          <div class="satoshi-avatar">S</div>
+          <div>
+            <div class="satoshi-name">Satoshi</div>
+            <div class="satoshi-role">Market Desk</div>
+          </div>
         </div>
-        <button class="sentiment-refresh-btn" id="sentimentRefreshBtn" onclick="runSentimentScan(true)">↻ refresh</button>
+        <div class="satoshi-timestamp" id="satoshiPredictTimestamp">—</div>
       </div>
-      <div id="sentimentBody">
-        <div class="sentiment-loading">
-          <div class="sentiment-loading-dots"><span></span><span></span><span></span></div>
-          <div>Analysing market sentiment…</div>
+      <div id="satoshiPredictContent" class="satoshi-body">
+        <div class="satoshi-loading">
+          <div class="satoshi-loading-dots"><span></span><span></span><span></span></div>
+          <div class="satoshi-loading-text">Satoshi is watching the tape…</div>
         </div>
+      </div>
+      <!-- Permanent hood — always visible regardless of day -->
+      <div style="border-top:1px solid var(--border);">
+        <div style="padding:10px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:rgba(245,158,11,.04);" onclick="toggleSatoshiHood(this)">
+          <div>
+            <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);">⚙ Open the hood</div>
+            <div style="font-family:var(--mono);font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-top:2px;">Signal web · Heatmap · Technical Analysis</div>
+          </div>
+          <div class="satoshi-hood-arrow" style="font-size:11px;color:var(--orange);padding:0 0 0 10px;transition:transform .2s;">▼</div>
+        </div>
+        <div class="satoshi-hood-content" style="display:none;">
+          <div style="padding:12px 14px 8px;border-top:1px solid var(--border);">
+            <div style="font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Signal web · how Satoshi weighted this week</div>
+            <div id="satoshiHoodWebPredict" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);padding:8px 0;">Available Monday when brief loads</div>
+          </div>
+          <div style="border-top:1px solid var(--border);">
+            <div id="satoshiHoodSentimentPredict"></div>
+          </div>
+          <div style="border-top:1px solid var(--border);">
+            <div id="satoshiHoodTAPredict"></div>
+          </div>
+        </div>
+      </div>
+      <div class="satoshi-footer">
+        <div class="satoshi-commentary-type" id="satoshiPredictType">—</div>
+        <button class="satoshi-refresh" onclick="loadSatoshiPredictCard(true)" id="satoshiPredictRefreshBtn">↻ refresh</button>
       </div>
     </div>
 
-    <!-- TA Entry Card (inline, always visible) -->
-    <div class="ta-entry-card" onclick="openTAWindow()">
-      <div class="ta-entry-left">
-        <div class="ta-entry-dot"></div>
-        <div>
-          <div class="ta-entry-title">7-Day Technical Analysis</div>
-          <div class="ta-entry-sub">RSI · MACD · Bollinger Bands · Support/Resistance · AI signal</div>
-        </div>
-      </div>
-      <div class="ta-entry-cta">Open TA ›</div>
-    </div>
+    <!-- Hidden sentiment render target (populated by runSentimentScan, displayed inside hood) -->
+    <div id="sentimentBody" style="display:none;"></div>
+    <button id="sentimentRefreshBtn" style="display:none;" onclick="runSentimentScan(true)"></button>
 
     <!-- F&G Float Button -->
     <button class="ta-float-btn" onclick="openFNGWindow()">
@@ -2112,8 +2133,9 @@ function switchTab(id) {
     p.classList.toggle('active', p.id === 'panel-' + id);
   });
 
-  if (id === 'live')   { updateLivePanel(); loadSatoshiCommentary(); }
-  if (id === 'league') renderLeaderboard();
+  if (id === 'live')    { updateLivePanel(); loadSatoshiCommentary(); }
+  if (id === 'predict') { loadSatoshiPredictCard(); }
+  if (id === 'league')  renderLeaderboard();
   if (id === 'how')    initHowInviteQR();
   if (id === 'admin') {
 
@@ -3569,6 +3591,8 @@ async function loadSatoshiBrief(forceRefresh) {
         if (typeEl) typeEl.textContent = 'Pre-Game Brief · Week Open';
         if (tsEl)   tsEl.textContent   = cached.timeStr;
         attachHoodToggle();
+        const predictWebEl = document.getElementById('satoshiHoodWebPredict');
+        if (predictWebEl && cached.webSVG) predictWebEl.innerHTML = cached.webSVG;
         return;
       }
     } catch(e) {}
@@ -3770,7 +3794,7 @@ Respond ONLY with valid JSON:
       </div>`;
 
     try {
-      localStorage.setItem(cacheKey, JSON.stringify({ html, ts: Date.now(), timeStr }));
+      localStorage.setItem(cacheKey, JSON.stringify({ html, webSVG, ts: Date.now(), timeStr }));
     } catch(e) {}
 
     contentEl.className = 'satoshi-brief-body';
@@ -3778,6 +3802,8 @@ Respond ONLY with valid JSON:
     if (typeEl) typeEl.textContent = 'Pre-Game Brief · Week Open';
     if (tsEl)   tsEl.textContent   = timeStr;
     attachHoodToggle();
+    const predictWebEl = document.getElementById('satoshiHoodWebPredict');
+    if (predictWebEl) predictWebEl.innerHTML = webSVG;
 
   } catch(err) {
     console.error('loadSatoshiBrief error:', err);
@@ -3789,21 +3815,42 @@ Respond ONLY with valid JSON:
 }
 
 function attachHoodToggle() {
-  // Populate hood sections with live data if available
-  const sentEl = document.getElementById('satoshiHoodSentiment');
-  const taEl   = document.getElementById('satoshiHoodTA');
-  if (sentEl && sentimentCache) {
-    renderSentiment(sentimentCache);
-    const liveBody = document.getElementById('sentimentBody');
-    if (liveBody) sentEl.innerHTML = liveBody.innerHTML;
-  } else if (sentEl) {
-    sentEl.innerHTML = '<div style="padding:12px 14px;font-family:var(--mono);font-size:10px;color:var(--text-dim);">Run sentiment scan to populate</div>';
+  // Helper: render sentiment into a target element
+  function populateSentiment(sentEl) {
+    if (!sentEl) return;
+    if (sentimentCache) {
+      var tempDiv = document.createElement('div');
+      document.body.appendChild(tempDiv);
+      var orig = document.getElementById('sentimentBody');
+      if (orig) orig.id = 'sentimentBody_bak2';
+      tempDiv.id = 'sentimentBody';
+      renderSentiment(sentimentCache);
+      sentEl.innerHTML = tempDiv.innerHTML;
+      tempDiv.id = 'sentimentBody_temp';
+      if (orig) orig.id = 'sentimentBody';
+      document.body.removeChild(tempDiv);
+    } else {
+      sentEl.innerHTML = '<div style="padding:12px 14px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;">Sentiment scan not yet run · refresh to load</div>';
+    }
   }
-  if (taEl && taCache) {
-    taEl.innerHTML = document.getElementById('taBody')?.innerHTML || '';
-  } else if (taEl) {
-    taEl.innerHTML = '<div style="padding:12px 14px;font-family:var(--mono);font-size:10px;color:var(--text-dim);">Run TA to populate</div>';
+
+  function populateTA(taEl) {
+    if (!taEl) return;
+    if (taCache) {
+      var src = document.getElementById('taBody');
+      if (src) taEl.innerHTML = src.innerHTML;
+    } else {
+      taEl.innerHTML = '<div style="padding:12px 14px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;">TA not yet run · refresh to load</div>';
+    }
   }
+
+  // Live Week hood
+  populateSentiment(document.getElementById('satoshiHoodSentiment'));
+  populateTA(document.getElementById('satoshiHoodTA'));
+
+  // Predict hood
+  populateSentiment(document.getElementById('satoshiHoodSentimentPredict'));
+  populateTA(document.getElementById('satoshiHoodTAPredict'));
 }
 
 function toggleSatoshiHood(headerEl) {
@@ -3815,6 +3862,96 @@ function toggleSatoshiHood(headerEl) {
   if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
   // Populate if opening for the first time
   if (!isOpen) attachHoodToggle();
+}
+
+async function loadSatoshiPredictCard(forceRefresh) {
+  const commentaryType = getSatoshiCommentaryType();
+  const contentEl  = document.getElementById('satoshiPredictContent');
+  const typeEl     = document.getElementById('satoshiPredictType');
+  const tsEl       = document.getElementById('satoshiPredictTimestamp');
+  const refreshBtn = document.getElementById('satoshiPredictRefreshBtn');
+  if (!contentEl) return;
+
+  if (commentaryType === 'monday_brief') {
+    // Reuse brief logic but target predict elements
+    const cacheKey = SATOSHI_BRIEF_CACHE_KEY + '_' + CURRENT_WEEK;
+    if (!forceRefresh) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+        if (cached && Date.now() - cached.ts < SATOSHI_BRIEF_CACHE_TTL) {
+          contentEl.className = 'satoshi-brief-body';
+          contentEl.innerHTML = cached.html;
+          if (typeEl) typeEl.textContent = 'Pre-Game Brief · Week Open';
+          if (tsEl)   tsEl.textContent   = cached.timeStr;
+          attachHoodToggle();
+          return;
+        }
+      } catch(e) {}
+    }
+    // Not cached — delegate to full brief loader but swap target elements
+    const origContent  = document.getElementById('satoshiContent');
+    const origType     = document.getElementById('satoshiType');
+    const origTs       = document.getElementById('satoshiTimestamp');
+    const origRefresh  = document.getElementById('satoshiRefreshBtn');
+    // Temporarily remap IDs so loadSatoshiBrief writes to predict card
+    if (origContent)  origContent.id  = 'satoshiContent_bak';
+    if (origType)     origType.id     = 'satoshiType_bak';
+    if (origTs)       origTs.id       = 'satoshiTimestamp_bak';
+    if (origRefresh)  origRefresh.id  = 'satoshiRefreshBtn_bak';
+    contentEl.id  = 'satoshiContent';
+    if (typeEl)     typeEl.id     = 'satoshiType';
+    if (tsEl)       tsEl.id       = 'satoshiTimestamp';
+    if (refreshBtn) refreshBtn.id = 'satoshiRefreshBtn';
+    try {
+      await loadSatoshiBrief(forceRefresh);
+    } finally {
+      // Restore original IDs
+      contentEl.id  = 'satoshiPredictContent';
+      if (typeEl)     typeEl.id     = 'satoshiPredictType';
+      if (tsEl)       tsEl.id       = 'satoshiPredictTimestamp';
+      if (refreshBtn) refreshBtn.id = 'satoshiPredictRefreshBtn';
+      if (origContent)  origContent.id  = 'satoshiContent';
+      if (origType)     origType.id     = 'satoshiType';
+      if (origTs)       origTs.id       = 'satoshiTimestamp';
+      if (origRefresh)  origRefresh.id  = 'satoshiRefreshBtn';
+    }
+    return;
+  }
+
+  // Non-brief states — show standard Satoshi commentary
+  const cacheKey = SATOSHI_CACHE_KEY + '_' + CURRENT_WEEK + '_' + commentaryType;
+  if (!forceRefresh) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if (cached && Date.now() - cached.ts < SATOSHI_CACHE_TTL) {
+        contentEl.className = 'satoshi-body';
+        contentEl.innerHTML = renderSatoshiText(cached.text);
+        if (typeEl) typeEl.textContent = getSatoshiTypeLabel(commentaryType);
+        if (tsEl)   tsEl.textContent   = cached.timeStr;
+        return;
+      }
+    } catch(e) {}
+  }
+
+  contentEl.className = 'satoshi-body';
+  contentEl.innerHTML = `<div class="satoshi-loading"><div class="satoshi-loading-dots"><span></span><span></span><span></span></div><div class="satoshi-loading-text">Watching the tape…</div></div>`;
+  if (refreshBtn) refreshBtn.style.opacity = '0.3';
+
+  try {
+    const allPredictions = await getAllPredictions();
+    const payload        = await buildSatoshiPayload(allPredictions);
+    const commentary     = await callSatoshiAPI(payload);
+    const now     = new Date();
+    const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · ' + now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    try { localStorage.setItem(cacheKey, JSON.stringify({ text: commentary, ts: Date.now(), timeStr })); } catch(e) {}
+    contentEl.innerHTML = renderSatoshiText(commentary);
+    if (typeEl) typeEl.textContent = getSatoshiTypeLabel(commentaryType);
+    if (tsEl)   tsEl.textContent   = timeStr;
+  } catch(err) {
+    contentEl.innerHTML = `<div class="satoshi-error">The desk is offline. Markets continue regardless.</div>`;
+  } finally {
+    if (refreshBtn) refreshBtn.style.opacity = '';
+  }
 }
 
 async function loadSatoshiCommentary(forceRefresh = false) {
@@ -3947,6 +4084,9 @@ async function loadSatoshiCommentary(forceRefresh = false) {
   initEarlybirdBanner();
   initEarlybirdFormHint();
   loadSatoshiCommentary();
+  loadSatoshiPredictCard();
+  runSentimentScan();
+  runTA();
   setInterval(updateWindowStatus, 1000);
   setInterval(fetchBTCPrice, 60000);
   setInterval(() => {
