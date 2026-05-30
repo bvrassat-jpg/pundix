@@ -233,7 +233,35 @@
       <div class="locked-icon" style="font-size:36px;color:var(--orange);">◈</div>
       <div class="locked-title">Your call is locked in</div>
       <div class="locked-sub" id="lockedSub">Your prediction is set. Results are published Sunday night after the weekly settlement.</div>
-      <div class="locked-prediction-display">
+
+      <!-- Live position tracker -->
+      <div id="lockedLiveTracker" style="display:none;margin:16px 0 4px;">
+        <!-- Your call vs BTC now -->
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch;gap:8px;margin-bottom:8px;">
+          <div style="background:var(--orange-dim);border:1px solid rgba(245,158,11,.4);border-radius:5px;padding:12px;text-align:center;">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(245,158,11,.8);margin-bottom:5px;">Your call</div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--orange);letter-spacing:-0.5px;" id="lockedYourCall">—</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--text-dim);">vs</div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:12px;text-align:center;">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;">BTC now</div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.5px;" id="lockedBTCNow">—</div>
+          </div>
+        </div>
+        <!-- Distance + direction -->
+        <div id="lockedDistanceRow" style="border-radius:5px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+          <div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:3px;">Distance from settlement</div>
+            <div style="font-family:var(--mono);font-size:18px;font-weight:700;" id="lockedDistancePct">—</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:3px;">Market moving</div>
+            <div style="font-family:var(--sans);font-size:15px;font-weight:800;letter-spacing:0.3px;text-transform:uppercase;" id="lockedDirection">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="locked-prediction-display" id="lockedPredDisplay">
         <div class="locked-prediction-label">Your forecast</div>
         <div class="locked-prediction-value" id="lockedValue">$84,200</div>
       </div>
@@ -1037,8 +1065,46 @@ function updateBTCDisplay(price, chg24) {
   }
 
   updatePreview();
-
+  updateLockedTracker();
   renderWarBoard();
+}
+
+function updateLockedTracker() {
+  const tracker     = document.getElementById('lockedLiveTracker');
+  const predDisplay = document.getElementById('lockedPredDisplay');
+  if (!tracker) return;
+  if (!myPrediction || !liveBTC) {
+    tracker.style.display = 'none';
+    if (predDisplay) predDisplay.style.display = 'block';
+    return;
+  }
+
+  const call    = parseFloat(myPrediction.price);
+  const current = liveBTC;
+  const diff    = current - call;
+  const distPct = Math.abs(diff / call * 100);
+
+  const distColor = distPct <= 1 ? '#10B981' : distPct <= 3 ? '#F59E0B' : '#EF4444';
+  const bgColor   = distPct <= 1 ? 'rgba(16,185,129,.15)' : distPct <= 3 ? 'rgba(245,158,11,.12)' : 'rgba(239,68,68,.15)';
+  const borderCol = distPct <= 1 ? 'rgba(16,185,129,.35)' : distPct <= 3 ? 'rgba(245,158,11,.32)' : 'rgba(239,68,68,.35)';
+
+  const dirText  = diff > 0 ? 'Above your call ↑' : diff < 0 ? 'Below your call ↓' : 'Right on target ◎';
+  const dirColor = diff === 0 ? '#10B981' : '#F59E0B';
+
+  const yourCallEl = document.getElementById('lockedYourCall');
+  const btcNowEl   = document.getElementById('lockedBTCNow');
+  const distRowEl  = document.getElementById('lockedDistanceRow');
+  const distPctEl  = document.getElementById('lockedDistancePct');
+  const dirEl      = document.getElementById('lockedDirection');
+
+  if (yourCallEl) yourCallEl.textContent = '$' + Math.round(call).toLocaleString('en-US');
+  if (btcNowEl)   btcNowEl.textContent   = '$' + Math.round(current).toLocaleString('en-US');
+  if (distPctEl) { distPctEl.textContent = distPct.toFixed(2) + '% off'; distPctEl.style.color = distColor; }
+  if (dirEl)     { dirEl.textContent = dirText; dirEl.style.color = dirColor; }
+  if (distRowEl) { distRowEl.style.background = bgColor; distRowEl.style.border = '1px solid ' + borderCol; }
+
+  tracker.style.display = 'block';
+  if (predDisplay) predDisplay.style.display = 'none';
 }
 
 function getWindowState() {
