@@ -205,11 +205,6 @@
           <div class="predict-preview-body" id="previewBody">—</div>
         </div>
 
-        <!-- Share before submit -->
-        <button class="share-prediction-btn" id="shareBeforeBtn" onclick="openShareModal('prediction')" style="display:none">
-          ↗ Share my prediction before locking in
-        </button>
-
         <!-- Early-bird bonus indicator -->
         <div class="window-status" id="earlybird-form-hint" style="margin-bottom:18px; display:none;">
           <div class="window-status-left" style="gap:10px;">
@@ -1126,11 +1121,9 @@ function updatePreview() {
 
   const preview  = document.getElementById('predictPreview');
   const body     = document.getElementById('previewBody');
-  const shareBtn = document.getElementById('shareBeforeBtn');
 
   if (!name || !price || price < 10000) {
     if (preview)  preview.classList.remove('show');
-    if (shareBtn) shareBtn.style.display = 'none';
     return;
   }
 
@@ -1151,7 +1144,6 @@ function updatePreview() {
   }
 
   if (preview)  preview.classList.add('show');
-  if (shareBtn) shareBtn.style.display = 'block';
 }
 
 let submitConfirmPending = false;
