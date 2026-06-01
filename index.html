@@ -3031,19 +3031,41 @@ function renderTA(data) {
     '<div style="font-family:var(--mono);font-size:8px;color:var(--text-dim);margin-top:12px;text-align:center;letter-spacing:1px;">SOURCE: BINANCE BTCUSDT 4H · 200 CANDLES</div>';
 }
 
-const ADMIN_PASSWORD = 'pundix2025';
-const ADMIN_KEY      = 'pundix_admin_unlocked';
+const ADMIN_AUTH_WORKER = 'https://spring-resonance-3bbb.bvrassat.workers.dev';
+const ADMIN_KEY         = 'pundix_admin_unlocked';
+const ADMIN_TOKEN_KEY   = 'pundix_admin_token';
 
-function checkAdminPassword() {
+async function checkAdminPassword() {
   const input = document.getElementById('adminPasswordInput')?.value || '';
-  if (input === ADMIN_PASSWORD) {
+  if (!input) return;
+
+  const btn = document.querySelector('#adminGate .submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+
+  try {
+    const resp = await fetch(ADMIN_AUTH_WORKER + '/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: input }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || !data.token) {
+      const err = document.getElementById('adminGateError');
+      if (err) { err.style.display = 'block'; setTimeout(() => err.style.display = 'none', 2000); }
+      if (btn) { btn.disabled = false; btn.textContent = 'Enter'; }
+      return;
+    }
+
     sessionStorage.setItem(ADMIN_KEY, '1');
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, data.token);
     document.getElementById('adminGate').style.display      = 'none';
     document.getElementById('adminDashboard').style.display = 'block';
     loadAdminDashboard();
-  } else {
-    const err = document.getElementById('adminGateError');
-    if (err) { err.style.display = 'block'; setTimeout(() => err.style.display = 'none', 2000); }
+
+  } catch(e) {
+    showToast('Auth error — check connection.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Enter'; }
   }
 }
 
@@ -3249,12 +3271,25 @@ async function startNextWeek() {
 }
 
 async function sbFetchAdmin(path, opts = {}) {
+  // Verify token with worker before any admin action
+  const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+  if (!token) throw new Error('Not authenticated');
+  try {
+    const vResp = await fetch(ADMIN_AUTH_WORKER + '/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    if (!vResp.ok) throw new Error('Token invalid');
+  } catch(e) {
+    sessionStorage.removeItem(ADMIN_KEY);
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    throw new Error('Session expired — please log in again');
+  }
+
   const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
     method:  opts.method || 'GET',
-    headers: {
-      ...HDRS,
-      'Prefer': opts.prefer || 'return=minimal',
-    },
+    headers: { ...HDRS, 'Prefer': opts.prefer || 'return=minimal' },
     body: opts.body || undefined,
   });
   if (!r.ok) {
