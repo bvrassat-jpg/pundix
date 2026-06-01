@@ -1563,11 +1563,14 @@ function initEarlybirdBanner() {
   const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const todayName = dayNames[day] || 'Today';
 
-  document.getElementById('eb-day-chip').textContent = todayName.toUpperCase();
+  const ebDayChip = document.getElementById('eb-day-chip');
+  if (ebDayChip) ebDayChip.textContent = todayName.toUpperCase();
 
   if (eb.mult > 1.0) {
-    document.getElementById('eb-mult').textContent = eb.mult + '×';
-    document.getElementById('eb-bonus-txt').textContent = eb.mult + '× multiplier';
+    const ebMult = document.getElementById('eb-mult');
+    if (ebMult) ebMult.textContent = eb.mult + '×';
+    const ebBonusTxt = document.getElementById('eb-bonus-txt');
+    if (ebBonusTxt) ebBonusTxt.textContent = eb.mult + '× multiplier';
 
     const headlineMap = {
       1: "Best bonus of the week — predict today",
@@ -1575,7 +1578,8 @@ function initEarlybirdBanner() {
       3: "1.2× bonus on the table — don't wait",
       4: "Last bonus day — 1.1× if you're right",
     };
-    document.getElementById('eb-headline').textContent = headlineMap[day] || 'Submit your prediction';
+    const ebHeadline = document.getElementById('eb-headline');
+    if (ebHeadline) ebHeadline.textContent = headlineMap[day] || 'Submit your prediction';
 
     const subMap = {
       1: `Predict on Monday and earn a <eb-accent>${eb.mult}× multiplier</eb-accent> on your score if you nail it. Bonus only boosts correct calls — no penalty for being wrong.`,
@@ -1591,9 +1595,12 @@ function initEarlybirdBanner() {
     }
   } else {
 
-    document.getElementById('eb-mult').textContent = '1.0×';
-    document.getElementById('eb-bonus-txt').textContent = 'no bonus today';
-    document.getElementById('eb-headline').textContent = 'Last chance — predictions close tonight';
+    const ebMult2 = document.getElementById('eb-mult');
+    if (ebMult2) ebMult2.textContent = '1.0×';
+    const ebBonusTxt2 = document.getElementById('eb-bonus-txt');
+    if (ebBonusTxt2) ebBonusTxt2.textContent = 'no bonus today';
+    const ebHeadline2 = document.getElementById('eb-headline');
+    if (ebHeadline2) ebHeadline2.textContent = 'Last chance — predictions close tonight';
     const subEl = document.getElementById('eb-sub');
     if (subEl) subEl.innerHTML = 'Predictions close <span class="eb-accent">Friday 23:59 UTC</span>. No early-bird bonus today — but every point counts. Get your call in now.';
   }
