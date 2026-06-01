@@ -2804,13 +2804,13 @@ async function fetchMacroData() {
   } catch(e) {}
 
   try {
-    // Yahoo Finance free API — no key required
-    const [dxyResp, nasdaqResp] = await Promise.all([
-      fetch('https://query1.finance.yahoo.com/v8/finance/chart/DX-Y.NYB?range=5d&interval=1d'),
-      fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EIXIC?range=5d&interval=1d')
-    ]);
-    const dxyJson    = await dxyResp.json();
-    const nasdaqJson = await nasdaqResp.json();
+    // Fetch via Cloudflare Worker (/macro) — avoids CORS block on Yahoo Finance
+    const resp = await fetch(WORKER + '/macro', { method: 'GET' });
+    if (!resp.ok) throw new Error('Worker /macro returned ' + resp.status);
+    const json = await resp.json();
+
+    const dxyJson    = json.dxy;
+    const nasdaqJson = json.nasdaq;
 
     const dxyCloses    = dxyJson?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(Boolean) || [];
     const nasdaqCloses = nasdaqJson?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(Boolean) || [];
