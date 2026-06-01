@@ -1666,17 +1666,11 @@ async function renderLeaderboard() {
   const warWkEl = document.getElementById('war-week-num');
   if (warWkEl) warWkEl.textContent = CURRENT_WEEK;
 
-  // Aggregate by player name — sum boosted scores across all weeks
   const playerMap = {};
   for (const p of all) {
     const key = p.name.trim().toLowerCase();
     if (!playerMap[key]) {
-      playerMap[key] = {
-        name:       p.name,
-        totalScore: 0,
-        weeks:      [],
-        isFounder:  false,
-      };
+      playerMap[key] = { name: p.name, totalScore: 0, weeks: [], isFounder: false };
     }
     const entry = playerMap[key];
     const boosted = (p.score != null) ? computeFinalScore(p.score, p.submitted_at || p.ts) : null;
@@ -1686,26 +1680,24 @@ async function renderLeaderboard() {
   }
 
   const players = Object.values(playerMap);
-  const uniquePlayerCount = players.length;
 
   const countEl = document.getElementById('lb-player-count');
-  if (countEl) countEl.textContent = uniquePlayerCount;
+  if (countEl) countEl.textContent = players.length;
 
   const metaEl = document.getElementById('lb-meta');
-  if (metaEl) metaEl.textContent = 'Season · ' + CURRENT_WEEK + ' weeks · ' + uniquePlayerCount + ' players';
+  if (metaEl) metaEl.textContent = 'Season · ' + CURRENT_WEEK + ' weeks · ' + players.length + ' players';
 
   if (players.length === 0) {
     document.getElementById('leaderboardRows').innerHTML = `
       <div class="lb-empty">
         <div class="lb-empty-icon" style="font-size:28px;margin-bottom:12px;">◈</div>
         <div class="lb-empty-text">No predictions yet</div>
-        <div class="lb-empty-sub">Be the first — Week 1 participants receive a permanent Founder mark.<br>Predictions close Friday 23:59 UTC.</div>
+        <div class="lb-empty-sub">Be the first to predict this week.<br>Predictions close Friday 23:59 UTC.</div>
         <button onclick="switchTab('predict')" style="margin-top:16px;padding:10px 20px;background:var(--orange);border:none;border-radius:4px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--navy);cursor:pointer;">Make my prediction →</button>
       </div>`;
     return;
   }
 
-  // Sort by total score desc
   players.sort((a, b) => b.totalScore - a.totalScore);
 
   const rows = players.map((p, i) => {
@@ -1715,21 +1707,16 @@ async function renderLeaderboard() {
     const rankStr = rank === 1 ? '◆' : rank === 2 ? '◇' : rank === 3 ? '◈' : '#' + rank;
     const founderTag = p.isFounder ? '<span class="founder-badge">Founder</span>' : '';
     const youTag     = isMe ? ' <span style="color:var(--blue);font-size:11px;font-family:var(--mono);">(you)</span>' : '';
-
     const weeksPlayed = p.weeks.length;
     const weeksSub = weeksPlayed === 1 ? '1 week played' : weeksPlayed + ' weeks played';
-
     const hasAnyScore = p.weeks.some(w => w.score != null);
     let scoreTxt, scoreCls;
     if (!hasAnyScore) {
-      scoreTxt = '—';
-      scoreCls = 'lb-score';
+      scoreTxt = '—'; scoreCls = 'lb-score';
     } else {
       scoreTxt = p.totalScore + ' pts';
       scoreCls = p.totalScore >= 160 ? 'lb-score high' : p.totalScore >= 80 ? 'lb-score mid' : 'lb-score low';
     }
-
-    // Pass latest week entry for drawer
     const latest = p.weeks[p.weeks.length - 1];
     const playerData = encodeURIComponent(JSON.stringify({
       name: p.name, price: latest.price, week: latest.week,
@@ -1737,7 +1724,6 @@ async function renderLeaderboard() {
       submitted_at: latest.submitted_at, direction: latest.direction,
       totalScore: p.totalScore, weeksPlayed
     }));
-
     return `<div class="leaderboard-row ${isMe ? 'your-row' : ''}" data-player="${playerData}" onclick="openPlayerDrawerFromEl(this)">
       <div class="${rankCls}">${rankStr}</div>
       <div>
@@ -4077,7 +4063,18 @@ function openPredictToggle(which) {
         }
       }
     }
-    // Signal web: satoshiHoodWebPredict is already inside bodyToggleSignal; no extra work needed
+    // Signal web: inject from cache if not yet populated by loadSatoshiBrief
+    var webEl = document.getElementById('satoshiHoodWebPredict');
+    if (webEl && webEl.querySelector('svg') === null) {
+      try {
+        var commentaryType = (new Date().getUTCDay() === 0 || new Date().getUTCDay() === 6) ? 'weekly_recap' : 'pre_game';
+        var ck = SATOSHI_CACHE_KEY + '_' + CURRENT_WEEK + '_' + commentaryType;
+        var cached = JSON.parse(localStorage.getItem(ck) || 'null');
+        if (cached && cached.webSVG) {
+          webEl.innerHTML = cached.webSVG;
+        }
+      } catch(e) {}
+    }
   }
 }
 // ────────────────────────────────────────────────────────────────────
@@ -4462,7 +4459,7 @@ function closePlayerDrawer(e) {
   setInterval(updateWindowStatus, 1000);
   setInterval(fetchBTCPrice, 60000);
   setInterval(() => {
-    if (!document.hidden) renderLeaderboard();
+    if (!document.hidden && document.getElementById('panel-league')?.classList.contains('active')) renderLeaderboard();
   }, 30000);
 
   initPwaBanner();
