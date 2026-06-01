@@ -554,7 +554,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
   <!-- ══ LEAGUE PANEL ══ -->
   <div class="panel" id="panel-league">
 
-    <div class="sec-label">Week <span id="lb-week-num">1</span> · League standings</div>
+    <div class="sec-label">Season standings · Week <span id="lb-week-num">1</span></div>
 
     <!-- Cohort status -->
     <div class="cohort-status">
@@ -1110,6 +1110,27 @@ async function getAllPredictions() {
   }
 }
 
+async function getAllSeasonPredictions() {
+  try {
+    const rows = await sbGet(
+      'predictions?select=name,price,week,submitted_at,score,direction,rationale&order=submitted_at.asc'
+    );
+    return (rows || []).map(r => ({
+      name:         r.name,
+      price:        r.price,
+      week:         r.week,
+      ts:           new Date(r.submitted_at).getTime(),
+      submitted_at: r.submitted_at,
+      score:        r.score ?? null,
+      direction:    r.direction || null,
+      rationale:    r.rationale || null,
+    }));
+  } catch(e) {
+    console.warn('getAllSeasonPredictions fallback:', e);
+    return [];
+  }
+}
+
 async function savePrediction(entry) {
   await sbPost(
     'predictions',
@@ -1638,24 +1659,42 @@ function initEarlybirdFormHint() {
 }
 
 async function renderLeaderboard() {
-  const all    = await getAllPredictions();
-  const n      = all.length;
+  const all    = await getAllSeasonPredictions();
   const myPred = getMyPrediction();
 
-  const countEl = document.getElementById('lb-player-count');
-  if (countEl) countEl.textContent = n;
-
-  document.getElementById('lb-week-num').textContent   = CURRENT_WEEK;
+  document.getElementById('lb-week-num').textContent = CURRENT_WEEK;
   const warWkEl = document.getElementById('war-week-num');
   if (warWkEl) warWkEl.textContent = CURRENT_WEEK;
 
-  const metaEl = document.getElementById('lb-meta');
-  if (metaEl) {
-    const statusLabel = WEEK_STATUS === 'resolved' ? 'Resolved' : 'In progress';
-    metaEl.textContent = 'Week ' + CURRENT_WEEK + ' · ' + statusLabel + ' · ' + n + ' players';
+  // Aggregate by player name — sum boosted scores across all weeks
+  const playerMap = {};
+  for (const p of all) {
+    const key = p.name.trim().toLowerCase();
+    if (!playerMap[key]) {
+      playerMap[key] = {
+        name:       p.name,
+        totalScore: 0,
+        weeks:      [],
+        isFounder:  false,
+      };
+    }
+    const entry = playerMap[key];
+    const boosted = (p.score != null) ? computeFinalScore(p.score, p.submitted_at || p.ts) : null;
+    if (boosted != null) entry.totalScore += boosted;
+    entry.weeks.push({ week: p.week, score: p.score, boosted, price: p.price, submitted_at: p.submitted_at, direction: p.direction });
+    if (parseInt(p.week) === 1) entry.isFounder = true;
   }
 
-  if (n === 0) {
+  const players = Object.values(playerMap);
+  const uniquePlayerCount = players.length;
+
+  const countEl = document.getElementById('lb-player-count');
+  if (countEl) countEl.textContent = uniquePlayerCount;
+
+  const metaEl = document.getElementById('lb-meta');
+  if (metaEl) metaEl.textContent = 'Season · ' + CURRENT_WEEK + ' weeks · ' + uniquePlayerCount + ' players';
+
+  if (players.length === 0) {
     document.getElementById('leaderboardRows').innerHTML = `
       <div class="lb-empty">
         <div class="lb-empty-icon" style="font-size:28px;margin-bottom:12px;">◈</div>
@@ -1666,55 +1705,46 @@ async function renderLeaderboard() {
     return;
   }
 
-  const hasScores = all.some(p => p.score != null);
-  const sorted = [...all].sort((a, b) => {
-    if (!hasScores) return a.ts - b.ts;
-    const bBoosted = computeFinalScore(b.score, b.submitted_at || b.ts) ?? -1;
-    const aBoosted = computeFinalScore(a.score, a.submitted_at || a.ts) ?? -1;
-    return bBoosted - aBoosted;
-  });
+  // Sort by total score desc
+  players.sort((a, b) => b.totalScore - a.totalScore);
 
-  const rows = sorted.map((p, i) => {
-    const isMe      = myPred && p.name === myPred.name && parseInt(p.week) === parseInt(myPred.week);
-    const isFounder = parseInt(p.week) === 1;
-    const rank      = i + 1;
-    const rankCls   = rank <= 3 ? 'lb-rank top3' : 'lb-rank';
-    const rankStr   = rank === 1 ? '◆' : rank === 2 ? '◇' : rank === 3 ? '◈' : '#' + rank;
-    const fmtPred   = '$' + Math.round(p.price).toLocaleString('en-US');
-    const founderTag = isFounder ? '<span class="founder-badge">Founder</span>' : '';
+  const rows = players.map((p, i) => {
+    const isMe    = myPred && p.name.trim().toLowerCase() === myPred.name.trim().toLowerCase();
+    const rank    = i + 1;
+    const rankCls = rank <= 3 ? 'lb-rank top3' : 'lb-rank';
+    const rankStr = rank === 1 ? '◆' : rank === 2 ? '◇' : rank === 3 ? '◈' : '#' + rank;
+    const founderTag = p.isFounder ? '<span class="founder-badge">Founder</span>' : '';
     const youTag     = isMe ? ' <span style="color:var(--blue);font-size:11px;font-family:var(--mono);">(you)</span>' : '';
-    const dirTag     = p.direction === 'bull' ? '<span class="dir-bull">▲</span>' : p.direction === 'bear' ? '<span class="dir-bear">▼</span>' : '';
 
-    const submittedDay = p.submitted_at ? new Date(p.submitted_at).getUTCDay() : (p.ts ? new Date(p.ts).getUTCDay() : null);
-    const ebInfo = submittedDay != null ? EARLYBIRD_MULTIPLIERS[submittedDay] : null;
-    const ebBadgeHtml = (ebInfo && ebInfo.badge && ebInfo.mult > 1.0)
-      ? `<span class="eb-badge ${ebInfo.badge}">⚡${ebInfo.label.slice(0,3).toUpperCase()}</span>`
-      : '';
+    const weeksPlayed = p.weeks.length;
+    const weeksSub = weeksPlayed === 1 ? '1 week played' : weeksPlayed + ' weeks played';
 
-    let scoreTxt;
-    let scoreCls;
-    if (p.score == null) {
+    const hasAnyScore = p.weeks.some(w => w.score != null);
+    let scoreTxt, scoreCls;
+    if (!hasAnyScore) {
       scoreTxt = '—';
       scoreCls = 'lb-score';
     } else {
-      const boosted = computeFinalScore(p.score, p.submitted_at || p.ts);
-      if (boosted !== p.score) {
-        scoreTxt = `<span class="lb-score-boosted"><span class="lb-base-score">${p.score}</span>${boosted} pts</span>`;
-        scoreCls = '';
-      } else {
-        scoreTxt = p.score + ' pts';
-        scoreCls = p.score >= 80 ? 'lb-score high' : p.score >= 50 ? 'lb-score mid' : 'lb-score low';
-      }
+      scoreTxt = p.totalScore + ' pts';
+      scoreCls = p.totalScore >= 160 ? 'lb-score high' : p.totalScore >= 80 ? 'lb-score mid' : 'lb-score low';
     }
 
-    const playerData = encodeURIComponent(JSON.stringify({name: p.name, price: p.price, week: p.week, ts: p.ts, score: p.score, submitted_at: p.submitted_at, rationale: p.rationale, direction: p.direction}));
+    // Pass latest week entry for drawer
+    const latest = p.weeks[p.weeks.length - 1];
+    const playerData = encodeURIComponent(JSON.stringify({
+      name: p.name, price: latest.price, week: latest.week,
+      ts: latest.submitted_at, score: latest.score,
+      submitted_at: latest.submitted_at, direction: latest.direction,
+      totalScore: p.totalScore, weeksPlayed
+    }));
+
     return `<div class="leaderboard-row ${isMe ? 'your-row' : ''}" data-player="${playerData}" onclick="openPlayerDrawerFromEl(this)">
       <div class="${rankCls}">${rankStr}</div>
       <div>
-        <div class="lb-name">${escHtml(p.name)}${founderTag}${youTag}${ebBadgeHtml}</div>
-        <div class="lb-name-sub">Week ${p.week} · ${new Date(p.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'})} ${dirTag}</div>
+        <div class="lb-name">${escHtml(p.name)}${founderTag}${youTag}</div>
+        <div class="lb-name-sub">${weeksSub}</div>
       </div>
-      <div class="lb-prediction">${fmtPred}</div>
+      <div class="lb-prediction" style="font-size:10px;color:var(--text-dim);">${weeksPlayed}w</div>
       <div class="${scoreCls}">${scoreTxt}</div>
     </div>`;
   }).join('');
