@@ -302,23 +302,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         </div>
       </div>
 
-      <!-- 3. Signal web -->
-      <div class="predict-toggle-card" id="toggleSignal">
-        <div class="predict-toggle-header" onclick="openPredictToggle('signal')">
-          <div style="display:flex;align-items:center;gap:9px;">
-            <span class="predict-toggle-arrow" id="arrowSignal">▶</span>
-            <span class="predict-toggle-label">Signal web</span>
-          </div>
-          <span class="predict-toggle-meta" style="color:var(--text-dim);">Available Monday</span>
-        </div>
-        <div class="predict-toggle-body" id="bodyToggleSignal" style="display:none;">
-          <div id="satoshiHoodWebPredict" style="padding:4px 8px 16px 8px;">
-            <div style="padding:14px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;line-height:1.6;">
-              Available Monday · Satoshi's weekly brief
-            </div>
-          </div>
-        </div>
-      </div>
+
 
     </div>
     <!-- ─────────────────────────────────────────────────────────────────── -->
@@ -3922,24 +3906,18 @@ Respond ONLY with valid JSON:
       <div style="border-bottom:1px solid var(--border);">
         <div style="padding:10px 18px 0;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleSatoshiHood(this)">
           <div>
-            <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);">⚙ Open the hood</div>
-            <div style="font-family:var(--mono);font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-top:2px;">Signal web · Heatmap · Technical Analysis</div>
+            <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);">⚙ Signal web</div>
+            <div style="font-family:var(--mono);font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-top:2px;">How Satoshi weighted the signals this week</div>
           </div>
           <div class="satoshi-hood-arrow" style="font-size:11px;color:var(--orange);padding:10px 0 10px 10px;transition:transform .2s;">▼</div>
         </div>
         <div class="satoshi-hood-content" style="display:none;">
           <div style="padding:12px 14px 8px;border-top:1px solid var(--border);">
-            <div style="font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Signal web · how Satoshi weighted this week</div>
             ${webSVG}
-          </div>
-          <div style="border-top:1px solid var(--border);">
-            <div id="satoshiHoodSentiment"></div>
-          </div>
-          <div style="border-top:1px solid var(--border);">
-            <div id="satoshiHoodTA"></div>
           </div>
         </div>
       </div>
+
       <div style="padding:5px 18px 8px;font-family:var(--mono);font-size:8px;color:var(--text-dim);letter-spacing:.5px;">
         🟢 LIVE: DXY · Nasdaq · 200DMA · F&amp;G · TA&nbsp;&nbsp;·&nbsp;&nbsp;🟡 INFERRED: On-chain · Sentiment · Social Lag
       </div>`;
@@ -3995,16 +3973,13 @@ function attachHoodToggle() {
     }
   }
 
-  // Live Week hood
-  populateSentiment(document.getElementById('satoshiHoodSentiment'));
-  populateTA(document.getElementById('satoshiHoodTA'));
 }
 
 // ── Predict tab — three independent analysis toggles ────────────────
 function openPredictToggle(which) {
-  var ids = { sentiment: 'toggleSentiment', ta: 'toggleTA', signal: 'toggleSignal' };
-  var bodyIds = { sentiment: 'bodyToggleSentiment', ta: 'bodyToggleTA', signal: 'bodyToggleSignal' };
-  var arrowIds = { sentiment: 'arrowSentiment', ta: 'arrowTA', signal: 'arrowSignal' };
+  var ids = { sentiment: 'toggleSentiment', ta: 'toggleTA' };
+  var bodyIds = { sentiment: 'bodyToggleSentiment', ta: 'bodyToggleTA' };
+  var arrowIds = { sentiment: 'arrowSentiment', ta: 'arrowTA' };
 
   var card  = document.getElementById(ids[which]);
   var body  = document.getElementById(bodyIds[which]);
@@ -4059,23 +4034,6 @@ function openPredictToggle(which) {
           }).catch(function(){});
         }
       }
-    }
-    // Signal web: inject from cache or trigger brief load
-    var webEl = document.getElementById('satoshiHoodWebPredict');
-    if (webEl && webEl.querySelector('svg') === null) {
-      try {
-        var ck = SATOSHI_BRIEF_CACHE_KEY + '_' + CURRENT_WEEK;
-        var cached = JSON.parse(localStorage.getItem(ck) || 'null');
-        if (cached && cached.webSVG) {
-          webEl.innerHTML = cached.webSVG;
-        } else {
-          webEl.innerHTML = '<div style="padding:14px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;">Loading signal web…</div>';
-          loadSatoshiBrief().then(function() {
-            var ck2 = SATOSHI_BRIEF_CACHE_KEY + '_' + CURRENT_WEEK;
-            try { var c2 = JSON.parse(localStorage.getItem(ck2) || 'null'); if (c2 && c2.webSVG && document.getElementById('bodyToggleSignal')?.style.display !== 'none') webEl.innerHTML = c2.webSVG; } catch(e2) {}
-          }).catch(function(){});
-        }
-      } catch(e) {}
     }
   }
 }
