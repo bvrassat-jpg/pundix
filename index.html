@@ -3685,7 +3685,7 @@ function buildSignalWebSVG(signals) {
   return svgParts.join('');
 }
 
-const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief_v2';
+const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief_v3';
 const SATOSHI_BRIEF_CACHE_TTL = 4 * 60 * 60 * 1000;
 
 async function loadSatoshiBrief(forceRefresh) {
@@ -4422,10 +4422,13 @@ function closePlayerDrawer(e) {
   initEarlybirdFormHint();
   // Run TA independently (slow - Cloudflare Worker call)
   runSentimentScan();
-  runTA();
-  // Wait only for FNG (fast API), then build brief with whatever TA data is available
+  // Wait for FNG (fast), then build brief
   loadFNG().then(function() {
     loadSatoshiCommentary();
+    // Once TA finishes, rebuild brief with real Technical score (force refresh)
+    runTA().then(function() {
+      loadSatoshiCommentary(true);
+    }).catch(function(){});
   }).catch(function() {
     loadSatoshiCommentary();
   });
