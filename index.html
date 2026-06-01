@@ -312,7 +312,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
           <span class="predict-toggle-meta" style="color:var(--text-dim);">Available Monday</span>
         </div>
         <div class="predict-toggle-body" id="bodyToggleSignal" style="display:none;">
-          <div id="satoshiHoodWebPredict" style="padding:4px 0 12px 0;">
+          <div id="satoshiHoodWebPredict" style="padding:4px 8px 16px 8px;">
             <div style="padding:14px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;line-height:1.6;">
               Available Monday · Satoshi's weekly brief
             </div>
@@ -3636,7 +3636,7 @@ function buildSignalWebSVG(signals) {
   const nodeW = 82, nodeH = 36;
   const lx = 4, rx = 254;
 
-  let svgParts = [`<svg viewBox="0 0 340 270" width="100%" xmlns="http://www.w3.org/2000/svg">
+  let svgParts = [`<svg viewBox="0 0 340 270" width="100%" height="auto" style="display:block;width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <marker id="sw-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="rgba(239,68,68,.75)"/></marker>
     <marker id="sw-grn" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="rgba(16,185,129,.75)"/></marker>
@@ -3685,7 +3685,7 @@ function buildSignalWebSVG(signals) {
   return svgParts.join('');
 }
 
-const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief';
+const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief_v2';
 const SATOSHI_BRIEF_CACHE_TTL = 4 * 60 * 60 * 1000;
 
 async function loadSatoshiBrief(forceRefresh) {
@@ -3735,7 +3735,7 @@ async function loadSatoshiBrief(forceRefresh) {
       {
         name: 'DXY',
         score: macro?.dxy_chg != null ? (macro.dxy_chg > 1 ? 22 : macro.dxy_chg > 0 ? 38 : macro.dxy_chg > -1 ? 55 : 70) : 50,
-        label: macro?.dxy != null ? macro.dxy.toFixed(1) : 'N/A',
+        label: macro?.dxy != null ? macro.dxy.toFixed(1) : '—',
         note:  macro?.dxy_chg != null ? (macro.dxy_chg >= 0 ? '+' : '') + macro.dxy_chg.toFixed(2) + '% w/w' : 'unavailable',
         weight: 'high',
         live: true
@@ -3743,7 +3743,7 @@ async function loadSatoshiBrief(forceRefresh) {
       {
         name: 'Nasdaq',
         score: macro?.nasdaq_chg != null ? (macro.nasdaq_chg > 2 ? 75 : macro.nasdaq_chg > 0 ? 60 : macro.nasdaq_chg > -2 ? 40 : 22) : 50,
-        label: macro?.nasdaq_chg != null ? (macro.nasdaq_chg >= 0 ? '+' : '') + macro.nasdaq_chg.toFixed(2) + '%' : 'N/A',
+        label: macro?.nasdaq_chg != null ? (macro.nasdaq_chg >= 0 ? '+' : '') + macro.nasdaq_chg.toFixed(2) + '%' : '—',
         note:  '5-day return',
         weight: 'high',
         live: true
@@ -3767,7 +3767,7 @@ async function loadSatoshiBrief(forceRefresh) {
       {
         name: 'F&G',
         score: fng ? fng.value : 50,
-        label: fng ? fng.value + '/100' : 'N/A',
+        label: fng ? fng.value + '/100' : '—',
         note:  fng ? fng.label : '',
         weight: 'high',
         live: true
@@ -3775,7 +3775,7 @@ async function loadSatoshiBrief(forceRefresh) {
       {
         name: 'Technical',
         score: ta ? (ta.consensus_score || 50) : 50,
-        label: ta ? (ta.consensus_direction || 'N/A') : 'N/A',
+        label: ta ? (ta.consensus_direction || '—') : '—',
         note:  'Binance candles',
         weight: 'high',
         live: true
@@ -3783,7 +3783,7 @@ async function loadSatoshiBrief(forceRefresh) {
       {
         name: 'Sentiment',
         score: sentimentCache ? Math.round((sentimentCache.sources||[]).reduce(function(s,x){return s+(x.score||50);},0)/Math.max(1,(sentimentCache.sources||[]).length)) : 50,
-        label: sentimentCache ? (sentimentCache.sources||[]).length + ' sources' : 'N/A',
+        label: sentimentCache ? (sentimentCache.sources||[]).length + ' src' : '—',
         note:  'AI heatmap',
         weight: 'med',
         live: false
