@@ -3725,7 +3725,8 @@ async function loadSatoshiBrief(forceRefresh) {
 
     const dma200     = dailyCloses ? compute200DMA(dailyCloses) : null;
     const dma200Dev  = (dma200 && liveBTC) ? parseFloat(((liveBTC - dma200) / dma200 * 100).toFixed(1)) : null;
-    const fng        = fngCache;
+    const fngRaw     = fngCache ? fngCache[0] : null;
+    const fng        = fngRaw ? { value: parseInt(fngRaw.value), label: fngRaw.value_classification } : null;
     const ta         = taCache;
 
     // Build signals array for web and prompt
@@ -4418,9 +4419,11 @@ function closePlayerDrawer(e) {
   updateLivePanel();
   initEarlybirdBanner();
   initEarlybirdFormHint();
-  // Run data fetches first, then build the brief so it has real values
+  // Run TA independently (slow - Cloudflare Worker call)
   runSentimentScan();
-  Promise.all([runTA(), loadFNG()]).then(function() {
+  runTA();
+  // Wait only for FNG (fast API), then build brief with whatever TA data is available
+  loadFNG().then(function() {
     loadSatoshiCommentary();
   }).catch(function() {
     loadSatoshiCommentary();
