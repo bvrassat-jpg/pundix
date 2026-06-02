@@ -95,7 +95,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
     <div class="hdr">
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
-        <div class="logo-tag">BTC Weekly Prediction League <span style="opacity:.4;margin-left:6px;">v20</span></div>
+        <div class="logo-tag">BTC Weekly Prediction League</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v20</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -281,7 +282,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         </div>
         <div class="predict-toggle-body" id="bodyToggleSentiment" style="display:none;">
           <div id="sentimentToggleContent">
-            <div style="padding:14px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;">Scanning 6 sources — takes ~10s…</div>
+            <div style="padding:14px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--orange);display:inline-block;animation:pulse-dot 1.2s infinite;flex-shrink:0;"></span>Scanning 6 sources — takes ~10s…</div>
           </div>
         </div>
       </div>
@@ -297,7 +298,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         </div>
         <div class="predict-toggle-body" id="bodyToggleTA" style="display:none;">
           <div id="taToggleContent">
-            <div style="padding:14px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;">Fetching Binance candles — takes ~15s…</div>
+            <div style="padding:14px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--orange);display:inline-block;animation:pulse-dot 1.2s infinite;flex-shrink:0;"></span>Fetching Binance candles — takes ~15s…</div>
           </div>
         </div>
       </div>
@@ -4035,7 +4036,7 @@ function openPredictToggle(which) {
           if (orig) orig.id = 'sentimentBody';
           document.body.removeChild(tmp);
         } else {
-          el.innerHTML = '<div style="padding:14px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;">Loading sentiment scan…</div>';
+          el.innerHTML = '<div style="padding:14px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--orange);display:inline-block;animation:pulse-dot 1.2s infinite;flex-shrink:0;"></span>Scanning 6 sources — takes ~10s…</div>';
           runSentimentScan().then(function() {
             if (sentimentCache && document.getElementById('bodyToggleSentiment')?.style.display !== 'none') {
               var tmp2 = document.createElement('div'); document.body.appendChild(tmp2);
@@ -4053,7 +4054,7 @@ function openPredictToggle(which) {
           var src = document.getElementById('taBody');
           if (src) el.innerHTML = src.innerHTML;
         } else {
-          el.innerHTML = '<div style="padding:14px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;">Loading technical analysis…</div>';
+          el.innerHTML = '<div style="padding:14px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--orange);display:inline-block;animation:pulse-dot 1.2s infinite;flex-shrink:0;"></span>Fetching Binance candles — takes ~15s…</div>';
           runTA().then(function() {
             if (taCache && document.getElementById('bodyToggleTA')?.style.display !== 'none') {
               var src2 = document.getElementById('taBody'); if (src2 && el) el.innerHTML = src2.innerHTML;
