@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Pundix v20 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -59,8 +60,7 @@
 .drawer-stat-value{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--text);}
 .player-drawer-dm{padding:0 22px;}
 .player-drawer-dm-btn{width:100%;padding:13px 16px;background:var(--surface);border:1px solid var(--border);border-radius:5px;font-family:var(--sans);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;}
-.player-drawer-dm-soon{font-family:var(--mono);font-size:9px;background:var(--border);border-radius:2px;padding:2px 6px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;}
-.player-drawer-dm-hint{font-family:var(--mono);font-size:9px;color:var(--text-dim);text-align:center;line-height:1.7;letter-spacing:.3px;}
+
 .leaderboard-row{cursor:pointer;transition:background .1s;}
 .leaderboard-row:hover{background:var(--card-hi);}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(
@@ -580,9 +580,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
           <button class="player-drawer-dm-btn" disabled>
             <span>💬</span>
             <span>Direct message</span>
-            <span class="player-drawer-dm-soon">coming soon</span>
           </button>
-          <div class="player-drawer-dm-hint">DMs are coming in a future update — for now, use the Trading Room chat below.</div>
         </div>
       </div>
     </div>
@@ -1060,6 +1058,31 @@ async function sbPost(path, body, prefer) {
   if (!r.ok) { const e = await r.text(); console.error('sbPost', r.status, e); throw new Error(e); }
 }
 
+async function resolveUser(rawName) {
+  const name = rawName.trim();
+  const cacheKey = 'pundix_user_' + name.toLowerCase().replace(/\s+/g, '');
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) return JSON.parse(cached);
+    const existing = await sbGet('users?name=ilike.' + encodeURIComponent(name) + '&limit=1');
+    if (existing && existing.length) {
+      localStorage.setItem(cacheKey, JSON.stringify(existing[0]));
+      return existing[0];
+    }
+    const r = await fetch(SUPABASE_URL + '/rest/v1/users', {
+      method: 'POST',
+      headers: { ...HDRS, 'Prefer': 'return=representation' },
+      body: JSON.stringify({ name }),
+    });
+    if (r.ok) {
+      const rows = await r.json();
+      const user = Array.isArray(rows) ? rows[0] : rows;
+      if (user && user.id) { localStorage.setItem(cacheKey, JSON.stringify(user)); return user; }
+    }
+  } catch(e) { console.warn('resolveUser failed:', e); }
+  return null;
+}
+
 async function loadConfig() {
   try {
     const rows = await sbGet('config?select=current_week,week_status&limit=1');
@@ -1105,6 +1128,7 @@ async function savePrediction(entry) {
       direction:    entry.direction || null,
       rationale:    entry.rationale || null,
       submitted_at: new Date(entry.ts).toISOString(),
+      user_id:      entry.user_id || null,
     },
     'resolution=merge-duplicates,return=minimal'
   );
@@ -1452,8 +1476,11 @@ async function submitPrediction() {
   // Persist name for chat
   localStorage.setItem(MY_NAME_KEY, name);
 
+  // Resolve or create user profile (non-blocking — failure doesn't stop prediction)
+  const resolvedUser = await resolveUser(name);
+
   const direction = price > liveBTC ? 'bull' : price < liveBTC ? 'bear' : 'flat';
-  const entry = { name, price, week: CURRENT_WEEK, ts: Date.now(), live: liveBTC, direction, rationale };
+  const entry = { name, price, week: CURRENT_WEEK, ts: Date.now(), live: liveBTC, direction, rationale, user_id: resolvedUser?.id || null };
 
   try {
     await savePrediction(entry);
@@ -4249,12 +4276,14 @@ async function sendLeagueChat() {
     ? myPred.price : null;
 
   try {
+    const chatUser = resolvedUser || await resolveUser(alias);
     await sbPost('chat_messages', {
       alias,
       body: body.slice(0, 200),
       week: CURRENT_WEEK,
       prediction: prediction || null,
       created_at: new Date().toISOString(),
+      user_id: chatUser?.id || null,
     });
     SFX.message();
     // Optimistic update
