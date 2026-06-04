@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v20 -->
+<!-- Pundix v22 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -96,7 +96,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v20</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v22</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -1517,6 +1517,161 @@ async function submitPrediction() {
     submitBtn.textContent = 'Lock in my prediction →';
   }
 }
+
+// ── Signal Weight Engine ──────────────────────────────────────────────────────
+const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','On-chain','F&G','Technical','Sentiment','Social Lag'];
+const SIGNAL_BASE_WEIGHT = 1 / SIGNAL_NAMES.length;
+let signalWeights = {}; // populated by loadSignalWeights()
+SIGNAL_NAMES.forEach(n => signalWeights[n] = SIGNAL_BASE_WEIGHT);
+
+async function loadSignalWeights() {
+  try {
+    const [snapshots, outcomes] = await Promise.all([
+      sbGet('signal_snapshots?select=week_start,signal_name,score&order=week_start.asc'),
+      sbGet('week_outcomes?select=week_start,direction&order=week_start.asc')
+    ]);
+    if (!snapshots || !outcomes || outcomes.length < 2) return; // not enough data yet
+    const N = Math.min(outcomes.length, 8);
+    const recentOutcomes = outcomes.slice(-N);
+    const weights = {};
+    SIGNAL_NAMES.forEach(name => {
+      const pairs = recentOutcomes.map(o => {
+        const snap = snapshots.find(s => s.week_start === o.week_start && s.signal_name === name);
+        if (!snap) return null;
+        return (snap.score >= 50 ? 'up' : 'down') === o.direction ? 1 : 0;
+      }).filter(x => x !== null);
+      const hitRate = pairs.length ? pairs.reduce((a,b) => a+b, 0) / pairs.length : 0.5;
+      const bonus = (hitRate - 0.5) * 2; // -1 to +1
+      weights[name] = Math.max(0.02, SIGNAL_BASE_WEIGHT * (1 + bonus));
+    });
+    const total = Object.values(weights).reduce((a,b) => a+b, 0);
+    SIGNAL_NAMES.forEach(n => signalWeights[n] = weights[n] / total);
+  } catch(e) { /* keep equal weights on error */ }
+}
+
+function computeWeightedScore(signals) {
+  const total = signals.reduce((s, sig) => s + (signalWeights[sig.name] || SIGNAL_BASE_WEIGHT), 0);
+  return Math.round(signals.reduce((s, sig) => s + sig.score * (signalWeights[sig.name] || SIGNAL_BASE_WEIGHT), 0) / total);
+}
+
+const SNAPSHOT_SAVED_KEY = 'pundix_snapshot_saved_w';
+async function saveSignalSnapshot(signals, weekNum, btcPrice) {
+  const key = SNAPSHOT_SAVED_KEY + weekNum;
+  if (sessionStorage.getItem(key)) return; // already saved this session
+  try {
+    const rows = signals.map(s => ({
+      week_start: getWeekStartDate(weekNum),
+      signal_name: s.name,
+      score: s.score,
+      btc_price_at_snapshot: btcPrice
+    }));
+    await sbPost('signal_snapshots', rows);
+    sessionStorage.setItem(key, '1');
+  } catch(e) { /* non-blocking */ }
+}
+
+function getWeekStartDate(weekNum) {
+  // Derive Monday date for a given week number relative to season start
+  // Use config week_start if available, fallback to current Monday
+  try {
+    const now = new Date();
+    const day = now.getUTCDay(); // 0=Sun
+    const diffToMon = (day === 0 ? -6 : 1 - day);
+    const mon = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMon));
+    return mon.toISOString().slice(0,10);
+  } catch(e) { return new Date().toISOString().slice(0,10); }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Satoshi Memory Builder ────────────────────────────────────────────────────
+// Fetches historical context from Supabase and returns a structured
+// memory block to inject into Satoshi's prompt. Non-blocking — returns
+// empty string gracefully if data is unavailable.
+async function buildSatoshiMemory() {
+  try {
+    const [outcomes, snapshots, winners, allPreds] = await Promise.all([
+      sbGet('week_outcomes?select=week_start,direction,btc_open,btc_close,pct_change&order=week_start.desc&limit=8'),
+      sbGet('signal_snapshots?select=week_start,signal_name,score&order=week_start.desc&limit=64'),
+      sbGet('weekly_winners?select=week,name,prediction,actual,error_pct,score&order=week.desc&limit=8'),
+      sbGet('predictions?select=week,name,price,score,direction&order=week.desc&limit=200')
+    ]);
+
+    if (!outcomes || outcomes.length === 0) return '';
+
+    const lines = [];
+
+    // ── 1. Recent week outcomes with signal accuracy audit ──
+    lines.push('RESOLVED WEEKS (most recent first):');
+    outcomes.forEach(o => {
+      const wSnaps = (snapshots || []).filter(s => s.week_start === o.week_start);
+      const signalAudit = wSnaps.map(s => {
+        const predicted = s.score >= 50 ? 'up' : 'down';
+        const hit = predicted === o.direction;
+        return `${s.signal_name}:${hit ? '✓' : '✗'}(${s.score})`;
+      }).join(' ');
+      const pctStr = (o.pct_change >= 0 ? '+' : '') + o.pct_change + '%';
+      lines.push(`  Week of ${o.week_start}: BTC ${o.direction.toUpperCase()} ${pctStr} ($${Math.round(o.btc_open).toLocaleString('en-US')} → $${Math.round(o.btc_close).toLocaleString('en-US')})${signalAudit ? ' | Signals: ' + signalAudit : ''}`);
+    });
+
+    // ── 2. Signal hit-rate summary ──
+    if (snapshots && snapshots.length > 0 && outcomes.length >= 2) {
+      lines.push('\nSIGNAL ACCURACY (last ' + outcomes.length + ' resolved weeks):');
+      SIGNAL_NAMES.forEach(name => {
+        const pairs = outcomes.map(o => {
+          const snap = snapshots.find(s => s.week_start === o.week_start && s.signal_name === name);
+          if (!snap) return null;
+          return (snap.score >= 50 ? 'up' : 'down') === o.direction ? 1 : 0;
+        }).filter(x => x !== null);
+        if (pairs.length === 0) return;
+        const hits = pairs.reduce((a,b) => a+b, 0);
+        const pct = Math.round(hits / pairs.length * 100);
+        const trend = pairs.length >= 3 ? (pairs.slice(-2).every(x=>x===1) ? ' (hot streak)' : pairs.slice(-2).every(x=>x===0) ? ' (cold streak)' : '') : '';
+        lines.push(`  ${name}: ${hits}/${pairs.length} correct (${pct}%)${trend} — current weight ${Math.round((signalWeights[name]||SIGNAL_BASE_WEIGHT)*100)}%`);
+      });
+    }
+
+    // ── 3. Crowd prediction pattern vs outcome ──
+    if (allPreds && allPreds.length > 0 && outcomes.length > 0 && winners && winners.length > 0) {
+      lines.push('\nCROWD vs REALITY (last ' + Math.min(outcomes.length, 4) + ' weeks):');
+      outcomes.slice(0, 4).forEach(o => {
+        // Match outcome to winner row by btc_close proximity (within 0.1%) to avoid float equality
+        const matchedWinner = winners.find(w => Math.abs(w.actual - o.btc_close) / o.btc_close < 0.001);
+        if (!matchedWinner) return;
+        const weekPreds = allPreds.filter(p => String(p.week) === String(matchedWinner.week));
+        if (weekPreds.length < 2) return;
+        const bullPct = Math.round(weekPreds.filter(p => p.direction === 'bull').length / weekPreds.length * 100);
+        const avgPred = Math.round(weekPreds.reduce((s,p) => s + p.price, 0) / weekPreds.length);
+        lines.push(`  Week of ${o.week_start}: crowd ${bullPct}% bullish, avg call $${avgPred.toLocaleString('en-US')}, actual $${Math.round(o.btc_close).toLocaleString('en-US')} (${o.direction.toUpperCase()})`);
+      });
+    }
+
+    // ── 4. Recent winners ──
+    if (winners && winners.length > 0) {
+      lines.push('\nRECENT WINNERS:');
+      winners.slice(0, 4).forEach(w => {
+        lines.push(`  Week ${w.week}: ${w.name} called $${Math.round(w.prediction).toLocaleString('en-US')}, actual $${Math.round(w.actual).toLocaleString('en-US')} (${w.error_pct}% off, ${w.score}pts)`);
+      });
+    }
+
+    // ── 5. Streak / pattern detection ──
+    if (outcomes.length >= 3) {
+      const dirs = outcomes.slice(0,4).map(o => o.direction);
+      const streak = dirs.filter(d => d === dirs[0]).length;
+      if (streak >= 3) {
+        lines.push(`\nPATTERN: BTC has gone ${dirs[0].toUpperCase()} for ${streak} consecutive weeks. Historically this increases mean-reversion probability.`);
+      }
+      const moves = outcomes.slice(0,4).map(o => Math.abs(o.pct_change));
+      const avgMove = (moves.reduce((a,b)=>a+b,0)/moves.length).toFixed(1);
+      lines.push(`\nRECENT VOLATILITY: average weekly move last ${moves.length} weeks = ${avgMove}%. Current week context.`);
+    }
+
+    return lines.join('\n');
+  } catch(e) {
+    console.warn('buildSatoshiMemory failed:', e.message);
+    return '';
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 const EARLYBIRD_MULTIPLIERS = {
   1: { mult: 1.5, label: 'Monday', badge: 'eb-badge-mon', color: 'var(--green)', cls: 'eb-mon' },
@@ -3188,6 +3343,25 @@ async function resolveWeek() {
       })
     });
 
+    // Record week outcome for signal weight learning
+    const weekMonday = getWeekStartDate(CURRENT_WEEK);
+    const openSnap = await sbGet('signal_snapshots?week_start=eq.' + weekMonday + '&signal_name=eq.F%26G&select=btc_price_at_snapshot&limit=1');
+    const btcOpen = openSnap?.[0]?.btc_price_at_snapshot || closePrice;
+    const pctChg = parseFloat(((closePrice - btcOpen) / btcOpen * 100).toFixed(2));
+    try {
+      await sbFetchAdmin('week_outcomes', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=minimal',
+        body: JSON.stringify({
+          week_start: weekMonday,
+          btc_open:   btcOpen,
+          btc_close:  closePrice,
+          direction:  closePrice >= btcOpen ? 'up' : 'down',
+          pct_change: pctChg
+        })
+      });
+    } catch(e) { console.warn('week_outcomes insert failed (non-blocking):', e.message); }
+
     await sbFetchAdmin('config?id=eq.1', {
       method: 'PATCH',
       body: JSON.stringify({ week_status: 'resolved' })
@@ -3355,7 +3529,10 @@ async function getSatoshiChatContext() {
 
   if (satoshiChatPayloadCache) return satoshiChatPayloadCache;
   try {
-    const allPredictions = await getAllPredictions();
+    const [allPredictions, memory] = await Promise.all([
+      getAllPredictions(),
+      buildSatoshiMemory()
+    ]);
     const payload = await buildSatoshiPayload(allPredictions);
     const myPred  = getMyPrediction();
 
@@ -3375,6 +3552,9 @@ async function getSatoshiChatContext() {
     }
     if (myPred) {
       ctx += `\nThis player's call: $${Math.round(myPred.price).toLocaleString('en-US')} (${myPred.name})`;
+    }
+    if (memory) {
+      ctx += `\n\n--- YOUR MEMORY ---\n${memory}\n---`;
     }
     satoshiChatPayloadCache = ctx;
     return ctx;
@@ -3675,23 +3855,22 @@ function buildSignalWebSVG(signals) {
     if (score >= 42) return { bg: 'rgba(245,158,11,.18)', border: 'rgba(245,158,11,.45)', text: '#FCD34D', line: 'rgba(245,158,11,.6)' };
     return { bg: 'rgba(239,68,68,.22)', border: 'rgba(239,68,68,.5)', text: '#FCA5A5', line: 'rgba(239,68,68,.65)' };
   }
-  function lineWidth(weight) { return weight === 'high' ? 3 : weight === 'med' ? 1.8 : 1.1; }
   function markerId(score) { return score >= 65 ? 'sw-grn' : score >= 42 ? 'sw-amb' : 'sw-red'; }
 
   const leftYs  = [8, 68, 128, 188];
   const rightYs = [8, 68, 128, 188];
-  const nodeW = 82, nodeH = 36;
+  const nodeW = 82, nodeH = 40;
   const lx = 4, rx = 254;
 
-  let svgParts = [`<svg viewBox="0 0 340 270" width="100%" height="auto" style="display:block;width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">
+  let svgParts = [`<svg viewBox="0 0 340 278" width="100%" height="auto" style="display:block;width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <marker id="sw-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="rgba(239,68,68,.75)"/></marker>
     <marker id="sw-grn" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="rgba(16,185,129,.75)"/></marker>
     <marker id="sw-amb" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="rgba(245,158,11,.75)"/></marker>
   </defs>`];
 
-  // Centre node
-  const centreScore = Math.round(signals.reduce((s,x)=>s+x.score,0)/signals.length);
+  // Centre node — weighted average using dynamic signal weights
+  const centreScore = computeWeightedScore(signals);
   const cc = nodeColor(centreScore);
   const centreLabel = centreScore>=65?'Bullish':centreScore>=42?'Neutral':centreScore<=27?'Bearish':'Cautious';
   svgParts.push(`<circle cx="${cx}" cy="${cy}" r="${cr}" fill="${cc.bg}" stroke="${cc.border}" stroke-width="1.8"/>`);
@@ -3703,36 +3882,42 @@ function buildSignalWebSVG(signals) {
   leftNodes.forEach(function(sig, i) {
     const y = leftYs[i];
     const c = nodeColor(sig.score);
-    const lw = lineWidth(sig.weight);
+    const w = signalWeights[sig.name] || SIGNAL_BASE_WEIGHT;
+    const lw = Math.max(0.8, Math.min(4, w * 8 * SIGNAL_NAMES.length)); // scale: avg weight = 1.0 = ~1.5px
+    const wPct = Math.round(w * 100);
     const mid = y + nodeH / 2;
-    svgParts.push(`<line x1="${lx+nodeW}" y1="${mid}" x2="${cx-cr-2}" y2="${cy}" stroke="${c.line}" stroke-width="${lw}" marker-end="url(#${markerId(sig.score)})"/>`);
+    svgParts.push(`<line x1="${lx+nodeW}" y1="${mid}" x2="${cx-cr-2}" y2="${cy}" stroke="${c.line}" stroke-width="${lw.toFixed(1)}" marker-end="url(#${markerId(sig.score)})"/>`);
     svgParts.push(`<rect x="${lx}" y="${y}" width="${nodeW}" height="${nodeH}" rx="3" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>`);
-    svgParts.push(`<text x="${lx+nodeW/2}" y="${y+12}" text-anchor="middle" font-family="Space Mono" font-size="7" fill="${c.text}" opacity=".7" letter-spacing="1">${sig.name.toUpperCase()}</text>`);
-    svgParts.push(`<text x="${lx+nodeW/2}" y="${y+25}" text-anchor="middle" font-family="Space Mono" font-size="11" fill="${c.text}" font-weight="700">${sig.label}</text>`);
+    svgParts.push(`<text x="${lx+nodeW/2}" y="${y+11}" text-anchor="middle" font-family="Space Mono" font-size="7" fill="${c.text}" opacity=".7" letter-spacing="1">${sig.name.toUpperCase()}</text>`);
+    svgParts.push(`<text x="${lx+nodeW/2}" y="${y+24}" text-anchor="middle" font-family="Space Mono" font-size="11" fill="${c.text}" font-weight="700">${sig.label}</text>`);
+    svgParts.push(`<text x="${lx+nodeW/2}" y="${y+34}" text-anchor="middle" font-family="Space Mono" font-size="6" fill="${c.text}" opacity=".45">${wPct}% wt</text>`);
   });
 
   // Right nodes
   rightNodes.forEach(function(sig, i) {
     const y = rightYs[i];
     const c = nodeColor(sig.score);
-    const lw = lineWidth(sig.weight);
+    const w = signalWeights[sig.name] || SIGNAL_BASE_WEIGHT;
+    const lw = Math.max(0.8, Math.min(4, w * 8 * SIGNAL_NAMES.length));
+    const wPct = Math.round(w * 100);
     const mid = y + nodeH / 2;
-    svgParts.push(`<line x1="${rx}" y1="${mid}" x2="${cx+cr+2}" y2="${cy}" stroke="${c.line}" stroke-width="${lw}" marker-end="url(#${markerId(sig.score)})"/>`);
+    svgParts.push(`<line x1="${rx}" y1="${mid}" x2="${cx+cr+2}" y2="${cy}" stroke="${c.line}" stroke-width="${lw.toFixed(1)}" marker-end="url(#${markerId(sig.score)})"/>`);
     svgParts.push(`<rect x="${rx}" y="${y}" width="${nodeW}" height="${nodeH}" rx="3" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>`);
-    svgParts.push(`<text x="${rx+nodeW/2}" y="${y+12}" text-anchor="middle" font-family="Space Mono" font-size="7" fill="${c.text}" opacity=".7" letter-spacing="1">${sig.name.toUpperCase()}</text>`);
-    svgParts.push(`<text x="${rx+nodeW/2}" y="${y+25}" text-anchor="middle" font-family="Space Mono" font-size="11" fill="${c.text}" font-weight="700">${sig.label}</text>`);
+    svgParts.push(`<text x="${rx+nodeW/2}" y="${y+11}" text-anchor="middle" font-family="Space Mono" font-size="7" fill="${c.text}" opacity=".7" letter-spacing="1">${sig.name.toUpperCase()}</text>`);
+    svgParts.push(`<text x="${rx+nodeW/2}" y="${y+24}" text-anchor="middle" font-family="Space Mono" font-size="11" fill="${c.text}" font-weight="700">${sig.label}</text>`);
+    svgParts.push(`<text x="${rx+nodeW/2}" y="${y+34}" text-anchor="middle" font-family="Space Mono" font-size="6" fill="${c.text}" opacity=".45">${wPct}% wt</text>`);
   });
 
-  // Legend — safely below all nodes (last node bottom = 188+36=224, legend at 244)
-  svgParts.push(`<line x1="8" y1="244" x2="34" y2="244" stroke="rgba(239,68,68,.65)" stroke-width="3"/><text x="38" y="248" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BEARISH · HIGH</text>`);
-  svgParts.push(`<line x1="130" y1="244" x2="156" y2="244" stroke="rgba(245,158,11,.6)" stroke-width="1.8"/><text x="160" y="248" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">NEUTRAL · MED</text>`);
-  svgParts.push(`<line x1="252" y1="244" x2="278" y2="244" stroke="rgba(16,185,129,.65)" stroke-width="1.1"/><text x="282" y="248" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BULL · LOW</text>`);
+  // Legend
+  svgParts.push(`<line x1="8" y1="252" x2="34" y2="252" stroke="rgba(239,68,68,.65)" stroke-width="3"/><text x="38" y="256" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BEARISH</text>`);
+  svgParts.push(`<line x1="100" y1="252" x2="126" y2="252" stroke="rgba(245,158,11,.6)" stroke-width="1.5"/><text x="130" y="256" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">NEUTRAL</text>`);
+  svgParts.push(`<line x1="200" y1="252" x2="226" y2="252" stroke="rgba(16,185,129,.65)" stroke-width="1"/><text x="230" y="256" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BULLISH · LINE=WEIGHT</text>`);
 
   svgParts.push('</svg>');
   return svgParts.join('');
 }
 
-const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief_v3';
+const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief_v4';
 const SATOSHI_BRIEF_CACHE_TTL = 4 * 60 * 60 * 1000;
 
 async function loadSatoshiBrief(forceRefresh) {
@@ -3765,10 +3950,11 @@ async function loadSatoshiBrief(forceRefresh) {
   if (refreshBtn) refreshBtn.style.opacity = '0.3';
 
   try {
-    // Fetch all data sources in parallel
-    const [macro, dailyCloses] = await Promise.all([
+    // Fetch all data sources in parallel including Satoshi's memory
+    const [macro, dailyCloses, satoshiMemory] = await Promise.all([
       fetchMacroData(),
-      fetchBinanceDailyCandles().catch(function(){ return null; })
+      fetchBinanceDailyCandles().catch(function(){ return null; }),
+      buildSatoshiMemory()
     ]);
 
     const dma200     = dailyCloses ? compute200DMA(dailyCloses) : null;
@@ -3848,34 +4034,50 @@ async function loadSatoshiBrief(forceRefresh) {
     // Build Claude prompt
     const today   = new Date().toISOString().slice(0,10);
     const price   = Math.round(liveBTC);
-    const sigLines = signals.map(function(s){ return s.name + ': score ' + s.score + '/100 (' + s.note + ')'; }).join(', ');
+    const sigLines = signals.map(function(s){ return s.name + ': score ' + s.score + '/100 (' + s.note + ', weight ' + Math.round((signalWeights[s.name]||SIGNAL_BASE_WEIGHT)*100) + '%)'; }).join(', ');
+    const weightedCentre = computeWeightedScore(signals);
 
-    const briefPrompt = `You are Satoshi, the market desk analyst for Pundix — a weekly BTC price prediction game.
+    // Save snapshot to Supabase for future weight learning (non-blocking)
+    saveSignalSnapshot(signals, CURRENT_WEEK, price);
+
+    const memoryBlock = satoshiMemory ? `\n\n---\nYOUR MEMORY — what has actually happened in recent weeks:\n${satoshiMemory}\n---` : '';
+
+    const briefPrompt = `You are Satoshi — the market desk analyst and institutional conscience of Pundix, a weekly BTC price prediction league. You have been running this desk for multiple weeks. You remember what happened. You remember which signals lied and which delivered. You remember which players called it right and how the crowd was positioned.
+
 Today: ${today}. BTC: $${price.toLocaleString('en-US')}.
 
-Signal inputs (0-100, where 0=extreme bear, 100=extreme bull):
+CURRENT WEEK SIGNALS (0=extreme bear, 100=extreme bull), with adaptive weights reflecting each signal's historical accuracy:
 ${sigLines}
 
+Weighted composite score: ${weightedCentre}/100
+
+Raw data:
 ${macro?.dxy_chg != null ? 'DXY week change: ' + (macro.dxy_chg >= 0 ? '+' : '') + macro.dxy_chg.toFixed(2) + '%' : ''}
 ${macro?.nasdaq_chg != null ? 'Nasdaq 5-day: ' + (macro.nasdaq_chg >= 0 ? '+' : '') + macro.nasdaq_chg.toFixed(2) + '%' : ''}
 ${dma200Dev != null ? 'BTC vs 200DMA: ' + (dma200Dev >= 0 ? '+' : '') + dma200Dev + '%' : ''}
 ${fng ? 'Fear & Greed: ' + fng.value + '/100 — ' + fng.label : ''}
 ${ta ? 'Technical: ' + (ta.consensus_direction || '') + ', score ' + (ta.consensus_score || '') + '/100' : ''}
+${memoryBlock}
 
-Write a pre-game brief. Strictly 3 sentences. No hedging. Direct. Identify the dominant signal this week and name what it implies. End with a single sentence that creates weight for the player making their call.
+YOUR VOICE: You are a cypherpunk analyst. Direct. No hedging. No "could" or "might". You call it as you read it and own the call. When you have been wrong before, you say so plainly and adjust. When a signal has been consistently misleading, you call it out by name. When the crowd is leaning the wrong way based on history, you flag it. You are not here to make players feel good — you are here to sharpen their thinking.
+
+Write a pre-game brief in exactly this structure:
+1. One sentence on what the dominant signal is saying this week and its current weight/reliability
+2. One sentence that references something from your memory — a pattern, a streak, a signal that has been hot or cold, or how the crowd has been wrong
+3. One sentence that creates genuine weight for the decision ahead — specific, not generic
 
 Respond ONLY with valid JSON:
 {
   "verdict": "<Bearish|Cautious|Neutral|Constructive|Bullish>",
   "score": <0-100>,
-  "dominant_signal": "<which signal is driving this week and why — 1 sentence>",
-  "brief": "<2 more sentences — direct, no hedging, Satoshi voice>"
+  "dominant_signal": "<signal name and what it is saying — 1 sentence>",
+  "brief": "<memory-informed sentence + closing weight sentence>"
 }`;
 
     const resp = await fetch(WORKER, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 400, messages: [{ role: 'user', content: briefPrompt }] })
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 600, messages: [{ role: 'user', content: briefPrompt }] })
     });
     const apiData = await resp.json();
     const raw = (apiData?.content?.[0]?.text || '').trim();
@@ -4376,6 +4578,7 @@ function closePlayerDrawer(e) {
 (async function init() {
 
   await loadConfig();
+  loadSignalWeights(); // non-blocking — weights update before Satoshi brief is needed
 
   myPrediction = getMyPrediction();
 
