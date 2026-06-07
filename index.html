@@ -1519,7 +1519,7 @@ async function submitPrediction() {
 }
 
 // ── Signal Weight Engine ──────────────────────────────────────────────────────
-const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','On-chain','F&G','Technical','Sentiment','Social Lag'];
+const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','On-chain','F&G','Technical','Sentiment','Social Lag','Cycle','Funding','Real Vol','Options Skew'];
 const SIGNAL_BASE_WEIGHT = 1 / SIGNAL_NAMES.length;
 let signalWeights = {}; // populated by loadSignalWeights()
 SIGNAL_NAMES.forEach(n => signalWeights[n] = SIGNAL_BASE_WEIGHT);
@@ -2950,6 +2950,193 @@ async function fetchBinanceDailyCandles() {
   return raw.map(function(c){return +c[4];});
 }
 
+const CYCLE_CACHE_KEY = 'pundix_cycle_cache';
+const CYCLE_CACHE_TTL = 12 * 60 * 60 * 1000; // 12h — Sharpe doesn't change intraday
+
+function computeCycleRegime(closes) {
+  // Compute 90-day rolling Sharpe from daily BTC closes
+  // closes = array of daily close prices, most recent last
+  if (!closes || closes.length < 10) return null;
+  const slice = closes.slice(-91); // 90 returns needs 91 prices
+  if (slice.length < 10) return null;
+
+  const returns = [];
+  for (let i = 1; i < slice.length; i++) {
+    returns.push((slice[i] - slice[i-1]) / slice[i-1]);
+  }
+
+  const n = returns.length;
+  const mean = returns.reduce((a, b) => a + b, 0) / n;
+  const variance = returns.reduce((s, r) => s + Math.pow(r - mean, 2), 0) / n;
+  const stddev = Math.sqrt(variance);
+  if (stddev === 0) return null;
+
+  const riskFreeDaily = 0.05 / 365; // ~5% annualised risk-free
+  const annualisedSharpe = parseFloat(((mean - riskFreeDaily) / stddev * Math.sqrt(365)).toFixed(2));
+
+  // Also compute direction: compare last 30d Sharpe vs prior 30d
+  let direction = 'stable';
+  if (closes.length >= 62) {
+    const prev30 = closes.slice(-62, -31);
+    const curr30 = closes.slice(-31);
+    const prevRet = []; for (let i=1;i<prev30.length;i++) prevRet.push((prev30[i]-prev30[i-1])/prev30[i-1]);
+    const currRet = []; for (let i=1;i<curr30.length;i++) currRet.push((curr30[i]-curr30[i-1])/curr30[i-1]);
+    const avgPrev = prevRet.reduce((a,b)=>a+b,0)/prevRet.length;
+    const avgCurr = currRet.reduce((a,b)=>a+b,0)/currRet.length;
+    direction = avgCurr > avgPrev + 0.001 ? 'rising' : avgCurr < avgPrev - 0.001 ? 'falling' : 'stable';
+  }
+
+  // Zone classification
+  let zone, label, score;
+  if (annualisedSharpe > 2.5) {
+    zone = 'A'; label = 'Euphoria'; score = 22; // bearish lean — risk of reversion
+  } else if (annualisedSharpe > 0.8) {
+    zone = 'B'; label = 'Expansion'; score = 65; // constructive
+  } else if (annualisedSharpe > 0) {
+    zone = 'C'; label = 'Accumulation'; score = 50; // neutral
+  } else {
+    zone = 'D'; label = 'Capitulation'; score = 72; // contrarian bullish on 12m+ horizon
+  }
+
+  // Direction nudge (+/- 5 pts)
+  if (direction === 'rising') score = Math.min(80, score + 5);
+  if (direction === 'falling') score = Math.max(15, score - 5);
+
+  return { zone, label, score, sharpe: annualisedSharpe, direction };
+}
+
+async function fetchCycleRegime(dailyCloses) {
+  try {
+    const cached = JSON.parse(localStorage.getItem(CYCLE_CACHE_KEY) || 'null');
+    if (cached && Date.now() - cached.ts < CYCLE_CACHE_TTL) return cached;
+  } catch(e) {}
+
+  // Use already-fetched Binance daily closes if available, else fetch
+  let closes = dailyCloses;
+  if (!closes) {
+    try { closes = await fetchBinanceDailyCandles(); } catch(e) { return null; }
+  }
+  const regime = computeCycleRegime(closes);
+  if (!regime) return null;
+  const result = { ...regime, ts: Date.now() };
+  try { localStorage.setItem(CYCLE_CACHE_KEY, JSON.stringify(result)); } catch(e) {}
+  return result;
+}
+
+const FUNDING_CACHE_KEY = 'pundix_funding_cache';
+const FUNDING_CACHE_TTL = 30 * 60 * 1000; // 30 min — funding updates every 8h
+
+async function fetchFundingRate() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(FUNDING_CACHE_KEY) || 'null');
+    if (cached && Date.now() - cached.ts < FUNDING_CACHE_TTL) return cached;
+  } catch(e) {}
+  try {
+    const resp = await fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT');
+    if (!resp.ok) throw new Error('Binance funding ' + resp.status);
+    const json = await resp.json();
+    const rate = parseFloat(json.lastFundingRate);
+    const ratePct = parseFloat((rate * 100).toFixed(4));
+    // Score: strongly positive funding (crowded longs) = bearish lean
+    // negative funding (shorts paying) = bullish lean
+    let score;
+    if (ratePct > 0.05)       score = 20; // very crowded longs — bearish
+    else if (ratePct > 0.02)  score = 35;
+    else if (ratePct > 0.005) score = 48;
+    else if (ratePct > -0.005) score = 55; // near neutral
+    else if (ratePct > -0.02) score = 65;
+    else                       score = 75; // shorts paying — contrarian bullish
+    const side = ratePct > 0.005 ? 'longs paying' : ratePct < -0.005 ? 'shorts paying' : 'balanced';
+    const result = { rate: ratePct, score, side, ts: Date.now() };
+    try { localStorage.setItem(FUNDING_CACHE_KEY, JSON.stringify(result)); } catch(e) {}
+    return result;
+  } catch(e) {
+    console.warn('fetchFundingRate failed:', e.message);
+    return null;
+  }
+}
+
+const REALVOL_CACHE_KEY = 'pundix_realvol_cache';
+const REALVOL_CACHE_TTL = 4 * 60 * 60 * 1000; // 4h
+
+function computeRealisedVol(closes) {
+  if (!closes || closes.length < 8) return null;
+  // 7-day realised vol annualised
+  const recent = closes.slice(-8);
+  const returns = [];
+  for (let i = 1; i < recent.length; i++) returns.push(Math.log(recent[i] / recent[i-1]));
+  const mean = returns.reduce((a,b) => a+b, 0) / returns.length;
+  const variance = returns.reduce((s,r) => s + Math.pow(r - mean, 2), 0) / returns.length;
+  const vol7d = parseFloat((Math.sqrt(variance * 365) * 100).toFixed(1));
+  // 30-day realised vol for comparison
+  const slice30 = closes.slice(-31);
+  const ret30 = [];
+  for (let i = 1; i < slice30.length; i++) ret30.push(Math.log(slice30[i] / slice30[i-1]));
+  const mean30 = ret30.reduce((a,b) => a+b, 0) / ret30.length;
+  const var30 = ret30.reduce((s,r) => s + Math.pow(r - mean30, 2), 0) / ret30.length;
+  const vol30d = parseFloat((Math.sqrt(var30 * 365) * 100).toFixed(1));
+  // Score: vol compressing below 30d avg = coiling = slightly bullish
+  // vol expanding = uncertain, slightly bearish
+  const ratio = vol30d > 0 ? vol7d / vol30d : 1;
+  let score, trend;
+  if (ratio < 0.7)      { score = 65; trend = 'compressing'; }
+  else if (ratio < 0.9) { score = 58; trend = 'below avg'; }
+  else if (ratio < 1.1) { score = 50; trend = 'avg'; }
+  else if (ratio < 1.3) { score = 42; trend = 'expanding'; }
+  else                  { score = 32; trend = 'spiking'; }
+  return { vol7d, vol30d, ratio: parseFloat(ratio.toFixed(2)), score, trend };
+}
+
+async function fetchRealisedVol(dailyCloses) {
+  try {
+    const cached = JSON.parse(localStorage.getItem(REALVOL_CACHE_KEY) || 'null');
+    if (cached && Date.now() - cached.ts < REALVOL_CACHE_TTL) return cached;
+  } catch(e) {}
+  let closes = dailyCloses;
+  if (!closes) {
+    try { closes = await fetchBinanceDailyCandles(); } catch(e) { return null; }
+  }
+  const result = computeRealisedVol(closes);
+  if (!result) return null;
+  result.ts = Date.now();
+  try { localStorage.setItem(REALVOL_CACHE_KEY, JSON.stringify(result)); } catch(e) {}
+  return result;
+}
+
+const OPTSKEW_CACHE_KEY = 'pundix_optskew_cache';
+const OPTSKEW_CACHE_TTL = 60 * 60 * 1000; // 1h
+
+async function fetchOptionsSkew() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(OPTSKEW_CACHE_KEY) || 'null');
+    if (cached && Date.now() - cached.ts < OPTSKEW_CACHE_TTL) return cached;
+  } catch(e) {}
+  try {
+    const resp = await fetch(WORKER + '/deribit', { method: 'GET' });
+    if (!resp.ok) throw new Error('Worker /deribit ' + resp.status);
+    const json = await resp.json();
+    // json = { skew: number (25d put-call skew), iv_call_25: number, iv_put_25: number }
+    const skew = parseFloat(json.skew);
+    // Negative skew = puts more expensive = market paying for downside protection = bearish
+    // Positive skew = calls more expensive = market pricing upside = bullish
+    let score, label;
+    if (skew < -8)       { score = 22; label = 'puts >> calls'; }
+    else if (skew < -4)  { score = 35; label = 'puts > calls'; }
+    else if (skew < -1)  { score = 46; label = 'slight put bias'; }
+    else if (skew < 1)   { score = 52; label = 'neutral'; }
+    else if (skew < 4)   { score = 62; label = 'call bias'; }
+    else if (skew < 8)   { score = 70; label = 'calls > puts'; }
+    else                 { score = 78; label = 'calls >> puts'; }
+    const result = { skew: parseFloat(skew.toFixed(2)), score, label, ts: Date.now() };
+    try { localStorage.setItem(OPTSKEW_CACHE_KEY, JSON.stringify(result)); } catch(e) {}
+    return result;
+  } catch(e) {
+    console.warn('fetchOptionsSkew failed:', e.message);
+    return null;
+  }
+}
+
+
 function compute200DMA(closes) {
   if (!closes || closes.length < 1) return null;
   var slice = closes.slice(-200);
@@ -3846,9 +4033,9 @@ function renderSatoshiText(text) {
 }
 
 function buildSignalWebSVG(signals) {
-  const cx = 170, cy = 175, cr = 34;
-  const leftNodes  = signals.slice(0, 4);
-  const rightNodes = signals.slice(4);
+  const cx = 170, cy = 154, cr = 34;
+  const leftNodes  = signals.slice(0, 6);
+  const rightNodes = signals.slice(6);
 
   function nodeColor(score) {
     if (score >= 65) return { bg: 'rgba(16,185,129,.22)', border: 'rgba(16,185,129,.5)', text: '#6EE7B7', line: 'rgba(16,185,129,.65)' };
@@ -3857,12 +4044,12 @@ function buildSignalWebSVG(signals) {
   }
   function markerId(score) { return score >= 65 ? 'sw-grn' : score >= 42 ? 'sw-amb' : 'sw-red'; }
 
-  const leftYs  = [8, 68, 128, 188];
-  const rightYs = [8, 68, 128, 188];
+  const leftYs  = [8, 60, 112, 164, 216, 268];
+  const rightYs = [8, 60, 112, 164, 216, 268];
   const nodeW = 82, nodeH = 40;
   const lx = 4, rx = 254;
 
-  let svgParts = [`<svg viewBox="0 0 340 278" width="100%" height="auto" style="display:block;width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">
+  let svgParts = [`<svg viewBox="0 0 340 338" width="100%" height="auto" style="display:block;width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <marker id="sw-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="rgba(239,68,68,.75)"/></marker>
     <marker id="sw-grn" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="rgba(16,185,129,.75)"/></marker>
@@ -3909,9 +4096,9 @@ function buildSignalWebSVG(signals) {
   });
 
   // Legend
-  svgParts.push(`<line x1="8" y1="252" x2="34" y2="252" stroke="rgba(239,68,68,.65)" stroke-width="3"/><text x="38" y="256" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BEARISH</text>`);
-  svgParts.push(`<line x1="100" y1="252" x2="126" y2="252" stroke="rgba(245,158,11,.6)" stroke-width="1.5"/><text x="130" y="256" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">NEUTRAL</text>`);
-  svgParts.push(`<line x1="200" y1="252" x2="226" y2="252" stroke="rgba(16,185,129,.65)" stroke-width="1"/><text x="230" y="256" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BULLISH · LINE=WEIGHT</text>`);
+  svgParts.push(`<line x1="8" y1="316" x2="34" y2="316" stroke="rgba(239,68,68,.65)" stroke-width="3"/><text x="38" y="320" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BEARISH</text>`);
+  svgParts.push(`<line x1="100" y1="316" x2="126" y2="316" stroke="rgba(245,158,11,.6)" stroke-width="1.5"/><text x="130" y="320" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">NEUTRAL</text>`);
+  svgParts.push(`<line x1="200" y1="316" x2="226" y2="316" stroke="rgba(16,185,129,.65)" stroke-width="1"/><text x="230" y="320" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BULLISH · LINE=WEIGHT</text>`);
 
   svgParts.push('</svg>');
   return svgParts.join('');
@@ -3957,7 +4144,13 @@ async function loadSatoshiBrief(forceRefresh) {
       buildSatoshiMemory()
     ]);
 
-    const dma200     = dailyCloses ? compute200DMA(dailyCloses) : null;
+    const dma200      = dailyCloses ? compute200DMA(dailyCloses) : null;
+    const cycleRegime = await fetchCycleRegime(dailyCloses);
+    const [fundingData, realVolData, optSkewData] = await Promise.all([
+      fetchFundingRate(),
+      fetchRealisedVol(dailyCloses),
+      fetchOptionsSkew()
+    ]);
     const dma200Dev  = (dma200 && liveBTC) ? parseFloat(((liveBTC - dma200) / dma200 * 100).toFixed(1)) : null;
     const fngRaw     = fngCache ? fngCache[0] : null;
     const fng        = fngRaw ? { value: parseInt(fngRaw.value), label: fngRaw.value_classification } : null;
@@ -4028,6 +4221,38 @@ async function loadSatoshiBrief(forceRefresh) {
         note:  '2-5 day delay',
         weight: 'low',
         live: false
+      },
+      {
+        name: 'Cycle',
+        score: cycleRegime ? cycleRegime.score : 50,
+        label: cycleRegime ? cycleRegime.label : '—',
+        note:  cycleRegime ? 'Sharpe ' + cycleRegime.sharpe + ' · ' + cycleRegime.direction : '90d rolling Sharpe',
+        weight: 'med',
+        live: true
+      },
+      {
+        name: 'Funding',
+        score: fundingData ? fundingData.score : 50,
+        label: fundingData ? (fundingData.rate >= 0 ? '+' : '') + fundingData.rate + '%' : '—',
+        note:  fundingData ? fundingData.side : '8h perp rate',
+        weight: 'high',
+        live: !!fundingData
+      },
+      {
+        name: 'Real Vol',
+        score: realVolData ? realVolData.score : 50,
+        label: realVolData ? realVolData.vol7d + '% ann' : '—',
+        note:  realVolData ? realVolData.trend + ' vs 30d' : '7d realised vol',
+        weight: 'med',
+        live: !!realVolData
+      },
+      {
+        name: 'Options Skew',
+        score: optSkewData ? optSkewData.score : 50,
+        label: optSkewData ? (optSkewData.skew >= 0 ? '+' : '') + optSkewData.skew + '%' : '—',
+        note:  optSkewData ? optSkewData.label : 'Deribit 25d skew',
+        weight: 'high',
+        live: !!optSkewData
       }
     ];
 
@@ -4057,6 +4282,10 @@ ${macro?.nasdaq_chg != null ? 'Nasdaq 5-day: ' + (macro.nasdaq_chg >= 0 ? '+' : 
 ${dma200Dev != null ? 'BTC vs 200DMA: ' + (dma200Dev >= 0 ? '+' : '') + dma200Dev + '%' : ''}
 ${fng ? 'Fear & Greed: ' + fng.value + '/100 — ' + fng.label : ''}
 ${ta ? 'Technical: ' + (ta.consensus_direction || '') + ', score ' + (ta.consensus_score || '') + '/100' : ''}
+${cycleRegime ? 'Cycle regime: ' + cycleRegime.label + ' (Zone ' + cycleRegime.zone + ') — 90-day Sharpe ' + cycleRegime.sharpe + ', trend ' + cycleRegime.direction + '. Zone A=euphoria/bearish lean, B=expansion/constructive, C=accumulation/neutral, D=capitulation/contrarian bullish.' : ''}
+${fundingData ? 'Funding rate: ' + (fundingData.rate >= 0 ? '+' : '') + fundingData.rate + '% (8h perpetual rate). ' + fundingData.side + '. High positive funding = crowded longs = mean reversion risk. Negative = shorts squeezed = contrarian bullish signal.' : ''}
+${realVolData ? 'Realised vol (7d annualised): ' + realVolData.vol7d + '% vs 30d avg ' + realVolData.vol30d + '%. Trend: ' + realVolData.trend + '. Vol compressing below average often precedes a directional move. Vol spiking indicates fear/uncertainty.' : ''}
+${optSkewData ? 'Options skew (Deribit 25-delta): ' + (optSkewData.skew >= 0 ? '+' : '') + optSkewData.skew + '% — ' + optSkewData.label + '. Negative skew = market paying premium for put protection = bearish positioning. Positive = call demand = upside bias.' : ''}
 ${memoryBlock}
 
 YOUR VOICE: You are a cypherpunk analyst. Direct. No hedging. No "could" or "might". You call it as you read it and own the call. When you have been wrong before, you say so plainly and adjust. When a signal has been consistently misleading, you call it out by name. When the crowd is leaning the wrong way based on history, you flag it. You are not here to make players feel good — you are here to sharpen their thinking.
@@ -4149,7 +4378,7 @@ Respond ONLY with valid JSON:
       </div>
 
       <div style="padding:5px 18px 8px;font-family:var(--mono);font-size:8px;color:var(--text-dim);letter-spacing:.5px;">
-        🟢 LIVE: DXY · Nasdaq · 200DMA · F&amp;G · TA&nbsp;&nbsp;·&nbsp;&nbsp;🟡 INFERRED: On-chain · Sentiment · Social Lag
+        🟢 LIVE: DXY · Nasdaq · 200DMA · F&amp;G · TA · Funding · Real Vol · Options Skew&nbsp;&nbsp;·&nbsp;&nbsp;🟡 INFERRED: On-chain · Sentiment · Social Lag
       </div>`;
 
     try {
