@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v24 -->
+<!-- Pundix v25 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -84,6 +84,43 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .predict-toggle-meta{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);flex-shrink:0;}
 .predict-toggle-body{border-top:1px solid var(--border);}
 /* ──────────────────────────────────────────────────────────────────── */
+/* ORACLE CHART */
+.oracle-card{background:var(--card);border:1px solid var(--border-hi);border-radius:8px;overflow:hidden;margin-bottom:20px;position:relative;}
+.oracle-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),var(--orange) 50%,transparent);}
+.oracle-header{padding:16px 18px 12px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.oracle-header-left{}
+.oracle-title{font-family:var(--sans);font-size:18px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:1px;line-height:1;}
+.oracle-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-top:4px;}
+.oracle-legend{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.oracle-legend-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);}
+.oracle-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.oracle-chart-wrap{padding:16px 14px 8px;background:var(--bg);position:relative;}
+.oracle-svg{width:100%;display:block;overflow:visible;}
+.oracle-empty{padding:48px 20px;text-align:center;}
+.oracle-empty-icon{font-size:26px;color:var(--text-dim);margin-bottom:10px;}
+.oracle-empty-title{font-family:var(--sans);font-size:15px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.oracle-empty-sub{font-family:var(--mono);font-size:10px;color:var(--text-dim);line-height:1.7;}
+.oracle-stats{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border);}
+.oracle-stat{padding:12px 14px;border-right:1px solid var(--border);text-align:center;}
+.oracle-stat:last-child{border-right:none;}
+.oracle-stat-label{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
+.oracle-stat-value{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);}
+.oracle-stat-value.green{color:var(--green);}
+.oracle-stat-value.orange{color:var(--orange);}
+.oracle-tooltip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--border-hi);border-radius:5px;padding:8px 11px;font-family:var(--mono);font-size:10px;color:var(--text);white-space:nowrap;z-index:10;opacity:0;transition:opacity .15s;box-shadow:0 4px 16px rgba(0,0,0,.4);}
+.oracle-tooltip.visible{opacity:1;}
+.oracle-tooltip-week{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;}
+.oracle-tooltip-row{display:flex;align-items:center;gap:7px;margin-bottom:3px;}
+.oracle-tooltip-row:last-child{margin-bottom:0;}
+.oracle-tooltip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.oracle-admin-row{padding:10px 18px 12px;border-top:1px solid var(--border);background:var(--surface);display:none;}
+.oracle-admin-row.show{display:flex;align-items:center;gap:10px;}
+.oracle-admin-label{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);flex-shrink:0;}
+.oracle-admin-input{flex:1;background:var(--bg);border:1px solid var(--border-hi);border-radius:3px;padding:7px 10px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;}
+.oracle-admin-input:focus{border-color:var(--green);}
+.oracle-admin-btn{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;background:var(--green-dim);border:1px solid rgba(16,185,129,.4);color:var(--green);padding:7px 12px;border-radius:3px;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.oracle-admin-btn:hover{background:rgba(16,185,129,.2);}
+@media(max-width:600px){.oracle-legend{display:none;}.oracle-stats{grid-template-columns:1fr 1fr;}.oracle-stat:nth-child(3){grid-column:1/-1;border-right:none;border-top:1px solid var(--border);}}
 </style>
 </head>
 <body>
@@ -96,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v24</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v25</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -676,6 +713,58 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
             <div class="hof-empty-title">Season 1 in progress</div>
             <div class="hof-empty-sub">The season champion is crowned when the season closes.<br>Their name stays here permanently.</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Oracle Chart -->
+    <div style="margin-top:28px;">
+      <div class="sec-label">Oracle vs Crowd vs Market</div>
+      <div class="oracle-card" id="oracleCard">
+        <div class="oracle-header">
+          <div class="oracle-header-left">
+            <div class="oracle-title">Track Record</div>
+            <div class="oracle-sub">Weekly settlement · All resolved weeks</div>
+          </div>
+          <div class="oracle-legend">
+            <div class="oracle-legend-item"><div class="oracle-legend-dot" style="background:#fff;"></div>BTC Close</div>
+            <div class="oracle-legend-item"><div class="oracle-legend-dot" style="background:var(--orange);"></div>Crowd</div>
+            <div class="oracle-legend-item"><div class="oracle-legend-dot" style="background:var(--green);"></div>Satoshi</div>
+          </div>
+        </div>
+        <div class="oracle-chart-wrap" id="oracleChartWrap">
+          <div class="oracle-empty" id="oracleEmpty">
+            <div class="oracle-empty-icon">◈</div>
+            <div class="oracle-empty-title">No resolved weeks yet</div>
+            <div class="oracle-empty-sub">The chart populates after the first week resolves.<br>Satoshi's calls are logged each Monday alongside the crowd.</div>
+          </div>
+          <div class="oracle-tooltip" id="oracleTooltip">
+            <div class="oracle-tooltip-week" id="oracleTipWeek"></div>
+            <div class="oracle-tooltip-row"><div class="oracle-tooltip-dot" style="background:#fff;"></div><span id="oracleTipBtc"></span></div>
+            <div class="oracle-tooltip-row"><div class="oracle-tooltip-dot" style="background:var(--orange);"></div><span id="oracleTipCrowd"></span></div>
+            <div class="oracle-tooltip-row" id="oracleTipSatoshiRow"><div class="oracle-tooltip-dot" style="background:var(--green);"></div><span id="oracleTipSatoshi"></span></div>
+          </div>
+        </div>
+        <div class="oracle-stats" id="oracleStats" style="display:none;">
+          <div class="oracle-stat">
+            <div class="oracle-stat-label">Satoshi avg error</div>
+            <div class="oracle-stat-value" id="oracleStatSatoshi">—</div>
+          </div>
+          <div class="oracle-stat">
+            <div class="oracle-stat-label">Crowd avg error</div>
+            <div class="oracle-stat-value" id="oracleStatCrowd">—</div>
+          </div>
+          <div class="oracle-stat">
+            <div class="oracle-stat-label">Oracle edge</div>
+            <div class="oracle-stat-value" id="oracleStatEdge">—</div>
+          </div>
+        </div>
+        <!-- Admin: override Satoshi's auto-logged call (only shown to admin) -->
+        <div class="oracle-admin-row" id="oracleAdminRow">
+          <div class="oracle-admin-label">Override Satoshi $</div>
+          <input class="oracle-admin-input" id="oracleSatoshiInput" type="number" placeholder="auto-logged on brief" min="10000" max="500000">
+          <button class="oracle-admin-btn" onclick="saveOracleSatoshiCall()">Save →</button>
+          <div id="oracleAdminStatus" style="font-family:var(--mono);font-size:10px;color:var(--green);display:none;">✓ Saved</div>
         </div>
       </div>
     </div>
@@ -2104,6 +2193,315 @@ async function renderWeeklyWinner() {
     winner.score ? winner.score + '/100' : '—';
 }
 
+// ─── ORACLE CHART ────────────────────────────────────────────────────────────
+// Data model: week_outcomes has btc_open, btc_close, week_start, satoshi_price (nullable)
+// predictions has price per week — we compute crowd median client-side
+// satoshi_price column must exist on week_outcomes (add in Supabase: alter table week_outcomes add column if not exists satoshi_price numeric;)
+
+async function renderOracleChart() {
+  const wrap  = document.getElementById('oracleChartWrap');
+  const empty = document.getElementById('oracleEmpty');
+  const stats = document.getElementById('oracleStats');
+  const adminRow = document.getElementById('oracleAdminRow');
+  if (!wrap) return;
+
+  // Show admin logging row if admin session is active
+  const isAdmin = sessionStorage.getItem(ADMIN_TOKEN_KEY) != null;
+  if (adminRow) {
+    adminRow.classList.toggle('show', isAdmin);
+    if (isAdmin) {
+      // Flush any locally-cached Satoshi call that hasn't been synced yet
+      try {
+        const cacheK   = 'pundix_satoshi_call_w' + CURRENT_WEEK;
+        const cached   = JSON.parse(localStorage.getItem(cacheK) || 'null');
+        if (cached && cached.weekMonday) {
+          const existing = await sbGet('week_outcomes?week_start=eq.' + cached.weekMonday + '&select=satoshi_price&limit=1');
+          if (existing && existing[0] && existing[0].satoshi_price == null) {
+            await sbFetchAdmin('week_outcomes?week_start=eq.' + cached.weekMonday, {
+              method: 'PATCH',
+              body: JSON.stringify({ satoshi_price: cached.target })
+            });
+            console.log('[Oracle] Deferred sync: Satoshi call $' + cached.target.toLocaleString('en-US') + ' written to Supabase.');
+          }
+        }
+      } catch(e) { console.warn('[Oracle] Deferred sync failed:', e.message); }
+
+      // Show the current week's logged call as placeholder
+      try {
+        const weekMonday = getWeekStartDate(CURRENT_WEEK);
+        const cur = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price&limit=1');
+        const input = document.getElementById('oracleSatoshiInput');
+        if (input) {
+          if (cur && cur[0] && cur[0].satoshi_price != null) {
+            input.placeholder = 'logged: $' + Math.round(cur[0].satoshi_price).toLocaleString('en-US');
+          } else {
+            // Fall back to localStorage cache
+            const cacheK = 'pundix_satoshi_call_w' + CURRENT_WEEK;
+            const cached = JSON.parse(localStorage.getItem(cacheK) || 'null');
+            input.placeholder = cached ? 'cached: $' + cached.target.toLocaleString('en-US') : 'auto-logged on brief';
+          }
+        }
+      } catch(e) {}
+    }
+  }
+
+  try {
+    // Fetch outcomes + all predictions in parallel
+    const [outcomes, allPreds] = await Promise.all([
+      sbGet('week_outcomes?select=week_start,btc_open,btc_close,satoshi_price&order=week_start.asc'),
+      sbGet('predictions?select=week,price&order=week.asc')
+    ]);
+
+    if (!outcomes || outcomes.length === 0) return; // empty state stays
+
+    // Week number mapping: week_outcomes are ordered ASC from season start.
+    // Index 0 = week 1, index 1 = week 2, etc. Always.
+    // CURRENT_WEEK is the live week (not yet resolved), so resolved outcomes
+    // are weeks 1 through (CURRENT_WEEK - 1).
+    const firstWeekNum = 1;
+
+    // Group predictions by week number
+    const predsByWeek = {};
+    (allPreds || []).forEach(function(p) {
+      if (!predsByWeek[p.week]) predsByWeek[p.week] = [];
+      predsByWeek[p.week].push(p.price);
+    });
+
+    function median(arr) {
+      if (!arr || arr.length === 0) return null;
+      const s = arr.slice().sort(function(a,b){return a-b;});
+      const m = Math.floor(s.length / 2);
+      return s.length % 2 !== 0 ? s[m] : (s[m-1] + s[m]) / 2;
+    }
+
+    // Build per-week data points (only weeks with a btc_close)
+    const points = outcomes.filter(function(o){ return o.btc_close; }).map(function(o, i) {
+      const weekNum  = firstWeekNum + i;
+      const crowdMed = median(predsByWeek[weekNum]);
+      return {
+        week:    weekNum,
+        date:    o.week_start,
+        btc:     o.btc_close,
+        crowd:   crowdMed,
+        satoshi: o.satoshi_price != null ? parseFloat(o.satoshi_price) : null
+      };
+    });
+
+    if (points.length === 0) return;
+
+    // Hide empty state, show stats
+    if (empty) empty.style.display = 'none';
+    if (stats) stats.style.display = 'grid';
+
+    // ── SVG chart ──────────────────────────────────────────────────────────
+    const SVG_H = 180;
+    const PAD_L = 54;
+    const PAD_R = 16;
+    const PAD_T = 16;
+    const PAD_B = 28;
+
+    // BUG FIX 2: wrap.clientWidth can be 0 if the League panel is hidden when
+    // renderOracleChart is called on initial load (panel-league is not active yet).
+    // Fall back to a safe default; the chart redraws correctly on tab switch.
+    const containerW = wrap.clientWidth > 0 ? wrap.clientWidth : 340;
+    const plotW = Math.max(containerW - PAD_L - PAD_R, 200);
+    const plotH = SVG_H - PAD_T - PAD_B;
+
+    // Price range across all three series
+    const allPrices = points.flatMap(function(p) {
+      return [p.btc, p.crowd, p.satoshi].filter(function(v){ return v != null; });
+    });
+    const rawMin = Math.min.apply(null, allPrices);
+    const rawMax = Math.max.apply(null, allPrices);
+    const pad    = (rawMax - rawMin) * 0.14 || rawMax * 0.05;
+    const yMin   = rawMin - pad;
+    const yMax   = rawMax + pad;
+
+    function xPos(i) {
+      if (points.length === 1) return PAD_L + plotW / 2;
+      return PAD_L + (i / (points.length - 1)) * plotW;
+    }
+    function yPos(price) {
+      return PAD_T + plotH - ((price - yMin) / (yMax - yMin)) * plotH;
+    }
+    function fmtK(v) {
+      return v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + Math.round(v);
+    }
+
+    // Y-axis grid lines
+    const yTicks = 4;
+    let gridLines = '';
+    let yLabels   = '';
+    for (let t = 0; t <= yTicks; t++) {
+      const price = yMin + (yMax - yMin) * (t / yTicks);
+      const y     = yPos(price);
+      gridLines += `<line x1="${PAD_L}" y1="${y.toFixed(1)}" x2="${(PAD_L + plotW).toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,.06)" stroke-width="1"/>`;
+      yLabels   += `<text x="${PAD_L - 5}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-family="Space Mono,monospace" font-size="8" fill="rgba(255,255,255,.3)">${fmtK(price)}</text>`;
+    }
+
+    // X-axis week labels
+    let xLabels = '';
+    points.forEach(function(p, i) {
+      const x = xPos(i);
+      if (points.length <= 8 || i % 2 === 0 || i === points.length - 1) {
+        xLabels += `<text x="${x.toFixed(1)}" y="${SVG_H - 6}" text-anchor="middle" font-family="Space Mono,monospace" font-size="8" fill="rgba(255,255,255,.3)">W${p.week}</text>`;
+      }
+    });
+
+    // BUG FIX 3: buildPath returned null for single-point series (< 2 points).
+    // For 1 point we still want the dot, just no connecting line — that's fine.
+    // Also return null gracefully if no valid points at all.
+    function buildPath(series) {
+      const validPts = points.map(function(p, i){ return {v: p[series], i: i}; })
+                             .filter(function(d){ return d.v != null; });
+      if (validPts.length < 2) return null;
+      return validPts.map(function(d, idx){
+        return (idx === 0 ? 'M' : 'L') + xPos(d.i).toFixed(1) + ',' + yPos(d.v).toFixed(1);
+      }).join(' ');
+    }
+
+    const btcPath     = buildPath('btc');
+    const crowdPath   = buildPath('crowd');
+    const satoshiPath = buildPath('satoshi');
+
+    let lines = '';
+    if (btcPath)     lines += `<path d="${btcPath}" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.5" stroke-linejoin="round"/>`;
+    if (crowdPath)   lines += `<path d="${crowdPath}" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="4 3" stroke-linejoin="round"/>`;
+    if (satoshiPath) lines += `<path d="${satoshiPath}" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="2 2" stroke-linejoin="round"/>`;
+
+    // Dots drawn AFTER lines so they sit on top
+    let dots = '';
+    points.forEach(function(p, i) {
+      const x = xPos(i).toFixed(1);
+      if (p.btc    != null) dots += `<circle cx="${x}" cy="${yPos(p.btc).toFixed(1)}"     r="3.5" fill="#fff"     stroke="#080D14" stroke-width="1.5"/>`;
+      if (p.crowd  != null) dots += `<circle cx="${x}" cy="${yPos(p.crowd).toFixed(1)}"   r="3.5" fill="#F59E0B" stroke="#080D14" stroke-width="1.5"/>`;
+      if (p.satoshi!= null) dots += `<circle cx="${x}" cy="${yPos(p.satoshi).toFixed(1)}" r="3.5" fill="#10B981" stroke="#080D14" stroke-width="1.5"/>`;
+    });
+
+    // BUG FIX 4: hit area calculation was wrong for rightmost point
+    // (x - halfSlot could go negative at left edge).
+    // Use fixed column width = plotW / points.length, centred on each x.
+    const slotW = points.length > 1 ? plotW / points.length : plotW;
+    let hitAreas = '';
+    points.forEach(function(p, i) {
+      const x    = xPos(i);
+      const left = Math.max(PAD_L, x - slotW / 2);
+      const w    = Math.min(slotW, PAD_L + plotW - left);
+      hitAreas += `<rect x="${left.toFixed(1)}" y="${PAD_T}" width="${w.toFixed(1)}" height="${plotH}" fill="transparent" data-idx="${i}" class="oracle-hit"/>`;
+    });
+
+    const totalW = PAD_L + plotW + PAD_R;
+    const svg = `<svg class="oracle-svg" viewBox="0 0 ${totalW} ${SVG_H}" xmlns="http://www.w3.org/2000/svg">
+      ${gridLines}
+      ${yLabels}
+      ${xLabels}
+      <line x1="${PAD_L}" y1="${PAD_T}" x2="${PAD_L}" y2="${PAD_T + plotH}" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+      ${lines}
+      ${dots}
+      ${hitAreas}
+    </svg>`;
+
+    const oldSvg = wrap.querySelector('svg');
+    if (oldSvg) oldSvg.remove();
+    wrap.insertAdjacentHTML('afterbegin', svg);
+
+    // Tooltip
+    const tooltip = document.getElementById('oracleTooltip');
+    wrap.querySelectorAll('.oracle-hit').forEach(function(rect) {
+      rect.addEventListener('mouseenter', function() {
+        const idx = parseInt(rect.dataset.idx);
+        const p   = points[idx];
+        if (!tooltip) return;
+        document.getElementById('oracleTipWeek').textContent    = 'Week ' + p.week + ' · ' + p.date;
+        document.getElementById('oracleTipBtc').textContent     = 'BTC close  ' + (p.btc    != null ? '$' + Math.round(p.btc).toLocaleString('en-US')     : '—');
+        document.getElementById('oracleTipCrowd').textContent   = 'Crowd med  ' + (p.crowd  != null ? '$' + Math.round(p.crowd).toLocaleString('en-US')   : '—');
+        document.getElementById('oracleTipSatoshi').textContent = 'Satoshi    ' + (p.satoshi != null ? '$' + Math.round(p.satoshi).toLocaleString('en-US') : 'no call');
+        const satRow = document.getElementById('oracleTipSatoshiRow');
+        if (satRow) satRow.style.opacity = p.satoshi != null ? '1' : '0.35';
+        // BUG FIX 5: tooltip width is ~155px; clamp properly
+        const wrapRect = wrap.getBoundingClientRect();
+        const rLeft    = parseFloat(rect.getAttribute('x'));
+        const rW       = parseFloat(rect.getAttribute('width'));
+        let left = rLeft + rW / 2 - 77;
+        left = Math.max(4, Math.min(left, (wrapRect.width || containerW) - 160));
+        tooltip.style.left = left + 'px';
+        tooltip.style.top  = '10px';
+        tooltip.classList.add('visible');
+      });
+      rect.addEventListener('mouseleave', function() {
+        if (tooltip) tooltip.classList.remove('visible');
+      });
+    });
+
+    // ── Stats row ──────────────────────────────────────────────────────────
+    const satWeeks   = points.filter(function(p){ return p.satoshi != null; });
+    const crowdWeeks = points.filter(function(p){ return p.crowd   != null; });
+
+    function avgErrPct(subset, key) {
+      if (!subset.length) return null;
+      const sum = subset.reduce(function(acc, p) {
+        return acc + Math.abs(p[key] - p.btc) / p.btc * 100;
+      }, 0);
+      return (sum / subset.length).toFixed(2);
+    }
+
+    const satErr   = avgErrPct(satWeeks,   'satoshi');
+    const crowdErr = avgErrPct(crowdWeeks, 'crowd');
+
+    const satEl   = document.getElementById('oracleStatSatoshi');
+    const crowdEl = document.getElementById('oracleStatCrowd');
+    const edgeEl  = document.getElementById('oracleStatEdge');
+
+    if (satEl)   satEl.textContent   = satErr   != null ? satErr   + '%' : '—';
+    if (crowdEl) crowdEl.textContent = crowdErr != null ? crowdErr + '%' : '—';
+
+    if (satErr != null && crowdErr != null && edgeEl) {
+      const edge = parseFloat(crowdErr) - parseFloat(satErr);
+      if (edge > 0.005) {
+        edgeEl.textContent = '+' + edge.toFixed(2) + '%';
+        edgeEl.className   = 'oracle-stat-value green';
+        edgeEl.title       = 'Satoshi beats crowd by ' + edge.toFixed(2) + '%';
+      } else if (edge < -0.005) {
+        edgeEl.textContent = edge.toFixed(2) + '%';
+        edgeEl.className   = 'oracle-stat-value orange';
+        edgeEl.title       = 'Crowd beats Satoshi by ' + Math.abs(edge).toFixed(2) + '%';
+      } else {
+        edgeEl.textContent = 'Tied';
+        edgeEl.className   = 'oracle-stat-value';
+      }
+    } else if (edgeEl) {
+      edgeEl.textContent = satWeeks.length === 0 ? 'No calls yet' : '—';
+      edgeEl.className   = 'oracle-stat-value';
+    }
+
+  } catch(e) {
+    console.warn('renderOracleChart:', e.message);
+  }
+}
+
+// Save Satoshi's weekly call from admin UI
+async function saveOracleSatoshiCall() {
+  const input  = document.getElementById('oracleSatoshiInput');
+  const status = document.getElementById('oracleAdminStatus');
+  const price  = parseFloat(input?.value);
+  if (!price || price < 10000 || price > 500000) { showToast('Enter a valid price.'); return; }
+
+  const weekMonday = getWeekStartDate(CURRENT_WEEK);
+  try {
+    await sbFetchAdmin('week_outcomes?week_start=eq.' + weekMonday, {
+      method: 'PATCH',
+      body: JSON.stringify({ satoshi_price: price })
+    });
+    if (status) { status.style.display = 'inline'; setTimeout(function(){ status.style.display = 'none'; }, 3000); }
+    if (input)  input.value = '';
+    showToast('Satoshi call logged for Week ' + CURRENT_WEEK);
+    renderOracleChart();
+  } catch(e) {
+    showToast('Save failed: ' + e.message);
+  }
+}
+// ─── END ORACLE CHART ─────────────────────────────────────────────────────────
+
 function _renderInviteQR(containerId, size) {
   const wrap = document.getElementById(containerId);
   if (!wrap || wrap.querySelector('canvas') || wrap.querySelector('img')) return;
@@ -2413,7 +2811,7 @@ function switchTab(id) {
 
   if (id === 'live')    { updateLivePanel(); loadSatoshiCommentary(); updateChatAlias(); loadChatMessages(false); }
   if (id === 'predict') { /* analysis toggles are lazy-loaded on open */ }
-  if (id === 'league')  renderLeaderboard();
+  if (id === 'league')  { renderLeaderboard(); renderOracleChart(); }
   if (id === 'how')    initHowInviteQR();
   if (id === 'admin') {
 
@@ -3565,6 +3963,7 @@ async function resolveWeek() {
     loadAdminDashboard();
     renderResolvedBanner();
     renderLeaderboard();
+    renderOracleChart();
 
   } catch(e) {
     btn.disabled = false;
@@ -4322,6 +4721,46 @@ Respond ONLY with valid JSON:
     const verdictBdr   = verdictScore >= 65 ? 'rgba(16,185,129,.4)'  : verdictScore >= 42 ? 'rgba(245,158,11,.35)' : 'rgba(239,68,68,.4)';
     const briefText    = (brief.dominant_signal || '') + ' ' + (brief.brief || '');
 
+    // Auto-log Satoshi's price target for this week into week_outcomes.satoshi_price
+    // Formula: btcOpen × (1 + bias × 0.03) where bias = (verdictScore - 50) / 50
+    // This gives a ±3% directional call off the week's opening price, locked at brief time.
+    // Strategy: always cache to localStorage immediately (cheap, instant).
+    // Then attempt the Supabase PATCH only if admin session is active.
+    // If admin is not active now, the PATCH is deferred — it will fire the next time
+    // renderOracleChart() runs while admin is unlocked (e.g. when you open the admin tab).
+    // Non-blocking — a failure here must never break the brief render.
+    (async function autoLogSatoshiCall() {
+      try {
+        const weekMonday = getWeekStartDate(CURRENT_WEEK);
+        const btcRef  = liveBTC; // global liveBTC at brief generation time
+        const bias    = (verdictScore - 50) / 50;
+        const target  = Math.round(btcRef * (1 + bias * 0.03));
+        const cacheK  = 'pundix_satoshi_call_w' + CURRENT_WEEK;
+
+        // Always cache locally so the value is never lost
+        localStorage.setItem(cacheK, JSON.stringify({ target, week: CURRENT_WEEK, weekMonday, score: verdictScore }));
+
+        // Attempt Supabase write only if admin token is present in this session
+        const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+        if (!token) {
+          console.log('[Oracle] Satoshi call cached locally ($' + target.toLocaleString('en-US') + ') — will sync when admin is active.');
+          return;
+        }
+
+        // Check if already logged in Supabase
+        const existing = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price&limit=1');
+        if (existing && existing[0] && existing[0].satoshi_price != null) return;
+
+        await sbFetchAdmin('week_outcomes?week_start=eq.' + weekMonday, {
+          method: 'PATCH',
+          body: JSON.stringify({ satoshi_price: target })
+        });
+        console.log('[Oracle] Satoshi call synced to Supabase for ' + weekMonday + ': $' + target.toLocaleString('en-US') + ' (score ' + verdictScore + ')');
+      } catch(e) {
+        console.warn('[Oracle] Auto-log failed (non-blocking):', e.message);
+      }
+    })();
+
     // Build signal web SVG
     const webSVG = buildSignalWebSVG(signals);
 
@@ -4860,6 +5299,7 @@ function closePlayerDrawer(e) {
   renderLeaderboard();
   renderHallOfFame();
   renderWeeklyWinner();
+  renderOracleChart();
 
   updateWindowStatus();
   fetchBTCPrice();
