@@ -743,6 +743,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
             <div class="oracle-tooltip-row"><div class="oracle-tooltip-dot" style="background:#fff;"></div><span id="oracleTipBtc"></span></div>
             <div class="oracle-tooltip-row"><div class="oracle-tooltip-dot" style="background:var(--orange);"></div><span id="oracleTipCrowd"></span></div>
             <div class="oracle-tooltip-row" id="oracleTipSatoshiRow"><div class="oracle-tooltip-dot" style="background:var(--green);"></div><span id="oracleTipSatoshi"></span></div>
+            <div class="oracle-tooltip-rationale" id="oracleTipRationale" style="display:none;font-family:var(--mono);font-size:9px;color:rgba(110,231,183,.75);margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08);line-height:1.5;letter-spacing:0.3px;"></div>
           </div>
         </div>
         <div class="oracle-stats" id="oracleStats" style="display:none;">
@@ -2219,9 +2220,9 @@ async function renderOracleChart() {
           if (existing && existing[0] && existing[0].satoshi_price == null) {
             await sbFetchAdmin('week_outcomes?week_start=eq.' + cached.weekMonday, {
               method: 'PATCH',
-              body: JSON.stringify({ satoshi_price: cached.target })
+              body: JSON.stringify({ satoshi_price: cached.target, satoshi_rationale: cached.rationale || null })
             });
-            console.log('[Oracle] Deferred sync: Satoshi call $' + cached.target.toLocaleString('en-US') + ' written to Supabase.');
+            console.log('[Oracle] Deferred sync: Satoshi call $' + cached.target.toLocaleString('en-US') + (cached.rationale ? ' — ' + cached.rationale : '') + ' written to Supabase.');
           }
         }
       } catch(e) { console.warn('[Oracle] Deferred sync failed:', e.message); }
@@ -2229,16 +2230,22 @@ async function renderOracleChart() {
       // Show the current week's logged call as placeholder
       try {
         const weekMonday = getWeekStartDate(CURRENT_WEEK);
-        const cur = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price&limit=1');
+        const cur = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price,satoshi_rationale&limit=1');
         const input = document.getElementById('oracleSatoshiInput');
         if (input) {
           if (cur && cur[0] && cur[0].satoshi_price != null) {
-            input.placeholder = 'logged: $' + Math.round(cur[0].satoshi_price).toLocaleString('en-US');
+            const rat = cur[0].satoshi_rationale ? ' · ' + cur[0].satoshi_rationale : '';
+            input.placeholder = 'logged: $' + Math.round(cur[0].satoshi_price).toLocaleString('en-US') + rat;
           } else {
             // Fall back to localStorage cache
             const cacheK = 'pundix_satoshi_call_w' + CURRENT_WEEK;
             const cached = JSON.parse(localStorage.getItem(cacheK) || 'null');
-            input.placeholder = cached ? 'cached: $' + cached.target.toLocaleString('en-US') : 'auto-logged on brief';
+            if (cached) {
+              const rat = cached.rationale ? ' · ' + cached.rationale : '';
+              input.placeholder = 'cached: $' + cached.target.toLocaleString('en-US') + rat;
+            } else {
+              input.placeholder = 'auto-logged on brief';
+            }
           }
         }
       } catch(e) {}
@@ -2248,7 +2255,7 @@ async function renderOracleChart() {
   try {
     // Fetch outcomes + all predictions in parallel
     const [outcomes, allPreds] = await Promise.all([
-      sbGet('week_outcomes?select=week_start,btc_open,btc_close,satoshi_price&order=week_start.asc'),
+      sbGet('week_outcomes?select=week_start,btc_open,btc_close,satoshi_price,satoshi_rationale&order=week_start.asc'),
       sbGet('predictions?select=week,price&order=week.asc')
     ]);
 
@@ -2283,7 +2290,8 @@ async function renderOracleChart() {
         date:    o.week_start,
         btc:     o.btc_close,
         crowd:   crowdMed,
-        satoshi: o.satoshi_price != null ? parseFloat(o.satoshi_price) : null
+        satoshi:   o.satoshi_price != null ? parseFloat(o.satoshi_price) : null,
+        rationale: o.satoshi_rationale || null
       };
     });
 
@@ -2418,6 +2426,15 @@ async function renderOracleChart() {
         document.getElementById('oracleTipSatoshi').textContent = 'Satoshi    ' + (p.satoshi != null ? '$' + Math.round(p.satoshi).toLocaleString('en-US') : 'no call');
         const satRow = document.getElementById('oracleTipSatoshiRow');
         if (satRow) satRow.style.opacity = p.satoshi != null ? '1' : '0.35';
+        const ratEl = document.getElementById('oracleTipRationale');
+        if (ratEl) {
+          if (p.rationale) {
+            ratEl.textContent = '↳ ' + p.rationale;
+            ratEl.style.display = 'block';
+          } else {
+            ratEl.style.display = 'none';
+          }
+        }
         // BUG FIX 5: tooltip width is ~155px; clamp properly
         const wrapRect = wrap.getBoundingClientRect();
         const rLeft    = parseFloat(rect.getAttribute('x'));
@@ -4537,11 +4554,13 @@ async function loadSatoshiBrief(forceRefresh) {
 
   try {
     // Fetch all data sources in parallel including Satoshi's memory
-    const [macro, dailyCloses, satoshiMemory] = await Promise.all([
+    const [macro, dailyCloses, satoshiMemory, weekOpenSnap] = await Promise.all([
       fetchMacroData(),
       fetchBinanceDailyCandles().catch(function(){ return null; }),
-      buildSatoshiMemory()
+      buildSatoshiMemory(),
+      sbGet('signal_snapshots?week_start=eq.' + getWeekStartDate(CURRENT_WEEK) + '&signal_name=eq.F%26G&select=btc_price_at_snapshot&limit=1').catch(function(){ return null; })
     ]);
+    const weekBtcOpen = weekOpenSnap?.[0]?.btc_price_at_snapshot || null;
 
     const dma200      = dailyCloses ? compute200DMA(dailyCloses) : null;
     const cycleRegime = await fetchCycleRegime(dailyCloses);
@@ -4668,7 +4687,7 @@ async function loadSatoshiBrief(forceRefresh) {
 
     const briefPrompt = `You are Satoshi — the market desk analyst and institutional conscience of Pundix, a weekly BTC price prediction league. You have been running this desk for multiple weeks. You remember what happened. You remember which signals lied and which delivered. You remember which players called it right and how the crowd was positioned.
 
-Today: ${today}. BTC: $${price.toLocaleString('en-US')}.
+Today: ${today}. BTC now: $${price.toLocaleString('en-US')}. Week open (Friday 23:59 UTC): $${(weekBtcOpen ? Math.round(weekBtcOpen).toLocaleString('en-US') : price.toLocaleString('en-US'))}.
 
 CURRENT WEEK SIGNALS (0=extreme bear, 100=extreme bull), with adaptive weights reflecting each signal's historical accuracy:
 ${sigLines}
@@ -4699,7 +4718,9 @@ Respond ONLY with valid JSON:
   "verdict": "<Bearish|Cautious|Neutral|Constructive|Bullish>",
   "score": <0-100>,
   "dominant_signal": "<signal name and what it is saying — 1 sentence>",
-  "brief": "<memory-informed sentence + closing weight sentence>"
+  "brief": "<memory-informed sentence + closing weight sentence>",
+  "target_price": <integer — your Sunday settlement price call, anchored to the week open, reflecting signal magnitude not just direction. Typical BTC weekly move is 2-8%. Be specific and own the call.>,
+  "target_rationale": "<max 10 words — the 1-2 signals driving your call, e.g. 'RSI oversold + funding rate reset'>"
 }`;
 
     const resp = await fetch(WORKER, {
@@ -4722,8 +4743,8 @@ Respond ONLY with valid JSON:
     const briefText    = (brief.dominant_signal || '') + ' ' + (brief.brief || '');
 
     // Auto-log Satoshi's price target for this week into week_outcomes.satoshi_price
-    // Formula: btcOpen × (1 + bias × 0.03) where bias = (verdictScore - 50) / 50
-    // This gives a ±3% directional call off the week's opening price, locked at brief time.
+    // Target now comes directly from Claude's brief (target_price field), anchored to week open.
+    // Rationale (target_rationale) is cached alongside and written to satoshi_rationale column.
     // Strategy: always cache to localStorage immediately (cheap, instant).
     // Then attempt the Supabase PATCH only if admin session is active.
     // If admin is not active now, the PATCH is deferred — it will fire the next time
@@ -4731,14 +4752,13 @@ Respond ONLY with valid JSON:
     // Non-blocking — a failure here must never break the brief render.
     (async function autoLogSatoshiCall() {
       try {
-        const weekMonday = getWeekStartDate(CURRENT_WEEK);
-        const btcRef  = liveBTC; // global liveBTC at brief generation time
-        const bias    = (verdictScore - 50) / 50;
-        const target  = Math.round(btcRef * (1 + bias * 0.03));
-        const cacheK  = 'pundix_satoshi_call_w' + CURRENT_WEEK;
+        const weekMonday  = getWeekStartDate(CURRENT_WEEK);
+        const target      = brief.target_price ? Math.round(brief.target_price) : Math.round(liveBTC * (1 + ((verdictScore - 50) / 50) * 0.03));
+        const rationale   = brief.target_rationale || '';
+        const cacheK      = 'pundix_satoshi_call_w' + CURRENT_WEEK;
 
         // Always cache locally so the value is never lost
-        localStorage.setItem(cacheK, JSON.stringify({ target, week: CURRENT_WEEK, weekMonday, score: verdictScore }));
+        localStorage.setItem(cacheK, JSON.stringify({ target, rationale, week: CURRENT_WEEK, weekMonday, score: verdictScore }));
 
         // Attempt Supabase write only if admin token is present in this session
         const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
@@ -4753,9 +4773,9 @@ Respond ONLY with valid JSON:
 
         await sbFetchAdmin('week_outcomes?week_start=eq.' + weekMonday, {
           method: 'PATCH',
-          body: JSON.stringify({ satoshi_price: target })
+          body: JSON.stringify({ satoshi_price: target, satoshi_rationale: rationale })
         });
-        console.log('[Oracle] Satoshi call synced to Supabase for ' + weekMonday + ': $' + target.toLocaleString('en-US') + ' (score ' + verdictScore + ')');
+        console.log('[Oracle] Satoshi call synced to Supabase for ' + weekMonday + ': $' + target.toLocaleString('en-US') + ' — ' + rationale);
       } catch(e) {
         console.warn('[Oracle] Auto-log failed (non-blocking):', e.message);
       }
