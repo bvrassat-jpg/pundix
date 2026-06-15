@@ -2211,23 +2211,9 @@ async function renderOracleChart() {
   if (adminRow) {
     adminRow.classList.toggle('show', isAdmin);
     if (isAdmin) {
-      // Flush any locally-cached Satoshi call that hasn't been synced yet
-      try {
-        const cacheK   = 'pundix_satoshi_call_w' + CURRENT_WEEK;
-        const cached   = JSON.parse(localStorage.getItem(cacheK) || 'null');
-        if (cached && cached.weekMonday) {
-          const existing = await sbGet('week_outcomes?week_start=eq.' + cached.weekMonday + '&select=satoshi_price&limit=1');
-          if (existing && existing[0] && existing[0].satoshi_price == null) {
-            await sbFetchAdmin('week_outcomes?week_start=eq.' + cached.weekMonday, {
-              method: 'PATCH',
-              body: JSON.stringify({ satoshi_price: cached.target, satoshi_rationale: cached.rationale || null })
-            });
-            console.log('[Oracle] Deferred sync: Satoshi call $' + cached.target.toLocaleString('en-US') + (cached.rationale ? ' — ' + cached.rationale : '') + ' written to Supabase.');
-          }
-        }
-      } catch(e) { console.warn('[Oracle] Deferred sync failed:', e.message); }
-
-      // Show the current week's logged call as placeholder
+      // Satoshi's weekly call is now auto-logged server-side by the worker
+      // (polished-frog-9374) the moment the brief is generated. Just show
+      // whatever's currently in Supabase as the placeholder, if anything.
       try {
         const weekMonday = getWeekStartDate(CURRENT_WEEK);
         const cur = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price,satoshi_rationale&limit=1');
@@ -2237,15 +2223,7 @@ async function renderOracleChart() {
             const rat = cur[0].satoshi_rationale ? ' · ' + cur[0].satoshi_rationale : '';
             input.placeholder = 'logged: $' + Math.round(cur[0].satoshi_price).toLocaleString('en-US') + rat;
           } else {
-            // Fall back to localStorage cache
-            const cacheK = 'pundix_satoshi_call_w' + CURRENT_WEEK;
-            const cached = JSON.parse(localStorage.getItem(cacheK) || 'null');
-            if (cached) {
-              const rat = cached.rationale ? ' · ' + cached.rationale : '';
-              input.placeholder = 'cached: $' + cached.target.toLocaleString('en-US') + rat;
-            } else {
-              input.placeholder = 'auto-logged on brief';
-            }
+            input.placeholder = 'auto-logged on brief';
           }
         }
       } catch(e) {}
@@ -4742,44 +4720,10 @@ Respond ONLY with valid JSON:
     const verdictBdr   = verdictScore >= 65 ? 'rgba(16,185,129,.4)'  : verdictScore >= 42 ? 'rgba(245,158,11,.35)' : 'rgba(239,68,68,.4)';
     const briefText    = (brief.dominant_signal || '') + ' ' + (brief.brief || '');
 
-    // Auto-log Satoshi's price target for this week into week_outcomes.satoshi_price
-    // Target now comes directly from Claude's brief (target_price field), anchored to week open.
-    // Rationale (target_rationale) is cached alongside and written to satoshi_rationale column.
-    // Strategy: always cache to localStorage immediately (cheap, instant).
-    // Then attempt the Supabase PATCH only if admin session is active.
-    // If admin is not active now, the PATCH is deferred — it will fire the next time
-    // renderOracleChart() runs while admin is unlocked (e.g. when you open the admin tab).
-    // Non-blocking — a failure here must never break the brief render.
-    (async function autoLogSatoshiCall() {
-      try {
-        const weekMonday  = getWeekStartDate(CURRENT_WEEK);
-        const target      = brief.target_price ? Math.round(brief.target_price) : Math.round(liveBTC * (1 + ((verdictScore - 50) / 50) * 0.03));
-        const rationale   = brief.target_rationale || '';
-        const cacheK      = 'pundix_satoshi_call_w' + CURRENT_WEEK;
-
-        // Always cache locally so the value is never lost
-        localStorage.setItem(cacheK, JSON.stringify({ target, rationale, week: CURRENT_WEEK, weekMonday, score: verdictScore }));
-
-        // Attempt Supabase write only if admin token is present in this session
-        const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
-        if (!token) {
-          console.log('[Oracle] Satoshi call cached locally ($' + target.toLocaleString('en-US') + ') — will sync when admin is active.');
-          return;
-        }
-
-        // Check if already logged in Supabase
-        const existing = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price&limit=1');
-        if (existing && existing[0] && existing[0].satoshi_price != null) return;
-
-        await sbFetchAdmin('week_outcomes?week_start=eq.' + weekMonday, {
-          method: 'PATCH',
-          body: JSON.stringify({ satoshi_price: target, satoshi_rationale: rationale })
-        });
-        console.log('[Oracle] Satoshi call synced to Supabase for ' + weekMonday + ': $' + target.toLocaleString('en-US') + ' — ' + rationale);
-      } catch(e) {
-        console.warn('[Oracle] Auto-log failed (non-blocking):', e.message);
-      }
-    })();
+    // Satoshi's price target for this week (target_price / target_rationale) is
+    // now auto-logged into week_outcomes.satoshi_price / satoshi_rationale
+    // server-side by the worker (polished-frog-9374), the moment this brief
+    // response comes back — no client-side action needed.
 
     // Build signal web SVG
     const webSVG = buildSignalWebSVG(signals);
