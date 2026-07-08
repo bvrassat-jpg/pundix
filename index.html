@@ -1683,14 +1683,19 @@ async function saveSignalSnapshot(signals, weekNum, btcPrice) {
 }
 
 function getWeekStartDate(weekNum) {
-  // Derive Monday date for a given week number relative to season start
-  // Use config week_start if available, fallback to current Monday
+  // Derive the Monday date for a given week number.
+  // Anchor: CURRENT_WEEK always corresponds to *this* calendar week's Monday.
+  // Any other weekNum is offset from that anchor by (weekNum - CURRENT_WEEK) * 7 days,
+  // so past/future weeks resolve to their own Monday instead of always "today."
   try {
     const now = new Date();
     const day = now.getUTCDay(); // 0=Sun
     const diffToMon = (day === 0 ? -6 : 1 - day);
-    const mon = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMon));
-    return mon.toISOString().slice(0,10);
+    const thisMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMon));
+    const weekOffsetDays = (Number(weekNum) - Number(CURRENT_WEEK)) * 7;
+    const targetMonday = new Date(thisMonday);
+    targetMonday.setUTCDate(targetMonday.getUTCDate() + weekOffsetDays);
+    return targetMonday.toISOString().slice(0,10);
   } catch(e) { return new Date().toISOString().slice(0,10); }
 }
 // ─────────────────────────────────────────────────────────────────────────────
