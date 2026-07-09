@@ -2399,10 +2399,14 @@ async function updateEloForWeek(weekNum) {
       rating_after: Math.round(newPlayerRating),
       opponent_rating_after: Math.round(newSatRating),
       result: actual === 1 ? 'win' : (actual === 0 ? 'loss' : 'tie'),
+      prediction_usd: p.price,
+      actual_settlement_usd: wo.btc_close,
+      rating_before: Math.round(playerRating),
+      k_used: K,
     });
     satRating = newSatRating;
   }
-  rows.push({ name: 'Satoshi', week_start: weekMonday, rating_after: Math.round(satRating), opponent_rating_after: null, result: null });
+  rows.push({ name: 'Satoshi', week_start: weekMonday, rating_after: Math.round(satRating), opponent_rating_after: null, result: null, prediction_usd: wo.satoshi_price, actual_settlement_usd: wo.btc_close, rating_before: null, k_used: null });
 
   await sbFetchAdmin('elo_history', {
     method: 'POST',
