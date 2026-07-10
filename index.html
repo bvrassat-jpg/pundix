@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v29</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v30</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -416,9 +416,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         <div class="locked-prediction-label">Your forecast</div>
         <div class="locked-prediction-value" id="lockedValue">$84,200</div>
       </div>
+
+      <!-- Satoshi reveal — shown immediately after submit, not at resolution -->
+      <div id="lockedSatoshiReveal" style="display:none;background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--green);border-radius:5px;padding:14px 16px;margin-bottom:18px;">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Satoshi's call this week</div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px;">
+          <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);" id="lockedSatoshiPrice">—</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--text-mid);text-align:right;" id="lockedSatoshiDelta">—</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text-mid);font-style:italic;margin-top:8px;display:none;" id="lockedSatoshiRationale"></div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);" id="lockedSatoshiRecord">—</div>
+      </div>
+
       <div class="locked-btns">
         <button class="locked-btn locked-btn-share" onclick="openShareModal('prediction')">↗ Share my prediction</button>
-        <button class="locked-btn" style="background:var(--surface);border:1px solid var(--border-hi);color:var(--text-mid);" onclick="switchTab('live')">⚔ War Board →</button>
+        <button class="locked-btn" style="background:var(--surface);border:1px solid var(--border-hi);color:var(--text-mid);" onclick="switchTab('live')">⚔ Live Race →</button>
       </div>
       <div style="margin-top:14px;font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.5px;text-align:center;line-height:1.7;">
         Your name is live on the board · <span onclick="switchTab('live')" style="color:var(--orange);cursor:pointer;">see your position</span>
@@ -464,7 +476,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
     <div class="war-board" id="warBoard">
       <div class="war-board-header">
         <div class="war-board-header-left">
-          <div class="war-board-title">War Board</div>
+          <div class="war-board-title">Live Race</div>
           <div class="war-board-sub">Week <span id="war-week-num">1</span> · live positions</div>
         </div>
         <div class="war-board-btc">
@@ -746,7 +758,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 
     <!-- Oracle Chart -->
     <div style="margin-top:28px;">
-      <div class="sec-label">Oracle vs Crowd vs Market</div>
+      <div class="sec-label">Satoshi vs Crowd vs Market</div>
       <div class="oracle-card" id="oracleCard">
         <div class="oracle-header">
           <div class="oracle-header-left">
@@ -783,7 +795,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
             <div class="oracle-stat-value" id="oracleStatCrowd">—</div>
           </div>
           <div class="oracle-stat">
-            <div class="oracle-stat-label">Oracle edge</div>
+            <div class="oracle-stat-label">Satoshi's edge</div>
             <div class="oracle-stat-value" id="oracleStatEdge">—</div>
           </div>
         </div>
@@ -856,7 +868,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         <div class="how-step-num">4</div>
         <div class="how-step-body">
           <div class="how-step-title">Watch the live week</div>
-          <div class="how-step-text">Your live position is on the War Board — distance from BTC, who's ahead, who's exposed. <strong>No final scores until settlement.</strong> Just live distances and tension.</div>
+          <div class="how-step-text">Your live position is on the Live Race — distance from BTC, who's ahead, who's exposed. <strong>No final scores until settlement.</strong> Just live distances and tension.</div>
         </div>
       </div>
       <div class="how-step">
@@ -1640,6 +1652,7 @@ async function submitPrediction() {
     updateChatAlias();
     renderLeaderboard();
     updateLivePanel();
+    renderSatoshiReveal();
   } catch(e) {
     showToast('Could not save — check your connection.');
     submitBtn.disabled = false;
@@ -2319,6 +2332,74 @@ async function renderSatoshiDuelCard() {
   } catch (e) {
     console.warn('renderSatoshiDuelCard:', e.message);
     card.style.display = 'none';
+  }
+}
+
+// ─── SATOSHI REVEAL (shown immediately after submit, before resolution) ───
+// Satoshi's call for the current week is auto-logged server-side the moment
+// the weekly brief is generated (worker polished-frog-9374) — it's already
+// sitting in week_outcomes.satoshi_price by the time anyone predicts. This
+// just surfaces it right after the player locks in, instead of waiting for
+// Sunday settlement like the Duel Card does.
+async function renderSatoshiReveal() {
+  const wrap = document.getElementById('lockedSatoshiReveal');
+  if (!wrap || !myPrediction) return;
+  try {
+    const weekMonday = getWeekStartDate(CURRENT_WEEK);
+    const rows = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price,satoshi_rationale&limit=1');
+    const row = rows && rows[0];
+    if (!row || row.satoshi_price == null) { wrap.style.display = 'none'; return; }
+
+    const satPrice   = parseFloat(row.satoshi_price);
+    const yourPrice   = myPrediction.price;
+    const diffAbs     = Math.abs(yourPrice - satPrice);
+    const diffLabel   = diffAbs < 1
+      ? 'You called it almost identically'
+      : 'You\'re $' + Math.round(diffAbs).toLocaleString('en-US') + (yourPrice > satPrice ? ' more bullish' : ' more bearish');
+
+    document.getElementById('lockedSatoshiPrice').textContent = '$' + Math.round(satPrice).toLocaleString('en-US');
+    document.getElementById('lockedSatoshiDelta').textContent = diffLabel;
+
+    const ratEl = document.getElementById('lockedSatoshiRationale');
+    if (ratEl) {
+      if (row.satoshi_rationale) {
+        ratEl.textContent = '↳ ' + row.satoshi_rationale;
+        ratEl.style.display = 'block';
+      } else {
+        ratEl.style.display = 'none';
+      }
+    }
+
+    // Cumulative record vs Satoshi across this player's resolved weeks —
+    // same calc as renderSatoshiDuelCard, just surfaced a week earlier.
+    const recordEl = document.getElementById('lockedSatoshiRecord');
+    if (recordEl) {
+      try {
+        const all = await getAllSeasonPredictions();
+        const mine = all.filter(function(p) {
+          return p.name.trim().toLowerCase() === myPrediction.name.trim().toLowerCase() && p.score != null;
+        });
+        const outcomes = await sbGet('week_outcomes?select=week_start,btc_close,satoshi_price');
+        let wins = 0, losses = 0;
+        mine.forEach(function(p) {
+          const wo = outcomes && outcomes.find(function(o) { return o.week_start === getWeekStartDate(p.week); });
+          if (!wo || wo.satoshi_price == null || wo.btc_close == null) return;
+          const yErr = Math.abs(p.price - wo.btc_close);
+          const sErr = Math.abs(wo.satoshi_price - wo.btc_close);
+          if (yErr < sErr) wins++; else if (yErr > sErr) losses++;
+        });
+        recordEl.textContent = (wins + losses) > 0
+          ? 'Record vs Satoshi: ' + wins + 'W – ' + losses + 'L'
+          : 'This is your first duel with Satoshi';
+      } catch(e) {
+        recordEl.textContent = '';
+      }
+    }
+
+    wrap.style.display = 'block';
+  } catch(e) {
+    console.warn('renderSatoshiReveal:', e.message);
+    wrap.style.display = 'none';
   }
 }
 
@@ -5503,6 +5584,7 @@ function closePlayerDrawer(e) {
       document.getElementById('lockedValue').textContent = '$' + Math.round(myPrediction.price).toLocaleString('en-US');
       document.getElementById('lockedSub').textContent =
         `${myPrediction.name}, your call is locked in for Week ${CURRENT_WEEK}. Results published Sunday night.`;
+      renderSatoshiReveal();
     } else if (WEEK_STATUS === 'resolved') {
       document.getElementById('predictForm').style.display = 'none';
       document.getElementById('lockedCard').classList.add('show');
