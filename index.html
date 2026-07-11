@@ -415,6 +415,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="locked-prediction-display" id="lockedPredDisplay">
         <div class="locked-prediction-label">Your forecast</div>
         <div class="locked-prediction-value" id="lockedValue">$84,200</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:6px;letter-spacing:0.3px;" id="lockedTimestamp"></div>
       </div>
 
       <!-- Satoshi reveal — shown immediately after submit, not at resolution -->
@@ -425,6 +426,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
           <div style="font-family:var(--mono);font-size:11px;color:var(--text-mid);text-align:right;" id="lockedSatoshiDelta">—</div>
         </div>
         <div style="font-family:var(--mono);font-size:11px;color:var(--text-mid);font-style:italic;margin-top:8px;display:none;" id="lockedSatoshiRationale"></div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:8px;" id="lockedSatoshiTimestamp"></div>
         <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);" id="lockedSatoshiRecord">—</div>
       </div>
 
@@ -1639,6 +1641,8 @@ async function submitPrediction() {
     document.getElementById('predictForm').style.display = 'none';
     document.getElementById('lockedCard').classList.add('show');
     document.getElementById('lockedValue').textContent = '$' + Math.round(price).toLocaleString('en-US');
+    const ltEl = document.getElementById('lockedTimestamp');
+    if (ltEl) ltEl.textContent = 'Submitted ' + new Date(entry.ts).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' });
     document.getElementById('lockedSub').textContent =
       WEEK_STATUS === 'resolved'
         ? `${name}, your prediction for Week ${CURRENT_WEEK} is final. Check the Leaderboard for results.`
@@ -2083,6 +2087,9 @@ async function renderWarBoard() {
     const ebTag  = (ebInfo && ebInfo.badge && ebInfo.mult > 1.0)
       ? ` <span class="eb-badge ${ebInfo.badge}" style="font-size:7px;padding:1px 4px;">⚡</span>`
       : '';
+    const submittedTimeStr = p.submitted_at
+      ? new Date(p.submitted_at).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })
+      : '';
 
     let rowCls = 'war-board-row';
     if (isLeading) rowCls += ' war-leading';
@@ -2092,7 +2099,7 @@ async function renderWarBoard() {
       <div class="${rankCls}">${rankStr}</div>
       <div class="war-player">
         <div class="war-player-name">${escHtml(p.name)}${youTag}${ebTag}</div>
-        <div class="war-player-call">called $${Math.round(p.price).toLocaleString('en-US')} <span style="${dirStyle}">${dirLabel}</span></div>
+        <div class="war-player-call">called $${Math.round(p.price).toLocaleString('en-US')} <span style="${dirStyle}">${dirLabel}</span>${submittedTimeStr ? ` · ${submittedTimeStr}` : ''}</div>
         ${p.rationale ? `<div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-top:3px;font-style:italic;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">"${escHtml(p.rationale)}"</div>` : ''}
       </div>
       <div class="war-distance ${distCls}">${pct}% off</div>
@@ -2353,7 +2360,7 @@ async function renderSatoshiReveal() {
   if (!wrap || !myPrediction) return;
   try {
     const weekMonday = getWeekStartDate(CURRENT_WEEK);
-    const rows = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price,satoshi_rationale&limit=1');
+    const rows = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price,satoshi_rationale,satoshi_logged_at&limit=1');
     const row = rows && rows[0];
     if (!row || row.satoshi_price == null) { wrap.style.display = 'none'; return; }
 
@@ -2366,6 +2373,29 @@ async function renderSatoshiReveal() {
 
     document.getElementById('lockedSatoshiPrice').textContent = '$' + Math.round(satPrice).toLocaleString('en-US');
     document.getElementById('lockedSatoshiDelta').textContent = diffLabel;
+
+    // Show when each call was actually made — Satoshi's is fixed once per week
+    // (first brief generated that week), yours is your own submit time.
+    const tsEl = document.getElementById('lockedSatoshiTimestamp');
+    if (tsEl) {
+      if (row.satoshi_logged_at) {
+        const satTs   = new Date(row.satoshi_logged_at);
+        const yourTs  = new Date(myPrediction.ts || myPrediction.submitted_at);
+        const satFmt  = satTs.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' });
+        const gapMs   = yourTs.getTime() - satTs.getTime();
+        const gapDays = Math.abs(gapMs) / 86400000;
+        let gapLabel  = '';
+        if (gapDays >= 0.5) {
+          const days = Math.round(gapDays);
+          gapLabel = gapMs >= 0
+            ? ' — locked in ' + days + (days === 1 ? ' day' : ' days') + ' before you predicted'
+            : ' — locked in ' + days + (days === 1 ? ' day' : ' days') + ' after you predicted';
+        }
+        tsEl.textContent = 'Satoshi called this: ' + satFmt + gapLabel;
+      } else {
+        tsEl.textContent = '';
+      }
+    }
 
     const ratEl = document.getElementById('lockedSatoshiRationale');
     if (ratEl) {
@@ -5589,6 +5619,8 @@ function closePlayerDrawer(e) {
       document.getElementById('predictForm').style.display = 'none';
       document.getElementById('lockedCard').classList.add('show');
       document.getElementById('lockedValue').textContent = '$' + Math.round(myPrediction.price).toLocaleString('en-US');
+      const ltEl1 = document.getElementById('lockedTimestamp');
+      if (ltEl1 && myPrediction.ts) ltEl1.textContent = 'Submitted ' + new Date(myPrediction.ts).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' });
       document.getElementById('lockedSub').textContent =
         `${myPrediction.name}, your call is locked in for Week ${CURRENT_WEEK}. Results published Sunday night.`;
       renderSatoshiReveal();
@@ -5596,6 +5628,8 @@ function closePlayerDrawer(e) {
       document.getElementById('predictForm').style.display = 'none';
       document.getElementById('lockedCard').classList.add('show');
       document.getElementById('lockedValue').textContent = '$' + Math.round(myPrediction.price).toLocaleString('en-US');
+      const ltEl2 = document.getElementById('lockedTimestamp');
+      if (ltEl2 && myPrediction.ts) ltEl2.textContent = 'Submitted ' + new Date(myPrediction.ts).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' });
       document.getElementById('lockedSub').textContent =
         `${myPrediction.name}, Week ${CURRENT_WEEK} is resolved. Check the Leaderboard for your final score.`;
       const shareResultSection = document.getElementById('shareResultSection');
