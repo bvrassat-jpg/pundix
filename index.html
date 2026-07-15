@@ -1703,8 +1703,15 @@ async function loadSignalWeights() {
 }
 
 function computeWeightedScore(signals) {
-  const total = signals.reduce((s, sig) => s + (signalWeights[sig.name] || SIGNAL_BASE_WEIGHT), 0);
-  return Math.round(signals.reduce((s, sig) => s + sig.score * (signalWeights[sig.name] || SIGNAL_BASE_WEIGHT), 0) / total);
+  // Signals whose data failed to load this run (missing:true) are excluded
+  // entirely rather than contributing their neutral-50 fallback at full
+  // weight — a failed high-weight signal should not silently pull the
+  // composite toward neutral. If every signal is missing (total outage),
+  // fall back to using them all rather than dividing by zero.
+  const usable = signals.filter(sig => !sig.missing);
+  const list = usable.length ? usable : signals;
+  const total = list.reduce((s, sig) => s + (signalWeights[sig.name] || SIGNAL_BASE_WEIGHT), 0);
+  return Math.round(list.reduce((s, sig) => s + sig.score * (signalWeights[sig.name] || SIGNAL_BASE_WEIGHT), 0) / total);
 }
 
 const SNAPSHOT_SAVED_KEY = 'pundix_snapshot_saved_w';
@@ -4934,7 +4941,12 @@ async function loadSatoshiBrief(forceRefresh) {
     const fng        = fngRaw ? { value: parseInt(fngRaw.value), label: fngRaw.value_classification } : null;
     const ta         = taCache;
 
-    // Build signals array for web and prompt
+    // Build signals array for web and prompt.
+    // Each signal now carries a `missing` flag — true only when its underlying
+    // fetch/derivation genuinely failed this run. Signals with missing:true are
+    // excluded from the weighted composite (computeWeightedScore) and from the
+    // "pills" list, and are called out explicitly to Satoshi in the prompt below,
+    // instead of silently contributing a neutral 50 at full weight.
     const signals = [
       {
         name: 'DXY',
@@ -4942,7 +4954,8 @@ async function loadSatoshiBrief(forceRefresh) {
         label: macro?.dxy != null ? macro.dxy.toFixed(1) : '—',
         note:  macro?.dxy_chg != null ? (macro.dxy_chg >= 0 ? '+' : '') + macro.dxy_chg.toFixed(2) + '% w/w' : 'unavailable',
         weight: 'high',
-        live: true
+        live: macro?.dxy_chg != null,
+        missing: macro?.dxy_chg == null
       },
       {
         name: 'Nasdaq',
@@ -4950,7 +4963,8 @@ async function loadSatoshiBrief(forceRefresh) {
         label: macro?.nasdaq_chg != null ? (macro.nasdaq_chg >= 0 ? '+' : '') + macro.nasdaq_chg.toFixed(2) + '%' : '—',
         note:  '5-day return',
         weight: 'high',
-        live: true
+        live: macro?.nasdaq_chg != null,
+        missing: macro?.nasdaq_chg == null
       },
       {
         name: '200DMA',
@@ -4958,7 +4972,8 @@ async function loadSatoshiBrief(forceRefresh) {
         label: dma200Dev != null ? (dma200Dev >= 0 ? '+' : '') + dma200Dev + '%' : 'N/A',
         note:  dma200 ? '$' + Math.round(dma200).toLocaleString('en-US') + ' mean' : '',
         weight: 'med',
-        live: true
+        live: dma200Dev != null,
+        missing: dma200Dev == null
       },
       {
         name: 'On-chain',
@@ -4966,7 +4981,8 @@ async function loadSatoshiBrief(forceRefresh) {
         label: 'Inferred',
         note:  'from F&G + price',
         weight: 'low',
-        live: false
+        live: false,
+        missing: !fng
       },
       {
         name: 'F&G',
@@ -4974,7 +4990,8 @@ async function loadSatoshiBrief(forceRefresh) {
         label: fng ? fng.value + '/100' : '—',
         note:  fng ? fng.label : '',
         weight: 'high',
-        live: true
+        live: !!fng,
+        missing: !fng
       },
       {
         name: 'Technical',
@@ -4982,7 +4999,8 @@ async function loadSatoshiBrief(forceRefresh) {
         label: ta ? (ta.consensus_direction || '—') : '—',
         note:  'Binance candles',
         weight: 'high',
-        live: true
+        live: !!ta,
+        missing: !ta
       },
       {
         name: 'Sentiment',
@@ -4990,7 +5008,8 @@ async function loadSatoshiBrief(forceRefresh) {
         label: sentimentCache ? (sentimentCache.sources||[]).length + ' src' : '—',
         note:  'AI heatmap',
         weight: 'med',
-        live: false
+        live: !!sentimentCache,
+        missing: !sentimentCache
       },
       {
         name: 'Social Lag',
@@ -4998,7 +5017,8 @@ async function loadSatoshiBrief(forceRefresh) {
         label: 'Lagged',
         note:  '2-5 day delay',
         weight: 'low',
-        live: false
+        live: false,
+        missing: !fng
       },
       {
         name: 'Cycle',
@@ -5006,7 +5026,8 @@ async function loadSatoshiBrief(forceRefresh) {
         label: cycleRegime ? cycleRegime.label : '—',
         note:  cycleRegime ? 'Sharpe ' + cycleRegime.sharpe + ' · ' + cycleRegime.direction : '90d rolling Sharpe',
         weight: 'med',
-        live: true
+        live: !!cycleRegime,
+        missing: !cycleRegime
       },
       {
         name: 'Funding',
@@ -5014,7 +5035,8 @@ async function loadSatoshiBrief(forceRefresh) {
         label: fundingData ? (fundingData.rate >= 0 ? '+' : '') + fundingData.rate + '%' : '—',
         note:  fundingData ? fundingData.side : '8h perp rate',
         weight: 'high',
-        live: !!fundingData
+        live: !!fundingData,
+        missing: !fundingData
       },
       {
         name: 'Real Vol',
@@ -5022,7 +5044,8 @@ async function loadSatoshiBrief(forceRefresh) {
         label: realVolData ? realVolData.vol7d + '% ann' : '—',
         note:  realVolData ? realVolData.trend + ' vs 30d' : '7d realised vol',
         weight: 'med',
-        live: !!realVolData
+        live: !!realVolData,
+        missing: !realVolData
       },
       {
         name: 'Options Skew',
@@ -5030,14 +5053,25 @@ async function loadSatoshiBrief(forceRefresh) {
         label: optSkewData ? (optSkewData.skew >= 0 ? '+' : '') + optSkewData.skew + '%' : '—',
         note:  optSkewData ? optSkewData.label : 'Deribit 25d skew',
         weight: 'high',
-        live: !!optSkewData
+        live: !!optSkewData,
+        missing: !optSkewData
       }
     ];
 
-    // Build Claude prompt
+    // Build Claude prompt.
+    // Signals that failed to load are flagged as UNAVAILABLE rather than
+    // silently reported as a real score, so Satoshi knows what it's missing.
     const today   = new Date().toISOString().slice(0,10);
     const price   = Math.round(liveBTC);
-    const sigLines = signals.map(function(s){ return s.name + ': score ' + s.score + '/100 (' + s.note + ', weight ' + Math.round((signalWeights[s.name]||SIGNAL_BASE_WEIGHT)*100) + '%)'; }).join(', ');
+    const missingSignals = signals.filter(function(s){ return s.missing; });
+    const sigLines = signals.map(function(s){
+      return s.missing
+        ? s.name + ': UNAVAILABLE this week — excluded from composite (weight ' + Math.round((signalWeights[s.name]||SIGNAL_BASE_WEIGHT)*100) + '%)'
+        : s.name + ': score ' + s.score + '/100 (' + s.note + ', weight ' + Math.round((signalWeights[s.name]||SIGNAL_BASE_WEIGHT)*100) + '%)';
+    }).join(', ');
+    const missingSignalsNote = missingSignals.length
+      ? '\nDATA GAPS THIS WEEK: ' + missingSignals.map(function(s){return s.name;}).join(', ') + ' failed to load and were excluded from the weighted composite below (not counted as neutral). If any of these are normally high-weight or decisive signals, say so plainly and note reduced confidence — do not treat their absence as silence.'
+      : '';
     const weightedCentre = computeWeightedScore(signals);
 
     // Save snapshot to Supabase for future weight learning (non-blocking)
@@ -5051,8 +5085,9 @@ Today: ${today}. BTC now: $${price.toLocaleString('en-US')}. Week open (Friday 2
 
 CURRENT WEEK SIGNALS (0=extreme bear, 100=extreme bull), with adaptive weights reflecting each signal's historical accuracy:
 ${sigLines}
+${missingSignalsNote}
 
-Weighted composite score: ${weightedCentre}/100
+Weighted composite score: ${weightedCentre}/100 (computed only from available signals — see data gaps above, if any)
 
 Raw data:
 ${macro?.dxy_chg != null ? 'DXY week change: ' + (macro.dxy_chg >= 0 ? '+' : '') + macro.dxy_chg.toFixed(2) + '%' : ''}
@@ -5111,7 +5146,7 @@ Respond ONLY with valid JSON:
     const webSVG = buildSignalWebSVG(signals);
 
     // Build live data pills
-    const pills = signals.filter(function(s){ return s.live && s.label !== 'N/A'; }).map(function(s){
+    const pills = signals.filter(function(s){ return !s.missing && s.label !== 'N/A'; }).map(function(s){
       const cs = s.score >= 65 ? {bg:'rgba(16,185,129,.15)',border:'rgba(16,185,129,.3)',col:'#6EE7B7'} :
                  s.score >= 42 ? {bg:'rgba(245,158,11,.12)',border:'rgba(245,158,11,.28)',col:'#FCD34D'} :
                                  {bg:'rgba(239,68,68,.15)',border:'rgba(239,68,68,.3)',col:'#FCA5A5'};
