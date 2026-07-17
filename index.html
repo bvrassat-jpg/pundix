@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v31 -->
+<!-- Pundix v26 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v31</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v32</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -4941,12 +4941,7 @@ async function loadSatoshiBrief(forceRefresh) {
     const fng        = fngRaw ? { value: parseInt(fngRaw.value), label: fngRaw.value_classification } : null;
     const ta         = taCache;
 
-    // Build signals array for web and prompt.
-    // Each signal now carries a `missing` flag — true only when its underlying
-    // fetch/derivation genuinely failed this run. Signals with missing:true are
-    // excluded from the weighted composite (computeWeightedScore) and from the
-    // "pills" list, and are called out explicitly to Satoshi in the prompt below,
-    // instead of silently contributing a neutral 50 at full weight.
+    // Build signals array for web and prompt
     const signals = [
       {
         name: 'DXY',
@@ -5058,21 +5053,15 @@ async function loadSatoshiBrief(forceRefresh) {
       }
     ];
 
-    // Build Claude prompt.
-    // Signals that failed to load are flagged as UNAVAILABLE rather than
-    // silently reported as a real score, so Satoshi knows what it's missing.
+    // Build Claude prompt
     const today   = new Date().toISOString().slice(0,10);
     const price   = Math.round(liveBTC);
-    const missingSignals = signals.filter(function(s){ return s.missing; });
-    const sigLines = signals.map(function(s){
-      return s.missing
-        ? s.name + ': UNAVAILABLE this week — excluded from composite (weight ' + Math.round((signalWeights[s.name]||SIGNAL_BASE_WEIGHT)*100) + '%)'
-        : s.name + ': score ' + s.score + '/100 (' + s.note + ', weight ' + Math.round((signalWeights[s.name]||SIGNAL_BASE_WEIGHT)*100) + '%)';
-    }).join(', ');
-    const missingSignalsNote = missingSignals.length
-      ? '\nDATA GAPS THIS WEEK: ' + missingSignals.map(function(s){return s.name;}).join(', ') + ' failed to load and were excluded from the weighted composite below (not counted as neutral). If any of these are normally high-weight or decisive signals, say so plainly and note reduced confidence — do not treat their absence as silence.'
-      : '';
+    const sigLines = signals.map(function(s){ return s.name + ': score ' + s.score + '/100 (' + s.note + ', weight ' + Math.round((signalWeights[s.name]||SIGNAL_BASE_WEIGHT)*100) + '%)'; }).join(', ');
     const weightedCentre = computeWeightedScore(signals);
+    const missingSignals = signals.filter(function(s){ return s.missing; });
+    const missingSignalsNote = missingSignals.length
+      ? '\n\nDATA GAPS THIS WEEK: ' + missingSignals.map(function(s){return s.name;}).join(', ') + ' failed to load and were excluded from the weighted composite below (not counted as neutral). If any of these are normally high-weight or decisive signals, say so plainly and note reduced confidence — do not treat their absence as silence.'
+      : '';
 
     // Save snapshot to Supabase for future weight learning (non-blocking)
     saveSignalSnapshot(signals, CURRENT_WEEK, price);
