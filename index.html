@@ -5101,6 +5101,7 @@ Respond ONLY with valid JSON:
 {
   "verdict": "<Bearish|Cautious|Neutral|Constructive|Bullish>",
   "score": <0-100>,
+  "confidence": <integer 0-100 — how sure you are this specific target_price will be close to Sunday's actual settlement, independent of how bullish or bearish you are>,
   "dominant_signal": "<signal name and what it is saying — 1 sentence>",
   "brief": "<memory-informed sentence + closing weight sentence>",
   "target_price": <integer — your Sunday settlement price call, anchored to the week open, reflecting signal magnitude not just direction. Typical BTC weekly move is 2-8%. Be specific and own the call.>,
