@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v33 -->
+<!-- Pundix v34 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v33</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v34</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -5163,6 +5163,8 @@ ${memoryBlock}
 
 YOUR VOICE: You are a cypherpunk analyst. Direct. No hedging. No "could" or "might". You call it as you read it and own the call. When you have been wrong before, you say so plainly and adjust. When a signal has been consistently misleading, you call it out by name. When the crowd is leaning the wrong way based on history, you flag it. You are not here to make players feel good — you are here to sharpen their thinking.
 
+TARGET FORMAT: Decide your call as a WEEKLY RETURN — the % move from week open to Sunday settlement — before you think about the absolute price. Seeing an absolute price number pulls estimates toward it regardless of what the signals actually say; deciding the % move first avoids that. Typical BTC weekly moves run 2-8% in magnitude, in either direction — go beyond that only if the signals clearly warrant it. Once target_return_pct is decided, target_price is mechanical: week open price × (1 + target_return_pct / 100), rounded to the nearest integer. Do not pick target_price independently of target_return_pct — it must be the direct arithmetic result.
+
 Write a pre-game brief in exactly this structure:
 1. One sentence on what the dominant signal is saying this week and its current weight/reliability
 2. One sentence that references something from your memory — a pattern, a streak, a signal that has been hot or cold, or how the crowd has been wrong
@@ -5175,7 +5177,8 @@ Respond ONLY with valid JSON:
   "confidence": <integer 0-100 — how sure you are this specific target_price will be close to Sunday's actual settlement, independent of how bullish or bearish you are>,
   "dominant_signal": "<signal name and what it is saying — 1 sentence>",
   "brief": "<memory-informed sentence + closing weight sentence>",
-  "target_price": <integer — your Sunday settlement price call, anchored to the week open, reflecting signal magnitude not just direction. Typical BTC weekly move is 2-8%. Be specific and own the call.>,
+  "target_return_pct": <number, e.g. -4.2 or 3.1 — your Sunday settlement call as a % move from week open. Decide this FIRST, before target_price. Typical weekly move is 2-8% in magnitude.>,
+  "target_price": <integer — MUST equal week open price × (1 + target_return_pct / 100), rounded to nearest integer. Not an independent guess.>,
   "target_rationale": "<max 10 words — the 1-2 signals driving your call, e.g. 'RSI oversold + funding rate reset'>"
 }`;
 
