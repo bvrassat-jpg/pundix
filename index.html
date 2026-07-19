@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v32 -->
+<!-- Pundix v33 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v32</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v33</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -969,6 +969,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
           Backfill All Elo History →
         </button>
         <div id="eloUpdateStatus" style="font-family:var(--mono);font-size:11px;margin-top:10px;display:none;"></div>
+      </div>
+
+      <div class="admin-card" id="adminCalibrationCard">
+        <div class="admin-card-title">Satoshi Calibration</div>
+        <div class="admin-card-sub">Stated confidence vs. actual accuracy, week by week. "Hit" = error ≤2% (your own "Good call" bar).</div>
+        <div id="adminCalibrationList" style="margin-top:10px;"></div>
+        <div id="adminCalibrationSummary" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"></div>
       </div>
 
       <div class="admin-card" id="adminNextWeekCard" style="display:none">
@@ -4203,6 +4210,68 @@ async function checkAdminPassword() {
   }
 }
 
+// ─── SATOSHI CALIBRATION (admin-only, read-only) ────────────────────────────
+// Compares Satoshi's stated `confidence` (0-100) against actual accuracy per
+// resolved week. Purely additive: no writes, no schema assumptions beyond
+// columns that already exist in week_outcomes (satoshi_price, btc_close,
+// satoshi_confidence — the latter written by the Worker's maybeLogSatoshiCall).
+// Fails silently into "no data yet" if satoshi_confidence isn't populated.
+async function loadSatoshiCalibration() {
+  const listEl = document.getElementById('adminCalibrationList');
+  const sumEl  = document.getElementById('adminCalibrationSummary');
+  if (!listEl || !sumEl) return;
+
+  try {
+    const rows = await sbGet(
+      'week_outcomes?select=week_start,satoshi_confidence,satoshi_price,btc_close' +
+      '&order=week_start.desc'
+    );
+
+    const usable = (rows || []).filter(function(r) {
+      return r.satoshi_confidence != null && r.satoshi_price != null && r.btc_close != null;
+    });
+
+    if (usable.length === 0) {
+      listEl.innerHTML = '<div class="admin-empty">No calibration data yet — needs weeks with satoshi_confidence logged.</div>';
+      sumEl.textContent = '';
+      return;
+    }
+
+    const HIT_THRESHOLD_PCT = 2; // matches existing "Good call" scoring bar
+
+    const scored = usable.map(function(r) {
+      const errPct = Math.abs(r.satoshi_price - r.btc_close) / r.btc_close * 100;
+      const hit = errPct <= HIT_THRESHOLD_PCT;
+      return { week_start: r.week_start, confidence: r.satoshi_confidence, errPct: errPct, hit: hit };
+    });
+
+    listEl.innerHTML = scored.map(function(s) {
+      const errStr = s.errPct.toFixed(2) + '%';
+      const hitStr = s.hit ? '✓ hit' : '✗ miss';
+      const hitColor = s.hit ? 'var(--green)' : 'var(--red)';
+      return '<div class="admin-status-row">' +
+        '<span class="admin-label">' + s.week_start + ' · said ' + s.confidence + '% sure</span>' +
+        '<span class="admin-value" style="color:' + hitColor + ';">' + errStr + ' (' + hitStr + ')</span>' +
+      '</div>';
+    }).join('');
+
+    const avgConfidence = scored.reduce(function(a, s) { return a + s.confidence; }, 0) / scored.length;
+    const actualHitRate = scored.filter(function(s) { return s.hit; }).length / scored.length * 100;
+
+    let note = scored.length + ' resolved week' + (scored.length === 1 ? '' : 's') + ' with confidence logged. ' +
+      'Avg stated confidence: ' + avgConfidence.toFixed(0) + '%. Actual hit rate: ' + actualHitRate.toFixed(0) + '%.';
+    if (scored.length < 10) {
+      note += ' Sample too small to mean much yet — treat as a running log, not a verdict.';
+    }
+    sumEl.textContent = note;
+
+  } catch (e) {
+    console.error('loadSatoshiCalibration:', e);
+    listEl.innerHTML = '<div class="admin-empty">Calibration check failed to load — see console.</div>';
+    sumEl.textContent = '';
+  }
+}
+
 async function loadAdminDashboard() {
 
   if (sessionStorage.getItem(ADMIN_KEY) !== '1') {
@@ -4231,6 +4300,8 @@ async function loadAdminDashboard() {
       'predictions?week=eq.' + CURRENT_WEEK + '&select=name,email,price,score&order=submitted_at.asc'
     );
     document.getElementById('admin-prediction-count').textContent = (preds || []).length;
+
+    loadSatoshiCalibration();
 
     const listEl = document.getElementById('adminPredictionsList');
     if (!preds || preds.length === 0) {
