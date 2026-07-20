@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v36 -->
+<!-- Pundix v40 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v36</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v40</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -1541,19 +1541,20 @@ function refreshPredictPanelState() {
 // ── Cross-device prediction sync ─────────────────────────────────────────────
 // getMyPrediction()/saveMyPrediction() are localStorage-only, so "have I
 // predicted this week" doesn't know about a submission made on another
-// device. This fills that gap: if local storage shows no prediction for the
-// current week but a player name is saved, check Supabase for a row matching
-// that name + week (same identity signal already used for the leaderboard/Elo
-// lookups elsewhere), and adopt it locally if found. Cheap, additive, and only
-// runs when the local check comes back empty — no change to normal same-device
-// behavior or to how predictions are written.
-async function syncMyPredictionFromServer() {
-  const savedName = (localStorage.getItem(MY_NAME_KEY) || '').trim();
-  if (!savedName) return false;
+// device. This fills that gap: check Supabase for a predictions row matching
+// a given name + current week (same identity signal already used for the
+// leaderboard/Elo lookups elsewhere), and adopt it locally if found.
+// nameOverride lets this be driven by what's typed into the form live —
+// necessary because on a device that's never had a prediction submitted on
+// it, MY_NAME_KEY was never written locally, so there'd otherwise be nothing
+// to match against at all.
+async function syncMyPredictionFromServer(nameOverride) {
+  const name = (nameOverride ?? localStorage.getItem(MY_NAME_KEY) ?? '').trim();
+  if (!name) return false;
   try {
     const rows = await sbGet(
       'predictions?week=eq.' + CURRENT_WEEK +
-      '&name=eq.' + encodeURIComponent(savedName) +
+      '&name=eq.' + encodeURIComponent(name) +
       '&select=name,price,week,submitted_at,direction,rationale&order=submitted_at.desc&limit=1'
     );
     const row = rows && rows[0];
@@ -1568,6 +1569,7 @@ async function syncMyPredictionFromServer() {
       rationale: row.rationale || null,
     };
     saveMyPrediction(entry);
+    localStorage.setItem(MY_NAME_KEY, row.name); // now known on this device too, for next time
     myPrediction = entry;
     return true;
   } catch (e) {
@@ -4554,6 +4556,26 @@ async function startNextWeek() {
     CURRENT_WEEK = nextWeek;
     WEEK_STATUS  = 'open';
 
+    // Create the week_outcomes row for the new week up front. The Worker's
+    // Satoshi-call logger only ever PATCHes an existing row (it never
+    // inserts) — without this, a PATCH against a week_start with no matching
+    // row silently updates zero rows, and Satoshi's price/confidence/
+    // rationale for the whole week is lost even though the brief generated
+    // fine. resolution=merge-duplicates makes this safe to run more than
+    // once (e.g. if "Start Next Week" is ever clicked twice by accident).
+    // btc_open is a NOT NULL column in week_outcomes, so it must be supplied
+    // at insert time — use liveBTC as the best available price at the moment
+    // the week opens (mirrors the fallback already used in resolveWeek()).
+    try {
+      await sbFetchAdmin('week_outcomes', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=minimal',
+        body: JSON.stringify({ week_start: getWeekStartDate(nextWeek), btc_open: liveBTC, btc_close: liveBTC })
+      });
+    } catch (e) {
+      console.warn('week_outcomes row creation for new week failed (non-blocking):', e.message);
+    }
+
     clearMyPrediction();
     myPrediction = null;
     sessionStorage.removeItem(EB_DISMISSED_KEY);
@@ -5841,6 +5863,32 @@ function closePlayerDrawer(e) {
 
   updateWindowStatus();
   fetchBTCPrice();
+
+  // If the form is showing (i.e. this device doesn't think you've predicted
+  // yet) and you type a name that already has a prediction on record for this
+  // week — most likely because you predicted on a different device — switch
+  // straight to the locked/reveal view instead of letting you fill out the
+  // form again. Debounced so it doesn't fire on every keystroke.
+  const playerNameEl = document.getElementById('playerName');
+  if (playerNameEl) {
+    let nameCheckTimer = null;
+    playerNameEl.addEventListener('input', function() {
+      clearTimeout(nameCheckTimer);
+      const typed = playerNameEl.value.trim();
+      if (typed.length < 2) return;
+      nameCheckTimer = setTimeout(async function() {
+        const current = getMyPrediction();
+        const alreadyKnownHere = current && parseInt(current.week) === parseInt(CURRENT_WEEK);
+        if (alreadyKnownHere) return; // this device already knows — nothing to check
+        const found = await syncMyPredictionFromServer(typed);
+        if (found) {
+          refreshPredictPanelState();
+          showToast('Welcome back, ' + myPrediction.name + ' — found your prediction for this week.');
+        }
+      }, 700);
+    });
+  }
+
   const rationaleEl = document.getElementById('playerRationale');
   const rationaleCount = document.getElementById('rationaleCount');
   if (rationaleEl && rationaleCount) {
