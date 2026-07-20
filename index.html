@@ -1853,20 +1853,28 @@ async function saveSignalSnapshot(signals, weekNum, btcPrice) {
   } catch(e) { /* non-blocking */ }
 }
 
+// FIX (2026-07-20): this function used to derive "today's real Monday" via
+// new Date() and offset from CURRENT_WEEK. That made it depend on the exact
+// moment it was called: if resolveWeek() ran for the closing week *after*
+// the real calendar had already rolled into the next ISO week (which happens
+// every single week, since resolution always runs Sunday-night/Monday-morning)
+// but *before* startNextWeek() incremented CURRENT_WEEK, this function
+// silently returned NEXT week's Monday instead of the week actually being
+// resolved — writing that week's real settlement price to the wrong
+// week_outcomes row. This is exactly what happened to Week 9 (settlement
+// landed on the 2026-07-20 row instead of 2026-07-13).
+//
+// Fix: make this a pure function of weekNum alone, anchored to one verified
+// (week, Monday) pair. It no longer reads the clock or CURRENT_WEEK, so the
+// same weekNum always returns the same date regardless of when or in what
+// order admin actions run.
+const ANCHOR_WEEK   = 9;
+const ANCHOR_MONDAY = '2026-07-13'; // verified: predictions.week=9 <-> this Monday
 function getWeekStartDate(weekNum) {
-  // Derive the Monday date for a given week number.
-  // Anchor: CURRENT_WEEK always corresponds to *this* calendar week's Monday.
-  // Any other weekNum is offset from that anchor by (weekNum - CURRENT_WEEK) * 7 days,
-  // so past/future weeks resolve to their own Monday instead of always "today."
   try {
-    const now = new Date();
-    const day = now.getUTCDay(); // 0=Sun
-    const diffToMon = (day === 0 ? -6 : 1 - day);
-    const thisMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMon));
-    const weekOffsetDays = (Number(weekNum) - Number(CURRENT_WEEK)) * 7;
-    const targetMonday = new Date(thisMonday);
-    targetMonday.setUTCDate(targetMonday.getUTCDate() + weekOffsetDays);
-    return targetMonday.toISOString().slice(0,10);
+    const anchor = new Date(ANCHOR_MONDAY + 'T00:00:00Z');
+    anchor.setUTCDate(anchor.getUTCDate() + (Number(weekNum) - ANCHOR_WEEK) * 7);
+    return anchor.toISOString().slice(0,10);
   } catch(e) { return new Date().toISOString().slice(0,10); }
 }
 // ─────────────────────────────────────────────────────────────────────────────
