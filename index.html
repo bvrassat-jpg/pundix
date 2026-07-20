@@ -4356,8 +4356,14 @@ async function loadSatoshiCalibration() {
       '&order=week_start.desc'
     );
 
+    // Exclude the current (still-open) week: its btc_close is just the
+    // live-price placeholder set when the week started (see startNextWeek()),
+    // not a real Sunday settlement — grading against it produces a spurious
+    // "miss" every week regardless of how good Satoshi's call actually is.
+    const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
     const usable = (rows || []).filter(function(r) {
-      return r.satoshi_confidence != null && r.satoshi_price != null && r.btc_close != null;
+      return r.satoshi_confidence != null && r.satoshi_price != null && r.btc_close != null
+        && r.week_start !== currentWeekMonday;
     });
 
     if (usable.length === 0) {
