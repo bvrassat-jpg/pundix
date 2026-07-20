@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v40 -->
+<!-- Pundix v41 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v40</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v41</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -1787,6 +1787,14 @@ async function submitPrediction() {
 // ── Signal Weight Engine ──────────────────────────────────────────────────────
 const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','On-chain','F&G','Technical','Sentiment','Social Lag','Cycle','Funding','Real Vol','Options Skew'];
 const SIGNAL_BASE_WEIGHT = 1 / SIGNAL_NAMES.length;
+// A signal's weight only reaches full divergence from equal once it has this
+// many resolved weeks of its own hit/miss history. Below that, the bonus is
+// linearly damped toward zero — without this, a signal that happens to go
+// 2/2 early in the season jumps to near-max weight off two data points, which
+// is noise, not skill, and risks compounding into Satoshi's stated confidence
+// (the prompt tells Satoshi these weights "reflect historical accuracy," so
+// an unearned weight swing this early reads as unearned certainty later).
+const WEIGHT_SAMPLE_TARGET = 8;
 let signalWeights = {}; // populated by loadSignalWeights()
 SIGNAL_NAMES.forEach(n => signalWeights[n] = SIGNAL_BASE_WEIGHT);
 
@@ -1807,7 +1815,9 @@ async function loadSignalWeights() {
         return (snap.score >= 50 ? 'up' : 'down') === o.direction ? 1 : 0;
       }).filter(x => x !== null);
       const hitRate = pairs.length ? pairs.reduce((a,b) => a+b, 0) / pairs.length : 0.5;
-      const bonus = (hitRate - 0.5) * 2; // -1 to +1
+      const rawBonus = (hitRate - 0.5) * 2; // -1 to +1, based on this signal's own hit rate
+      const sampleConfidence = Math.min(1, pairs.length / WEIGHT_SAMPLE_TARGET);
+      const bonus = rawBonus * sampleConfidence; // damped toward 0 (equal weight) until enough samples exist
       weights[name] = Math.max(0.02, SIGNAL_BASE_WEIGHT * (1 + bonus));
     });
     const total = Object.values(weights).reduce((a,b) => a+b, 0);
