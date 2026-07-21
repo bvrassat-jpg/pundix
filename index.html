@@ -2769,11 +2769,18 @@ async function renderOracleChart() {
 
     if (!outcomes || outcomes.length === 0) return; // empty state stays
 
-    // Week number mapping: week_outcomes are ordered ASC from season start.
-    // Index 0 = week 1, index 1 = week 2, etc. Always.
-    // CURRENT_WEEK is the live week (not yet resolved), so resolved outcomes
-    // are weeks 1 through (CURRENT_WEEK - 1).
-    const firstWeekNum = 1;
+    // Week number: derived from the row's own week_start date against the
+    // same ANCHOR_WEEK/ANCHOR_MONDAY reference getWeekStartDate() uses,
+    // NOT from array position. Positional numbering (firstWeekNum + i)
+    // silently mislabels every week after any gap in week_outcomes —
+    // confirmed: no row exists for the historical week around 2026-06-01,
+    // so counting by position was shifting Week 9 (2026-07-13) down to
+    // display as "Week 8". Date-based numbering is immune to gaps.
+    function weekNumFromDate(dateStr) {
+      const MS_PER_DAY = 24 * 60 * 60 * 1000;
+      const diffDays = (new Date(dateStr + 'T00:00:00Z') - new Date(ANCHOR_MONDAY + 'T00:00:00Z')) / MS_PER_DAY;
+      return ANCHOR_WEEK + Math.round(diffDays / 7);
+    }
 
     // Group predictions by week number
     const predsByWeek = {};
@@ -2808,7 +2815,7 @@ async function renderOracleChart() {
     // it here produces a false hit/miss reading every single week).
     const currentWeekMondayForChart = getWeekStartDate(CURRENT_WEEK);
     const points = outcomes.filter(function(o){ return o.btc_close && o.week_start !== currentWeekMondayForChart; }).map(function(o, i) {
-      const weekNum  = firstWeekNum + i;
+      const weekNum  = weekNumFromDate(o.week_start);
       const crowdMed = median(predsByWeek[weekNum]);
       return {
         week:    weekNum,
