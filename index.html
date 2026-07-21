@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v41 -->
+<!-- Pundix v43 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v41</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v43</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -969,6 +969,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
           Backfill All Elo History →
         </button>
         <div id="eloUpdateStatus" style="font-family:var(--mono);font-size:11px;margin-top:10px;display:none;"></div>
+      </div>
+
+      <div class="admin-card" id="adminHealthCard">
+        <div class="admin-card-title">Data Health Check</div>
+        <div class="admin-card-sub">Automated checks on week_outcomes, run every time you open this panel. Catches the kind of silent drift that caused the Week 9 miswrite.</div>
+        <div id="adminHealthBadge" style="font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1px;margin-top:10px;padding:8px 10px;border-radius:4px;"></div>
+        <div id="adminHealthList" style="margin-top:10px;"></div>
       </div>
 
       <div class="admin-card" id="adminCalibrationCard">
@@ -2782,6 +2789,19 @@ async function renderOracleChart() {
       return s.length % 2 !== 0 ? s[m] : (s[m-1] + s[m]) / 2;
     }
 
+    // Classify Satoshi's call: 'hit' (right direction, error <=2%),
+    // 'miss-direction' (called the wrong way), or 'miss-magnitude'
+    // (right direction, error > 2%). Returns null if not enough data.
+    function satoshiStatus(o) {
+      if (o.satoshi_price == null || o.btc_open == null || o.btc_close == null) return null;
+      const satoshi = parseFloat(o.satoshi_price);
+      const predUp   = satoshi >= o.btc_open;
+      const actualUp = o.btc_close >= o.btc_open;
+      if (predUp !== actualUp) return 'miss-direction';
+      const errPct = Math.abs(satoshi - o.btc_close) / o.btc_close * 100;
+      return errPct <= 2 ? 'hit' : 'miss-magnitude';
+    }
+
     // Build per-week data points (only weeks with a btc_close)
     const points = outcomes.filter(function(o){ return o.btc_close; }).map(function(o, i) {
       const weekNum  = firstWeekNum + i;
@@ -2792,7 +2812,8 @@ async function renderOracleChart() {
         btc:     o.btc_close,
         crowd:   crowdMed,
         satoshi:   o.satoshi_price != null ? parseFloat(o.satoshi_price) : null,
-        rationale: o.satoshi_rationale || null
+        rationale: o.satoshi_rationale || null,
+        satoshiStatus: satoshiStatus(o)
       };
     });
 
@@ -2878,10 +2899,24 @@ async function renderOracleChart() {
     if (crowdPath)   lines += `<path d="${crowdPath}" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="4 3" stroke-linejoin="round"/>`;
     if (satoshiPath) lines += `<path d="${satoshiPath}" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="2 2" stroke-linejoin="round"/>`;
 
-    // Dots drawn AFTER lines so they sit on top
+    // Status ring color: green=hit, red=wrong direction, amber=right direction but off target
+    function ringColor(status) {
+      if (status === 'hit') return '#10B981';
+      if (status === 'miss-direction') return '#EF4444';
+      if (status === 'miss-magnitude') return '#F59E0B';
+      return null;
+    }
+
+    // Dots drawn AFTER lines so they sit on top. Status ring drawn behind the
+    // Satoshi dot so a "close-looking" wrong-direction call is still visible
+    // even when the price gap is small on the shared axis.
     let dots = '';
     points.forEach(function(p, i) {
       const x = xPos(i).toFixed(1);
+      if (p.satoshi != null && p.satoshiStatus) {
+        const rc = ringColor(p.satoshiStatus);
+        if (rc) dots += `<circle cx="${x}" cy="${yPos(p.satoshi).toFixed(1)}" r="7" fill="none" stroke="${rc}" stroke-width="1.5" opacity="0.9"/>`;
+      }
       if (p.btc    != null) dots += `<circle cx="${x}" cy="${yPos(p.btc).toFixed(1)}"     r="3.5" fill="#fff"     stroke="#080D14" stroke-width="1.5"/>`;
       if (p.crowd  != null) dots += `<circle cx="${x}" cy="${yPos(p.crowd).toFixed(1)}"   r="3.5" fill="#F59E0B" stroke="#080D14" stroke-width="1.5"/>`;
       if (p.satoshi!= null) dots += `<circle cx="${x}" cy="${yPos(p.satoshi).toFixed(1)}" r="3.5" fill="#10B981" stroke="#080D14" stroke-width="1.5"/>`;
@@ -2924,7 +2959,11 @@ async function renderOracleChart() {
         document.getElementById('oracleTipWeek').textContent    = 'Week ' + p.week + ' · ' + p.date;
         document.getElementById('oracleTipBtc').textContent     = 'BTC close  ' + (p.btc    != null ? '$' + Math.round(p.btc).toLocaleString('en-US')     : '—');
         document.getElementById('oracleTipCrowd').textContent   = 'Crowd med  ' + (p.crowd  != null ? '$' + Math.round(p.crowd).toLocaleString('en-US')   : '—');
-        document.getElementById('oracleTipSatoshi').textContent = 'Satoshi    ' + (p.satoshi != null ? '$' + Math.round(p.satoshi).toLocaleString('en-US') : 'no call');
+        let statusSuffix = '';
+        if (p.satoshiStatus === 'hit') statusSuffix = '  ✓ hit';
+        else if (p.satoshiStatus === 'miss-direction') statusSuffix = '  ✗ wrong direction';
+        else if (p.satoshiStatus === 'miss-magnitude') statusSuffix = '  △ off target';
+        document.getElementById('oracleTipSatoshi').textContent = 'Satoshi    ' + (p.satoshi != null ? '$' + Math.round(p.satoshi).toLocaleString('en-US') + statusSuffix : 'no call');
         const satRow = document.getElementById('oracleTipSatoshiRow');
         if (satRow) satRow.style.opacity = p.satoshi != null ? '1' : '0.35';
         const ratEl = document.getElementById('oracleTipRationale');
@@ -4339,7 +4378,77 @@ async function checkAdminPassword() {
   }
 }
 
-// ─── SATOSHI CALIBRATION (admin-only, read-only) ────────────────────────────
+// ─── DATA HEALTH CHECK (admin-only, read-only) ──────────────────────────────
+// Scans week_outcomes for the invariant violations that have historically
+// turned into silent bugs: a resolved-looking row still holding its
+// startNextWeek() placeholder (btc_open === btc_close), or a stored
+// `direction` that contradicts the stored open/close prices. Also flags
+// resolved weeks with no Satoshi call logged, as a lower-severity note
+// (expected for early weeks before Satoshi existed, not necessarily a bug).
+// Purely additive: no writes, only sbGet + DOM updates.
+async function loadHealthCheck() {
+  const badgeEl = document.getElementById('adminHealthBadge');
+  const listEl  = document.getElementById('adminHealthList');
+  if (!badgeEl || !listEl) return;
+
+  try {
+    const rows = await sbGet(
+      'week_outcomes?select=week_start,btc_open,btc_close,satoshi_price,direction&order=week_start.desc'
+    );
+    const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
+    const issues = []; // { severity: 'critical'|'info', text }
+
+    (rows || []).forEach(function(r) {
+      const isCurrent = r.week_start === currentWeekMonday;
+
+      if (!isCurrent && r.btc_open != null && r.btc_close != null && r.btc_open === r.btc_close) {
+        issues.push({ severity: 'critical', text: r.week_start + ' — stale placeholder (btc_open == btc_close), never resolved' });
+      }
+
+      if (!isCurrent && r.direction && r.btc_open != null && r.btc_close != null) {
+        const computed = r.btc_close >= r.btc_open ? 'up' : 'down';
+        if (computed !== r.direction) {
+          issues.push({ severity: 'critical', text: r.week_start + ' — stored direction (' + r.direction + ') contradicts price data (' + computed + ')' });
+        }
+      }
+
+      if (!isCurrent && r.btc_open !== r.btc_close && r.satoshi_price == null) {
+        issues.push({ severity: 'info', text: r.week_start + ' — resolved with no Satoshi call logged' });
+      }
+    });
+
+    const hasCritical = issues.some(function(i){ return i.severity === 'critical'; });
+    const hasInfo      = issues.some(function(i){ return i.severity === 'info'; });
+
+    if (!hasCritical && !hasInfo) {
+      badgeEl.textContent = '✓ All checks passed — no drift detected';
+      badgeEl.style.color = 'var(--green)';
+      badgeEl.style.background = 'var(--green-dim)';
+    } else if (hasCritical) {
+      badgeEl.textContent = '✗ ' + issues.filter(function(i){return i.severity==='critical';}).length + ' critical issue(s) found';
+      badgeEl.style.color = 'var(--red)';
+      badgeEl.style.background = 'var(--red-dim)';
+    } else {
+      badgeEl.textContent = '△ ' + issues.length + ' informational note(s)';
+      badgeEl.style.color = 'var(--orange)';
+      badgeEl.style.background = 'var(--orange-dim)';
+    }
+
+    listEl.innerHTML = issues.length === 0 ? '' : issues.map(function(i) {
+      const color = i.severity === 'critical' ? 'var(--red)' : 'var(--orange)';
+      return '<div class="admin-status-row"><span class="admin-label" style="color:' + color + ';">' + i.text + '</span></div>';
+    }).join('');
+
+  } catch (e) {
+    console.error('loadHealthCheck:', e);
+    badgeEl.textContent = 'Health check failed to load — see console';
+    badgeEl.style.color = 'var(--text-dim)';
+    badgeEl.style.background = 'var(--surface)';
+    listEl.innerHTML = '';
+  }
+}
+
+
 // Compares Satoshi's stated `confidence` (0-100) against actual accuracy per
 // resolved week. Purely additive: no writes, no schema assumptions beyond
 // columns that already exist in week_outcomes (satoshi_price, btc_close,
@@ -4436,6 +4545,7 @@ async function loadAdminDashboard() {
     );
     document.getElementById('admin-prediction-count').textContent = (preds || []).length;
 
+    loadHealthCheck();
     loadSatoshiCalibration();
 
     const listEl = document.getElementById('adminPredictionsList');
