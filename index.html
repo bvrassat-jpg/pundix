@@ -2802,8 +2802,12 @@ async function renderOracleChart() {
       return errPct <= 2 ? 'hit' : 'miss-magnitude';
     }
 
-    // Build per-week data points (only weeks with a btc_close)
-    const points = outcomes.filter(function(o){ return o.btc_close; }).map(function(o, i) {
+    // Build per-week data points (only weeks with a btc_close, and never the
+    // current still-open week — its btc_close is just the live-price
+    // placeholder set by startNextWeek(), not a real settlement, so grading
+    // it here produces a false hit/miss reading every single week).
+    const currentWeekMondayForChart = getWeekStartDate(CURRENT_WEEK);
+    const points = outcomes.filter(function(o){ return o.btc_close && o.week_start !== currentWeekMondayForChart; }).map(function(o, i) {
       const weekNum  = firstWeekNum + i;
       const crowdMed = median(predsByWeek[weekNum]);
       return {
