@@ -4396,6 +4396,10 @@ async function loadHealthCheck() {
       'week_outcomes?select=week_start,btc_open,btc_close,satoshi_price,direction&order=week_start.desc'
     );
     const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
+    // Satoshi's price-call mechanism didn't exist before this date (built in v22-v26,
+    // June 2026). Weeks resolved before it legitimately have no satoshi_price —
+    // that's history, not a bug, so never flag them as a missing-call note.
+    const SATOSHI_CALL_START = '2026-06-09';
     const issues = []; // { severity: 'critical'|'info', text }
 
     (rows || []).forEach(function(r) {
@@ -4412,7 +4416,7 @@ async function loadHealthCheck() {
         }
       }
 
-      if (!isCurrent && r.btc_open !== r.btc_close && r.satoshi_price == null) {
+      if (!isCurrent && r.week_start >= SATOSHI_CALL_START && r.btc_open !== r.btc_close && r.satoshi_price == null) {
         issues.push({ severity: 'info', text: r.week_start + ' — resolved with no Satoshi call logged' });
       }
     });
