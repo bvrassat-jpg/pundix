@@ -5408,10 +5408,10 @@ async function loadSatoshiBrief(forceRefresh) {
         attachHoodToggle();
         const predictWebEl = document.getElementById('satoshiHoodWebPredict');
         if (predictWebEl && cached.webSVG) predictWebEl.innerHTML = cached.webSVG;
-        // The heatmap isn't part of the cached HTML string's data — it needs
-        // its own live fetch regardless of whether the rest of the brief
-        // came from cache, same as the fresh-render path below.
-        renderSignalStreakHeatmap().catch(function(e) { /* non-blocking */ });
+        // Reliability heatmap is lazy-loaded on first expand (see
+        // toggleSatoshiHood) rather than fetched here — both sections stay
+        // collapsed by default so the brief doesn't front-load detail most
+        // people won't open.
         return;
       }
     } catch(e) {}
@@ -5675,7 +5675,7 @@ Respond ONLY with valid JSON:
           </div>
           <div class="satoshi-hood-arrow" style="font-size:11px;color:var(--orange);padding:10px 0 10px 10px;transition:transform .2s;">▼</div>
         </div>
-        <div class="satoshi-hood-content" style="display:block;">
+        <div class="satoshi-hood-content" style="display:none;">
           <div style="padding:12px 14px 8px;border-top:1px solid var(--border);">
             ${webSVG}
           </div>
@@ -5690,9 +5690,9 @@ Respond ONLY with valid JSON:
           </div>
           <div class="satoshi-hood-arrow" style="font-size:11px;color:var(--orange);padding:10px 0 10px 10px;transition:transform .2s;">▼</div>
         </div>
-        <div class="satoshi-hood-content" style="display:block;">
-          <div style="padding:12px 14px 8px;border-top:1px solid var(--border);" id="signalStreakContainer">
-            <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);padding:8px 0;">Loading reliability history…</div>
+        <div class="satoshi-hood-content" style="display:none;">
+          <div style="padding:12px 14px 8px;border-top:1px solid var(--border);" id="signalStreakContainer" data-loaded="0">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);padding:8px 0;">Tap to load reliability history…</div>
           </div>
         </div>
       </div>
@@ -5710,11 +5710,11 @@ Respond ONLY with valid JSON:
     if (typeEl) typeEl.textContent = 'Pre-Game Brief · Week Open';
     if (tsEl)   tsEl.textContent   = timeStr;
 
-    // Fetch + render the reliability heatmap in the background — it needs
-    // its own Supabase round trip (week_outcomes + signal_snapshots), so it
-    // shouldn't block the rest of the brief from displaying. Wrapped so a
-    // failure here never breaks the brief that's already on screen.
-    renderSignalStreakHeatmap().catch(function(e) { /* non-blocking */ });
+    // Both "Signal weights" and "Signal reliability" stay collapsed by
+    // default (see the html template above) — the reliability heatmap's
+    // data is fetched lazily on first expand, in toggleSatoshiHood, not
+    // here. That keeps the brief itself lightweight and avoids a Supabase
+    // round trip for anyone who never opens that section.
     attachHoodToggle();
     const predictWebEl = document.getElementById('satoshiHoodWebPredict');
     if (predictWebEl) predictWebEl.innerHTML = webSVG;
@@ -5832,7 +5832,17 @@ function toggleSatoshiHood(headerEl) {
   content.style.display = isOpen ? 'none' : 'block';
   if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
   // Populate if opening for the first time
-  if (!isOpen) attachHoodToggle();
+  if (!isOpen) {
+    attachHoodToggle();
+    // Lazy-load the reliability heatmap the first time its section is
+    // actually expanded — data-loaded guards against re-fetching every
+    // time the user collapses and re-opens it in the same page load.
+    const streakContainer = content.querySelector('#signalStreakContainer');
+    if (streakContainer && streakContainer.dataset.loaded !== '1') {
+      streakContainer.dataset.loaded = '1';
+      renderSignalStreakHeatmap().catch(function(e) { /* non-blocking */ });
+    }
+  }
 }
 
 
