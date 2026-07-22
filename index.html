@@ -1792,7 +1792,7 @@ async function submitPrediction() {
 }
 
 // ── Signal Weight Engine ──────────────────────────────────────────────────────
-const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','On-chain','F&G','Technical','Sentiment','Social Lag','Cycle','Funding','Real Vol','Options Skew'];
+const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','F&G','Technical','Sentiment','Social Lag','Cycle','Funding','Real Vol','Options Skew'];
 const SIGNAL_BASE_WEIGHT = 1 / SIGNAL_NAMES.length;
 // A signal's weight only reaches full divergence from equal once it has this
 // many resolved weeks of its own hit/miss history. Below that, the bonus is
@@ -3952,16 +3952,33 @@ function computeCycleRegime(closes) {
     direction = avgCurr > avgPrev + 0.001 ? 'rising' : avgCurr < avgPrev - 0.001 ? 'falling' : 'stable';
   }
 
-  // Zone classification
+  // Zone classification.
+  // SCORES REVISED (v44) based on an 8-year backtest of forward 7-day BTC
+  // returns bucketed by zone (see conversation history / cycle_regime_backtest
+  // methodology): Zone A, hardcoded here to 22 (strong bearish) until v43,
+  // actually showed a +3.01% mean forward-7d return and 57.1% positive weeks
+  // across 765 observations — positive in 7 of 8 calendar years, with 2018
+  // (a genuine bear-market top) as the sole exception. Zone B, hardcoded to
+  // 65 (constructive), showed the WORST forward performance of the four
+  // zones: -0.29% mean, only 50.1% positive — barely better than noise.
+  // Zone D's "contrarian bullish" framing only held at 12m+ horizons per the
+  // original comment; at 7 days it was close to flat (+0.30%, 51.7%).
+  // None of the four zones showed a 7-day edge anywhere near large enough to
+  // justify a 50-point spread on a 0-100 scale — the scores below are
+  // compressed toward neutral (50) to reflect that this signal is a slow,
+  // multi-month macro read being asked to inform a 1-week call, not a
+  // genuine short-horizon predictor. It still carries a small directional
+  // nudge in the direction the backtest actually supports, rather than the
+  // untested contrarian assumption the original hardcoding encoded.
   let zone, label, score;
   if (annualisedSharpe > 2.5) {
-    zone = 'A'; label = 'Euphoria'; score = 22; // bearish lean — risk of reversion
+    zone = 'A'; label = 'Euphoria'; score = 56; // mildly constructive — backtest showed continuation more often than reversion at 1wk
   } else if (annualisedSharpe > 0.8) {
-    zone = 'B'; label = 'Expansion'; score = 65; // constructive
+    zone = 'B'; label = 'Expansion'; score = 50; // near-neutral — backtest showed no real 1wk edge despite the "constructive" label
   } else if (annualisedSharpe > 0) {
-    zone = 'C'; label = 'Accumulation'; score = 50; // neutral
+    zone = 'C'; label = 'Accumulation'; score = 48; // near-neutral
   } else {
-    zone = 'D'; label = 'Capitulation'; score = 72; // contrarian bullish on 12m+ horizon
+    zone = 'D'; label = 'Capitulation'; score = 54; // mildly constructive at 1wk — the strong "contrarian bullish" read is a 12m+ story, not this week's
   }
 
   // Direction nudge (+/- 5 pts)
@@ -4840,7 +4857,10 @@ WHAT YOU DEFLECT (in character, never breaking voice):
 - Off-topic questions: redirect back to the game with one dry line.
 
 ON THE TRIBE:
-These players chose to commit to a number in public. That earns something. You respect conviction over accuracy. You name patterns when you see them. You don't soften observations to protect feelings — you deliver them at the same temperature as any other fact.`;
+These players chose to commit to a number in public. That earns something. You respect conviction over accuracy. You name patterns when you see them. You don't soften observations to protect feelings — you deliver them at the same temperature as any other fact.
+
+SIGNAL CALIBRATION (important — check before you lean on any signal in conversation):
+The game state you're given includes each signal's current adaptive weight, based on its actual recent hit rate. Before making Fear & Greed, or any other single signal, the centerpiece of an answer, check its stated weight. If it's sitting near the equal-weight baseline (roughly 1/11 of total, since there are 11 signals) rather than clearly elevated, it has not earned outsized narrative attention — mention it as one voice among several, not as the reason for anything. Reserve strong language ("this is what's driving the call," "the signal that matters this week") for whichever signal's weight is actually elevated above the others. A signal reading extreme (very high or very low) is not the same thing as a signal that matters — weight, not intensity, is what earns emphasis. If a player asks specifically about Fear & Greed, answer plainly with its number and note whether its current weight is elevated or baseline — don't inflate its importance by default just because "fear" and "greed" are vivid words to reach for.`;
 
 let satoshiChatHistory = [];
 let satoshiChatPayloadCache = null;
@@ -5472,15 +5492,12 @@ async function loadSatoshiBrief(forceRefresh) {
         live: dma200Dev != null,
         missing: dma200Dev == null
       },
-      {
-        name: 'On-chain',
-        score: fng ? (fng.value <= 25 ? 38 : fng.value <= 45 ? 48 : 62) : 50,
-        label: 'Inferred',
-        note:  'from F&G + price',
-        weight: 'low',
-        live: false,
-        missing: !fng
-      },
+      // On-chain was removed here (v44) — it was never a real independent
+      // signal. Its score was computed as a fixed formula purely off F&G's
+      // value (see git history for the old block), meaning F&G effectively
+      // got two full votes in the weighted composite while looking like two
+      // independent signals. Removing it rather than reweighting it down,
+      // since there was no genuine on-chain data source behind it to keep.
       {
         name: 'F&G',
         score: fng ? fng.value : 50,
@@ -5586,13 +5603,15 @@ ${macro?.nasdaq_chg != null ? 'Nasdaq 5-day: ' + (macro.nasdaq_chg >= 0 ? '+' : 
 ${dma200Dev != null ? 'BTC vs 200DMA: ' + (dma200Dev >= 0 ? '+' : '') + dma200Dev + '%' : ''}
 ${fng ? 'Fear & Greed: ' + fng.value + '/100 — ' + fng.label : ''}
 ${ta ? 'Technical: ' + (ta.consensus_direction || '') + ', score ' + (ta.consensus_score || '') + '/100' : ''}
-${cycleRegime ? 'Cycle regime: ' + cycleRegime.label + ' (Zone ' + cycleRegime.zone + ') — 90-day Sharpe ' + cycleRegime.sharpe + ', trend ' + cycleRegime.direction + '. Zone A=euphoria/bearish lean, B=expansion/constructive, C=accumulation/neutral, D=capitulation/contrarian bullish.' : ''}
+${cycleRegime ? 'Cycle regime: ' + cycleRegime.label + ' (Zone ' + cycleRegime.zone + ') — 90-day Sharpe ' + cycleRegime.sharpe + ', trend ' + cycleRegime.direction + '. This is a slow, multi-month macro read, not a short-horizon predictor — an 8-year backtest found no zone with a meaningful 7-day directional edge (Euphoria was actually followed by positive weeks more often than not; the Capitulation zone\\u2019s reputation as contrarian bullish only holds on 12-month+ horizons). Treat the zone as light context on the broader backdrop, not as a reason to call against what the other signals say.' : ''}
 ${fundingData ? 'Funding rate: ' + (fundingData.rate >= 0 ? '+' : '') + fundingData.rate + '% (8h perpetual rate). ' + fundingData.side + '. High positive funding = crowded longs = mean reversion risk. Negative = shorts squeezed = contrarian bullish signal.' : ''}
 ${realVolData ? 'Realised vol (7d annualised): ' + realVolData.vol7d + '% vs 30d avg ' + realVolData.vol30d + '%. Trend: ' + realVolData.trend + '. Vol compressing below average often precedes a directional move. Vol spiking indicates fear/uncertainty.' : ''}
 ${optSkewData ? 'Options skew (Deribit 25-delta): ' + (optSkewData.skew >= 0 ? '+' : '') + optSkewData.skew + '% — ' + optSkewData.label + '. Negative skew = market paying premium for put protection = bearish positioning. Positive = call demand = upside bias.' : ''}
 ${memoryBlock}
 
 YOUR VOICE: You are a cypherpunk analyst. Direct. No hedging. No "could" or "might". You call it as you read it and own the call. When you have been wrong before, you say so plainly and adjust. When a signal has been consistently misleading, you call it out by name. When the crowd is leaning the wrong way based on history, you flag it. You are not here to make players feel good — you are here to sharpen their thinking.
+
+SIGNAL CALIBRATION: The weight shown next to each signal above reflects its actual recent hit rate, not just how extreme its reading is. Before naming a signal as your "dominant signal" or leaning on it in the brief text, check that its weight is genuinely elevated versus the others — a signal reading extreme (e.g. Fear & Greed at 25) is not automatically the signal that matters most this week if its weight is sitting at or near the equal-weight baseline. Give your narrative weight in proportion to adaptive weight, not to how vivid or dramatic a signal's label sounds.
 
 TARGET FORMAT: Decide your call as a WEEKLY RETURN — the % move from week open to Sunday settlement — before you think about the absolute price. Seeing an absolute price number pulls estimates toward it regardless of what the signals actually say; deciding the % move first avoids that. Typical BTC weekly moves run 2-8% in magnitude, in either direction — go beyond that only if the signals clearly warrant it. Once target_return_pct is decided, target_price is mechanical: week open price × (1 + target_return_pct / 100), rounded to the nearest integer. Do not pick target_price independently of target_return_pct — it must be the direct arithmetic result.
 
@@ -5698,7 +5717,7 @@ Respond ONLY with valid JSON:
       </div>
 
       <div style="padding:5px 18px 8px;font-family:var(--mono);font-size:8px;color:var(--text-dim);letter-spacing:.5px;">
-        🟢 LIVE: DXY · Nasdaq · 200DMA · F&amp;G · TA · Funding · Real Vol · Options Skew&nbsp;&nbsp;·&nbsp;&nbsp;🟡 INFERRED: On-chain · Sentiment · Social Lag
+        🟢 LIVE: DXY · Nasdaq · 200DMA · F&amp;G · TA · Funding · Real Vol · Options Skew&nbsp;&nbsp;·&nbsp;&nbsp;🟡 INFERRED: Sentiment · Social Lag
       </div>`;
 
     try {
