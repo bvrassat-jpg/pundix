@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v43 -->
+<!-- Pundix v44 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v43</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;">v44</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -5238,7 +5238,154 @@ function buildSignalWebSVG(signals) {
   return svgParts.join('');
 }
 
-const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief_v4';
+// ── Alternative to buildSignalWebSVG: a plain weight-sorted bar chart. ──
+// Same input (signals array), same output contract (SVG string), same
+// viewBox footprint (340x338) so it drops into the same container with no
+// layout changes. Sorts signals by their current adaptive weight (highest
+// first) rather than the fixed left/right split the spider used, so the
+// single most-relevant fact — "what's actually driving the call this week"
+// — is readable at a glance instead of requiring the reader to compare line
+// thicknesses radiating in different directions. No centre "oracle" node;
+// the composite score is shown as a plain summary line at the top instead.
+function buildSignalWeightChartSVG(signals) {
+  function barColor(score) {
+    if (score >= 65) return { bar: 'rgba(16,185,129,.55)', text: '#6EE7B7' };
+    if (score >= 42) return { bar: 'rgba(245,158,11,.5)',  text: '#FCD34D' };
+    return { bar: 'rgba(239,68,68,.55)', text: '#FCA5A5' };
+  }
+
+  const centreScore = computeWeightedScore(signals);
+  const cc = barColor(centreScore);
+  const centreLabel = centreScore>=65?'Bullish':centreScore>=42?'Neutral':centreScore<=27?'Bearish':'Cautious';
+
+  const sorted = signals.slice().sort(function(a, b) {
+    const wa = signalWeights[a.name] || SIGNAL_BASE_WEIGHT;
+    const wb = signalWeights[b.name] || SIGNAL_BASE_WEIGHT;
+    return wb - wa;
+  });
+
+  const maxWeight = Math.max.apply(null, sorted.map(function(s) { return signalWeights[s.name] || SIGNAL_BASE_WEIGHT; }));
+  const nameColW = 68, chartLeft = 10 + nameColW, chartRight = 300, chartWidth = chartRight - chartLeft;
+  // Two-line rows (name + raw-data note, the info the pills used to carry)
+  // need more vertical room than the original single-line version — rowH
+  // bumped from 24 to 30, and the viewBox height is now DERIVED from the
+  // actual row count rather than hardcoded at 338. The original spider's
+  // fixed 338 was safe because it always drew exactly 12 fixed node slots;
+  // this chart doesn't have that guarantee (e.g. if a signal set ever
+  // shrinks, as with the On-chain removal being discussed separately), so
+  // a fixed height would either clip the legend or leave dead space.
+  const rowH = 30, rowGap = 2, startY = 40, legendH = 30;
+  const totalHeight = startY + sorted.length * (rowH + rowGap) + legendH;
+
+  let svgParts = [`<svg viewBox="0 0 340 ${totalHeight}" width="100%" height="auto" style="display:block;width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">`];
+
+  // Header: composite score as a plain summary line, not a glowing hub.
+  svgParts.push(`<text x="10" y="18" font-family="Space Mono" font-size="9" fill="${cc.text}" font-weight="700" letter-spacing="1">SATOSHI COMPOSITE: ${centreScore}/100 — ${centreLabel.toUpperCase()}</text>`);
+  svgParts.push(`<line x1="10" y1="26" x2="330" y2="26" stroke="rgba(255,255,255,.12)" stroke-width="1"/>`);
+
+  sorted.forEach(function(sig, i) {
+    const y = startY + i * (rowH + rowGap);
+    const c = barColor(sig.score);
+    const w = signalWeights[sig.name] || SIGNAL_BASE_WEIGHT;
+    const wPct = Math.round(w * 100);
+    const barW = Math.max(2, (w / maxWeight) * chartWidth);
+    const barY = y + 6;
+
+    // Signal name, left-aligned, top line
+    svgParts.push(`<text x="10" y="${y + 11}" font-family="Space Mono" font-size="8" fill="rgba(255,255,255,.75)" font-weight="700" letter-spacing=".5">${escHtml(sig.name.toUpperCase())}</text>`);
+    // Raw-data note, left-aligned, second line — carries the same detail the
+    // pills used to show (e.g. "Fear", "-0.4% w/w"), so nothing is lost by
+    // dropping the separate pills row.
+    svgParts.push(`<text x="10" y="${y + 22}" font-family="Space Mono" font-size="6" fill="rgba(255,255,255,.4)" letter-spacing=".3">${escHtml((sig.note || '').toUpperCase())}</text>`);
+    // Bar
+    svgParts.push(`<rect x="${chartLeft}" y="${barY}" width="${barW.toFixed(1)}" height="${rowH - 12}" rx="2" fill="${c.bar}"/>`);
+    // Weight % at the end of the bar
+    svgParts.push(`<text x="${chartLeft + barW + 6}" y="${barY + (rowH-12)/2 + 3}" font-family="Space Mono" font-size="7" fill="${c.text}" opacity=".85">${wPct}%</text>`);
+    // Score badge, right-aligned
+    svgParts.push(`<text x="330" y="${barY + (rowH-12)/2 + 3}" text-anchor="end" font-family="Space Mono" font-size="8" fill="${c.text}" font-weight="700">${sig.score}</text>`);
+  });
+
+  const legendY = startY + sorted.length * (rowH + rowGap) + 14;
+  svgParts.push(`<line x1="8" y1="${legendY}" x2="26" y2="${legendY}" stroke="rgba(239,68,68,.65)" stroke-width="4"/><text x="30" y="${legendY+4}" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BEARISH</text>`);
+  svgParts.push(`<line x1="100" y1="${legendY}" x2="118" y2="${legendY}" stroke="rgba(245,158,11,.6)" stroke-width="4"/><text x="122" y="${legendY+4}" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">NEUTRAL</text>`);
+  svgParts.push(`<line x1="200" y1="${legendY}" x2="218" y2="${legendY}" stroke="rgba(16,185,129,.65)" stroke-width="4"/><text x="222" y="${legendY+4}" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BULLISH · BAR = WEIGHT, SORTED</text>`);
+
+  svgParts.push('</svg>');
+  return svgParts.join('');
+}
+
+// ── Signal reliability heatmap ──────────────────────────────────────────────
+// Rows = signals, columns = recent resolved weeks, cell = hit (green) or
+// miss (red). Uses the exact same hit/miss definition already proven in
+// buildSatoshiMemory()'s SIGNAL ACCURACY text summary (score>=50 predicts
+// "up", compared against week_outcomes.direction) — this just renders that
+// same computation as a grid instead of a sentence, so streaks that were
+// previously only discoverable by reading the brief text or running SQL by
+// hand are visible at a glance.
+function buildSignalStreakHeatmapSVG(outcomes, snapshots) {
+  const rows = SIGNAL_NAMES.map(function(name) {
+    const cells = outcomes.map(function(o) {
+      const snap = snapshots.find(function(s) { return s.week_start === o.week_start && s.signal_name === name; });
+      if (!snap) return null; // no data that week
+      return (snap.score >= 50 ? 'up' : 'down') === o.direction ? 1 : 0;
+    });
+    const known = cells.filter(function(c) { return c !== null; });
+    const hitRate = known.length ? known.reduce(function(a,b){return a+b;}, 0) / known.length : -1;
+    return { name: name, cells: cells, hitRate: hitRate, n: known.length };
+  }).filter(function(r) { return r.n > 0; }); // drop signals with zero history yet
+
+  rows.sort(function(a, b) { return b.hitRate - a.hitRate; });
+
+  const nameColW = 76, cellW = 26, cellGap = 3, cellH = 18, rowGap = 4, startY = 24;
+  const weekCount = outcomes.length;
+  const chartW = nameColW + weekCount * (cellW + cellGap);
+  const totalH = startY + rows.length * (cellH + rowGap) + 10;
+
+  let svgParts = [`<svg viewBox="0 0 ${chartW} ${totalH}" width="100%" height="auto" style="display:block;width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">`];
+
+  // Column headers: week dates, short form (MM-DD)
+  outcomes.forEach(function(o, i) {
+    const x = nameColW + i * (cellW + cellGap) + cellW / 2;
+    const shortDate = (o.week_start || '').slice(5); // "07-20"
+    svgParts.push(`<text x="${x}" y="14" text-anchor="middle" font-family="Space Mono" font-size="7" fill="rgba(255,255,255,.4)">${shortDate}</text>`);
+  });
+
+  rows.forEach(function(row, ri) {
+    const y = startY + ri * (cellH + rowGap);
+    svgParts.push(`<text x="0" y="${y + cellH/2 + 3}" font-family="Space Mono" font-size="8" fill="rgba(255,255,255,.75)">${row.name.toUpperCase()}</text>`);
+    row.cells.forEach(function(hit, ci) {
+      const x = nameColW + ci * (cellW + cellGap);
+      const fill = hit === null ? 'rgba(255,255,255,.06)' : hit === 1 ? 'rgba(16,185,129,.55)' : 'rgba(239,68,68,.55)';
+      svgParts.push(`<rect x="${x}" y="${y}" width="${cellW}" height="${cellH}" rx="3" fill="${fill}"/>`);
+    });
+    const pctLabel = row.hitRate >= 0 ? Math.round(row.hitRate * 100) + '%' : '—';
+    svgParts.push(`<text x="${chartW}" y="${y + cellH/2 + 3}" text-anchor="end" font-family="Space Mono" font-size="8" font-weight="700" fill="rgba(255,255,255,.6)">${pctLabel}</text>`);
+  });
+
+  svgParts.push('</svg>');
+  return svgParts.join('');
+}
+
+async function renderSignalStreakHeatmap() {
+  const container = document.getElementById('signalStreakContainer');
+  if (!container) return;
+  try {
+    const [outcomes, snapshots] = await Promise.all([
+      sbGet('week_outcomes?select=week_start,direction&order=week_start.asc&limit=8'),
+      sbGet('signal_snapshots?select=week_start,signal_name,score&order=week_start.asc&limit=200')
+    ]);
+    if (!outcomes || outcomes.length < 2) {
+      container.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);padding:8px 0;">Not enough resolved weeks yet to show reliability history.</div>';
+      return;
+    }
+    const svg = buildSignalStreakHeatmapSVG(outcomes, snapshots || []);
+    container.innerHTML = svg;
+  } catch (e) {
+    container.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);padding:8px 0;">Couldn\'t load reliability history.</div>';
+  }
+}
+
+const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief_v5';
 const SATOSHI_BRIEF_CACHE_TTL = 4 * 60 * 60 * 1000;
 
 async function loadSatoshiBrief(forceRefresh) {
@@ -5261,6 +5408,10 @@ async function loadSatoshiBrief(forceRefresh) {
         attachHoodToggle();
         const predictWebEl = document.getElementById('satoshiHoodWebPredict');
         if (predictWebEl && cached.webSVG) predictWebEl.innerHTML = cached.webSVG;
+        // The heatmap isn't part of the cached HTML string's data — it needs
+        // its own live fetch regardless of whether the rest of the brief
+        // came from cache, same as the fresh-render path below.
+        renderSignalStreakHeatmap().catch(function(e) { /* non-blocking */ });
         return;
       }
     } catch(e) {}
@@ -5486,20 +5637,14 @@ Respond ONLY with valid JSON:
     // server-side by the worker (polished-frog-9374), the moment this brief
     // response comes back — no client-side action needed.
 
-    // Build signal web SVG
-    const webSVG = buildSignalWebSVG(signals);
+    // Build signal weight chart (was: buildSignalWebSVG(signals) — the spider.
+    // Swap back to buildSignalWebSVG(signals) here to revert.)
+    const webSVG = buildSignalWeightChartSVG(signals);
 
-    // Build live data pills
-    const pills = signals.filter(function(s){ return !s.missing && s.label !== 'N/A'; }).map(function(s){
-      const cs = s.score >= 65 ? {bg:'rgba(16,185,129,.15)',border:'rgba(16,185,129,.3)',col:'#6EE7B7'} :
-                 s.score >= 42 ? {bg:'rgba(245,158,11,.12)',border:'rgba(245,158,11,.28)',col:'#FCD34D'} :
-                                 {bg:'rgba(239,68,68,.15)',border:'rgba(239,68,68,.3)',col:'#FCA5A5'};
-      return '<div style="background:'+cs.bg+';border:1px solid '+cs.border+';border-radius:3px;padding:5px 8px;display:flex;flex-direction:column;gap:2px;">' +
-        '<div style="font-family:var(--mono);font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.4);">'+escHtml(s.name)+'</div>' +
-        '<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:'+cs.col+';">'+escHtml(s.label)+'</div>' +
-        '<div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,.35);">'+escHtml(s.note)+'</div>' +
-      '</div>';
-    }).join('');
+    // Live data pills were removed — the signal weight chart below now
+    // carries the same per-signal detail (name, score, raw-data note) in
+    // its two-line rows, so this was a duplicate presentation of identical
+    // information rather than a second useful view of it.
 
     const now     = new Date();
     const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · ' + now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -5522,14 +5667,10 @@ Respond ONLY with valid JSON:
         <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-top:10px;font-style:italic;">— Satoshi · node://satoshi · v0.2.0</div>
       </div>
 
-      <div style="padding:8px 18px 6px;display:flex;flex-wrap:wrap;gap:5px;border-bottom:1px solid var(--border);">
-        ${pills}
-      </div>
-
       <div style="border-bottom:1px solid var(--border);">
         <div style="padding:10px 18px 0;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleSatoshiHood(this)">
           <div>
-            <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);">⚙ Signal web</div>
+            <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);">⚙ Signal weights</div>
             <div style="font-family:var(--mono);font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-top:2px;">How Satoshi weighted the signals this week</div>
           </div>
           <div class="satoshi-hood-arrow" style="font-size:11px;color:var(--orange);padding:10px 0 10px 10px;transition:transform .2s;">▼</div>
@@ -5537,6 +5678,21 @@ Respond ONLY with valid JSON:
         <div class="satoshi-hood-content" style="display:block;">
           <div style="padding:12px 14px 8px;border-top:1px solid var(--border);">
             ${webSVG}
+          </div>
+        </div>
+      </div>
+
+      <div style="border-bottom:1px solid var(--border);">
+        <div style="padding:10px 18px 0;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleSatoshiHood(this)">
+          <div>
+            <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);">⚙ Signal reliability</div>
+            <div style="font-family:var(--mono);font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-top:2px;">Hit/miss per signal over recent resolved weeks</div>
+          </div>
+          <div class="satoshi-hood-arrow" style="font-size:11px;color:var(--orange);padding:10px 0 10px 10px;transition:transform .2s;">▼</div>
+        </div>
+        <div class="satoshi-hood-content" style="display:block;">
+          <div style="padding:12px 14px 8px;border-top:1px solid var(--border);" id="signalStreakContainer">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);padding:8px 0;">Loading reliability history…</div>
           </div>
         </div>
       </div>
@@ -5553,6 +5709,12 @@ Respond ONLY with valid JSON:
     contentEl.innerHTML = html;
     if (typeEl) typeEl.textContent = 'Pre-Game Brief · Week Open';
     if (tsEl)   tsEl.textContent   = timeStr;
+
+    // Fetch + render the reliability heatmap in the background — it needs
+    // its own Supabase round trip (week_outcomes + signal_snapshots), so it
+    // shouldn't block the rest of the brief from displaying. Wrapped so a
+    // failure here never breaks the brief that's already on screen.
+    renderSignalStreakHeatmap().catch(function(e) { /* non-blocking */ });
     attachHoodToggle();
     const predictWebEl = document.getElementById('satoshiHoodWebPredict');
     if (predictWebEl) predictWebEl.innerHTML = webSVG;
