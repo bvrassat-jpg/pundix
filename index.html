@@ -5503,6 +5503,39 @@ async function loadSatoshiBrief(forceRefresh) {
   const refreshBtn = document.getElementById('satoshiRefreshBtn');
   if (!contentEl) return;
 
+  // Preserve whichever "hood" section (Signal weights / Signal reliability)
+  // the user currently has open across this refresh. Without this, a
+  // forced refresh — e.g. the automatic re-render that fires once TA
+  // finishes loading in the background (see the init sequence) — replaces
+  // contentEl's entire innerHTML and always starts both sections
+  // collapsed, silently closing whatever the user was mid-way through
+  // reading. Index-based: there are exactly two hood sections, always in
+  // the same fixed order (weights, then reliability).
+  const openHoodIndex = (function() {
+    const hoods = contentEl.querySelectorAll('.satoshi-hood-content');
+    for (let i = 0; i < hoods.length; i++) {
+      if (hoods[i].style.display === 'block') return i;
+    }
+    return -1;
+  })();
+  function restoreOpenHood() {
+    if (openHoodIndex === -1) return;
+    const hoods = contentEl.querySelectorAll('.satoshi-hood-content');
+    const content = hoods[openHoodIndex];
+    if (!content) return;
+    const header = content.previousElementSibling;
+    const arrow  = header ? header.querySelector('.satoshi-hood-arrow') : null;
+    content.style.display = 'block';
+    if (arrow) arrow.style.transform = 'rotate(180deg)';
+    if (openHoodIndex === 1) {
+      const streakContainer = content.querySelector('#signalStreakContainer');
+      if (streakContainer && streakContainer.dataset.loaded !== '1') {
+        streakContainer.dataset.loaded = '1';
+        renderSignalStreakHeatmap().catch(function(e) { /* non-blocking */ });
+      }
+    }
+  }
+
   const cacheKey = SATOSHI_BRIEF_CACHE_KEY + '_' + CURRENT_WEEK;
 
   if (!forceRefresh) {
@@ -5514,6 +5547,7 @@ async function loadSatoshiBrief(forceRefresh) {
         if (typeEl) typeEl.textContent = 'Pre-Game Brief · Week Open';
         if (tsEl)   tsEl.textContent   = cached.timeStr;
         attachHoodToggle();
+        restoreOpenHood();
         const predictWebEl = document.getElementById('satoshiHoodWebPredict');
         if (predictWebEl && cached.webSVG) predictWebEl.innerHTML = cached.webSVG;
         // Reliability heatmap is lazy-loaded on first expand (see
@@ -5705,12 +5739,15 @@ Respond ONLY with valid JSON:
     if (typeEl) typeEl.textContent = 'Pre-Game Brief · Week Open';
     if (tsEl)   tsEl.textContent   = timeStr;
 
-    // Both "Signal weights" and "Signal reliability" stay collapsed by
-    // default (see the html template above) — the reliability heatmap's
-    // data is fetched lazily on first expand, in toggleSatoshiHood, not
-    // here. That keeps the brief itself lightweight and avoids a Supabase
-    // round trip for anyone who never opens that section.
+    // Both "Signal weights" and "Signal reliability" start collapsed by
+    // default (see the html template above) unless the user already had
+    // one open before this refresh ran — restoreOpenHood() re-expands it.
+    // The reliability heatmap's data is fetched lazily on first expand, in
+    // toggleSatoshiHood (or here via restoreOpenHood if it was already
+    // open), not unconditionally — that keeps the brief itself lightweight
+    // for anyone who never opens that section.
     attachHoodToggle();
+    restoreOpenHood();
     const predictWebEl = document.getElementById('satoshiHoodWebPredict');
     if (predictWebEl) predictWebEl.innerHTML = webSVG;
 
