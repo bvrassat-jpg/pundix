@@ -1783,7 +1783,7 @@ async function submitPrediction() {
 }
 
 // ── Signal Weight Engine ──────────────────────────────────────────────────────
-const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','F&G','Technical','Sentiment','Cycle','Funding','Real Vol','Options Skew'];
+const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','F&G','Technical','Sentiment','Cycle','Funding','Real Vol','Options Skew','ETF Flows','Stablecoins'];
 
 // One-line "what this measures" explainer per signal, shown in the
 // Predict-tab Signal Snapshot. Funding / Real Vol / Options Skew / Cycle
@@ -1801,7 +1801,9 @@ const SIGNAL_EXPLAINERS = {
   'Cycle':         '90-day risk-adjusted trend regime — slow macro backdrop, not a timing signal.',
   'Funding':       'Perpetual funding rate — high positive = crowded longs, mean-reversion risk.',
   'Real Vol':      '7-day realised volatility trend — compression often precedes a big move.',
-  'Options Skew':  'Deribit put/call skew — negative = bearish hedging, positive = call demand.'
+  'Options Skew':  'Deribit put/call skew — negative = bearish hedging, positive = call demand.',
+  'ETF Flows':     'US spot BTC ETF net flow, 5-day rolling — sustained inflows absorb supply.',
+  'Stablecoins':   'Total stablecoin supply, 7-day change — growing supply is fresh dry powder.'
 };
 const SIGNAL_BASE_WEIGHT = 1 / SIGNAL_NAMES.length;
 // A signal's weight only reaches full divergence from equal once it has this
@@ -4032,6 +4034,83 @@ async function fetchOptionsSkew() {
   }
 }
 
+const ONCHAIN_CACHE_KEY = 'pundix_onchain_cache';
+// Both underlying sources (Farside ETF flow table, DeFiLlama stablecoin
+// supply) update roughly once per day — matching MACRO_CACHE_TTL's 6h
+// window rather than the 1h/4h TTLs used for faster-moving signals like
+// Options Skew or Real Vol.
+const ONCHAIN_CACHE_TTL = 6 * 60 * 60 * 1000;
+
+// ETF Flows + Stablecoins — added to fill the gap left when the fabricated
+// On-chain signal was removed (v44): that signal was never real chain data,
+// just a formula off F&G's value. These two are genuine, independently
+// sourced reads: Farside's published US spot BTC ETF flow table (daily net
+// flow per fund, US$m) and DeFiLlama's aggregate stablecoin circulating
+// supply (all chains, all pegged-USD stablecoins). Both are fetched
+// server-side by the Worker's /onchain route (Farside has no CORS headers
+// and no public JSON API, so it's scraped there) and scored client-side
+// here, same division of labour as /macro and /deribit.
+async function fetchOnchainData() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(ONCHAIN_CACHE_KEY) || 'null');
+    if (cached && Date.now() - cached.ts < ONCHAIN_CACHE_TTL) return cached;
+  } catch(e) {}
+  try {
+    const resp = await fetch(WORKER + '/onchain', { method: 'GET' });
+    if (!resp.ok) throw new Error('Worker /onchain ' + resp.status);
+    const json = await resp.json();
+
+    // ETF Flows: 5-trading-day rolling net flow (US$m), summed from the
+    // most recent daily rows the Worker parsed out of Farside's table.
+    // Sustained inflows = institutional demand absorbing supply = bullish;
+    // sustained outflows = bearish. Thresholds are calibrated loosely
+    // against Farside's own 2026 summary stats (avg ~$82M/day, max single
+    // day ~$1.37B, min ~-$1.11B) scaled to a 5-day window.
+    const flows = (json.etf_flows || []).slice(-5).map(function(r){ return r.flow; });
+    const flow5d = flows.length ? parseFloat(flows.reduce(function(a,b){ return a+b; }, 0).toFixed(1)) : null;
+    let etfScore = 50, etfLabel = 'no data';
+    if (flow5d != null) {
+      if (flow5d > 800)       { etfScore = 80; etfLabel = 'strong inflows'; }
+      else if (flow5d > 300)  { etfScore = 68; etfLabel = 'inflows'; }
+      else if (flow5d > 50)   { etfScore = 58; etfLabel = 'mild inflows'; }
+      else if (flow5d > -50)  { etfScore = 50; etfLabel = 'flat'; }
+      else if (flow5d > -300) { etfScore = 42; etfLabel = 'mild outflows'; }
+      else if (flow5d > -800) { etfScore = 30; etfLabel = 'outflows'; }
+      else                     { etfScore = 18; etfLabel = 'strong outflows'; }
+    }
+
+    // Stablecoins: 7-day % change in total circulating USD supply across
+    // all DeFiLlama-tracked stablecoins. Rising supply = fresh capital
+    // parked on-chain ready to deploy = bullish; contracting supply =
+    // capital exiting crypto rails entirely = bearish. Weekly moves here
+    // are normally much smaller than ETF flow swings, hence tighter bands.
+    const points = json.stable_points || [];
+    const latest  = points.length ? points[points.length - 1] : null;
+    const weekAgo = points.length >= 8 ? points[points.length - 8] : (points.length ? points[0] : null);
+    let stableChg = null, stableScore = 50, stableLabel = 'no data';
+    if (latest && weekAgo && latest.total_usd && weekAgo.total_usd) {
+      stableChg = parseFloat(((latest.total_usd - weekAgo.total_usd) / weekAgo.total_usd * 100).toFixed(2));
+      if (stableChg > 3)         { stableScore = 78; stableLabel = 'strong supply growth'; }
+      else if (stableChg > 1)    { stableScore = 64; stableLabel = 'supply growing'; }
+      else if (stableChg > -0.3) { stableScore = 52; stableLabel = 'flat'; }
+      else if (stableChg > -1)   { stableScore = 40; stableLabel = 'supply contracting'; }
+      else if (stableChg > -3)   { stableScore = 28; stableLabel = 'contracting'; }
+      else                        { stableScore = 16; stableLabel = 'sharp contraction'; }
+    }
+
+    const result = {
+      etfFlow: { flow5d: flow5d, score: etfScore, label: etfLabel },
+      stablecoin: { chg7d: stableChg, score: stableScore, label: stableLabel, totalUsd: (latest && latest.total_usd) || null },
+      ts: Date.now()
+    };
+    try { localStorage.setItem(ONCHAIN_CACHE_KEY, JSON.stringify(result)); } catch(e) {}
+    return result;
+  } catch(e) {
+    console.warn('fetchOnchainData failed:', e.message);
+    return null;
+  }
+}
+
 
 function compute200DMA(closes) {
   if (!closes || closes.length < 1) return null;
@@ -5375,10 +5454,11 @@ async function buildCoreSignals(force) {
 
   const dma200      = dailyCloses ? compute200DMA(dailyCloses) : null;
   const cycleRegime = await fetchCycleRegime(dailyCloses);
-  const [fundingData, realVolData, optSkewData] = await Promise.all([
+  const [fundingData, realVolData, optSkewData, onchainData] = await Promise.all([
     fetchFundingRate(),
     fetchRealisedVol(dailyCloses),
-    fetchOptionsSkew()
+    fetchOptionsSkew(),
+    fetchOnchainData()
   ]);
   const dma200Dev  = (dma200 && liveBTC) ? parseFloat(((liveBTC - dma200) / dma200 * 100).toFixed(1)) : null;
   const fngRaw     = fngCache ? fngCache[0] : null;
@@ -5508,10 +5588,28 @@ async function buildCoreSignals(force) {
       weight: 'high',
       live: !!optSkewData,
       missing: !optSkewData
+    },
+    {
+      name: 'ETF Flows',
+      score: (onchainData && onchainData.etfFlow) ? onchainData.etfFlow.score : 50,
+      label: (onchainData && onchainData.etfFlow && onchainData.etfFlow.flow5d != null) ? (onchainData.etfFlow.flow5d >= 0 ? '+' : '') + onchainData.etfFlow.flow5d + 'M' : '—',
+      note:  (onchainData && onchainData.etfFlow) ? onchainData.etfFlow.label + ' · 5d' : 'BTC spot ETF net flow',
+      weight: 'high',
+      live: !!(onchainData && onchainData.etfFlow && onchainData.etfFlow.flow5d != null),
+      missing: !(onchainData && onchainData.etfFlow && onchainData.etfFlow.flow5d != null)
+    },
+    {
+      name: 'Stablecoins',
+      score: (onchainData && onchainData.stablecoin) ? onchainData.stablecoin.score : 50,
+      label: (onchainData && onchainData.stablecoin && onchainData.stablecoin.chg7d != null) ? (onchainData.stablecoin.chg7d >= 0 ? '+' : '') + onchainData.stablecoin.chg7d + '%' : '—',
+      note:  (onchainData && onchainData.stablecoin) ? onchainData.stablecoin.label + ' · 7d supply' : 'total stablecoin supply',
+      weight: 'med',
+      live: !!(onchainData && onchainData.stablecoin && onchainData.stablecoin.chg7d != null),
+      missing: !(onchainData && onchainData.stablecoin && onchainData.stablecoin.chg7d != null)
     }
   ];
 
-  const result = { signals: signals, macro: macro, dma200: dma200, dma200Dev: dma200Dev, cycleRegime: cycleRegime, fundingData: fundingData, realVolData: realVolData, optSkewData: optSkewData, fng: fng, ta: ta };
+  const result = { signals: signals, macro: macro, dma200: dma200, dma200Dev: dma200Dev, cycleRegime: cycleRegime, fundingData: fundingData, realVolData: realVolData, optSkewData: optSkewData, onchainData: onchainData, fng: fng, ta: ta };
   coreSignalsCache = result;
   coreSignalsCacheTs = Date.now();
   return result;
@@ -5602,6 +5700,7 @@ async function loadSatoshiBrief(forceRefresh) {
     const fundingData  = core.fundingData;
     const realVolData  = core.realVolData;
     const optSkewData  = core.optSkewData;
+    const onchainData  = core.onchainData;
 
     // Build Claude prompt
     const today   = new Date().toISOString().slice(0,10);
@@ -5638,6 +5737,8 @@ ${cycleRegime ? 'Cycle regime: ' + cycleRegime.label + ' (Zone ' + cycleRegime.z
 ${fundingData ? 'Funding rate: ' + (fundingData.rate >= 0 ? '+' : '') + fundingData.rate + '% (8h perpetual rate). ' + fundingData.side + '. High positive funding = crowded longs = mean reversion risk. Negative = shorts squeezed = contrarian bullish signal.' : ''}
 ${realVolData ? 'Realised vol (7d annualised): ' + realVolData.vol7d + '% vs 30d avg ' + realVolData.vol30d + '%. Trend: ' + realVolData.trend + '. Vol compressing below average often precedes a directional move. Vol spiking indicates fear/uncertainty.' : ''}
 ${optSkewData ? 'Options skew (Deribit 25-delta): ' + (optSkewData.skew >= 0 ? '+' : '') + optSkewData.skew + '% — ' + optSkewData.label + '. Negative skew = market paying premium for put protection = bearish positioning. Positive = call demand = upside bias.' : ''}
+${onchainData?.etfFlow?.flow5d != null ? 'US spot BTC ETF net flow (5-day rolling): ' + (onchainData.etfFlow.flow5d >= 0 ? '+' : '') + onchainData.etfFlow.flow5d + 'M USD — ' + onchainData.etfFlow.label + '. Sustained inflows mean institutional demand is absorbing supply; sustained outflows mean it is being sold back into the market.' : ''}
+${onchainData?.stablecoin?.chg7d != null ? 'Stablecoin supply (7-day change, all chains): ' + (onchainData.stablecoin.chg7d >= 0 ? '+' : '') + onchainData.stablecoin.chg7d + '% — ' + onchainData.stablecoin.label + '. Growing supply is fresh capital parked on-chain, ready to deploy into risk assets; contracting supply means capital is leaving crypto rails.' : ''}
 ${memoryBlock}
 
 YOUR VOICE: You are a cypherpunk analyst. Direct. No hedging. No "could" or "might". You call it as you read it and own the call. When you have been wrong before, you say so plainly and adjust. When a signal has been consistently misleading, you call it out by name. When the crowd is leaning the wrong way based on history, you flag it. You are not here to make players feel good — you are here to sharpen their thinking.
@@ -5748,7 +5849,7 @@ Respond ONLY with valid JSON:
       </div>
 
       <div style="padding:5px 18px 8px;font-family:var(--mono);font-size:8px;color:var(--text-dim);letter-spacing:.5px;">
-        🟢 LIVE: DXY · Nasdaq · 200DMA · F&amp;G · TA · Funding · Real Vol · Options Skew&nbsp;&nbsp;·&nbsp;&nbsp;🟡 MODELED: Cycle · Sentiment
+        🟢 LIVE: DXY · Nasdaq · 200DMA · F&amp;G · TA · Funding · Real Vol · Options Skew · ETF Flows · Stablecoins&nbsp;&nbsp;·&nbsp;&nbsp;🟡 MODELED: Cycle · Sentiment
       </div>`;
 
     try {
@@ -5859,7 +5960,7 @@ function renderSignalSnapshotHTML(signals) {
   }).join('');
 
   return '<div class="signal-snap-list">' + rows + '</div>' +
-    '<div class="signal-snap-footer">Same 11 signals feeding Satoshi\'s weighted call this week. Tap Fear &amp; Greed or Technical for the full breakdown. Adaptive weights and Satoshi\'s composite verdict stay hidden until after you submit — this shows raw readings only.</div>';
+    '<div class="signal-snap-footer">Same ' + SIGNAL_NAMES.length + ' signals feeding Satoshi\'s weighted call this week. Tap Fear &amp; Greed or Technical for the full breakdown. Adaptive weights and Satoshi\'s composite verdict stay hidden until after you submit — this shows raw readings only.</div>';
 }
 // ────────────────────────────────────────────────────────────────────
 
