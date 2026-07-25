@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v45</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v46</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         <span style="flex:1;height:1px;background:var(--border);display:block;"></span>
       </div>
 
-      <!-- Signal snapshot — the same 11 signals that feed Satoshi's
+      <!-- Signal snapshot — the same 12 signals that feed Satoshi's
            weighted call, shown here with real readings before you commit,
            so you're working from the same raw material he is. The
            adaptive weights and the composite verdict stay hidden until
@@ -339,7 +339,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
             <span class="predict-toggle-arrow" id="arrowSignals">▶</span>
             <span class="predict-toggle-label">Signal snapshot</span>
           </div>
-          <span class="predict-toggle-meta">11 signals</span>
+          <span class="predict-toggle-meta" id="signalsToggleCount">— signals</span>
         </div>
         <div class="predict-toggle-body" id="bodyToggleSignals" style="display:none;">
           <div id="signalsToggleContent">
@@ -649,19 +649,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="predict-form-sub" style="margin-bottom:16px;">Smaller error = higher score. Rankings are based on percentage distance from the Sunday BTC settlement.</div>
       <div class="score-examples">
         <div class="score-example">
-          <div class="score-example-label">Error &lt; 0.5% · Very close</div>
-          <div class="score-example-value high">95–100 pts</div>
+          <div class="score-example-label">Error &lt; 2% · Very close</div>
+          <div class="score-example-value high">94–100 pts</div>
         </div>
         <div class="score-example">
-          <div class="score-example-label">Error 0.5–2% · Good call</div>
-          <div class="score-example-value mid">70–94 pts</div>
+          <div class="score-example-label">Error 2–5% · Good call</div>
+          <div class="score-example-value mid">73–94 pts</div>
         </div>
         <div class="score-example">
-          <div class="score-example-label">Error 2–5% · Reasonable</div>
-          <div class="score-example-value" style="color:var(--orange)">40–69 pts</div>
+          <div class="score-example-label">Error 5–10% · Reasonable</div>
+          <div class="score-example-value" style="color:var(--orange)">40–73 pts</div>
         </div>
         <div class="score-example">
-          <div class="score-example-label">Error &gt; 5% · Wide miss</div>
+          <div class="score-example-label">Error &gt; 10% · Wide miss</div>
           <div class="score-example-value low">&lt; 40 pts</div>
         </div>
       </div>
@@ -959,9 +959,31 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 
       <div class="admin-card" id="adminCalibrationCard">
         <div class="admin-card-title">Satoshi Calibration</div>
-        <div class="admin-card-sub">Stated confidence vs. actual accuracy, week by week. "Hit" = error ≤2% (your own "Good call" bar).</div>
+        <div class="admin-card-sub">Stated confidence vs. actual accuracy, week by week. "Hit" = error ≤2% (your own "Very close" bar).</div>
         <div id="adminCalibrationList" style="margin-top:10px;"></div>
         <div id="adminCalibrationSummary" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"></div>
+      </div>
+
+      <div class="admin-card" id="adminRegimeCard">
+        <div class="admin-card-title">Regime Performance</div>
+        <div class="admin-card-sub">Satoshi's average error, split by how volatile that week's actual BTC move was. Calm &lt;3% · Normal 3–6% · Volatile &gt;6% weekly move — bands chosen against the app's own "typical 2-8%" framing, not data-derived terciles, so they stay stable as more weeks resolve.</div>
+        <div id="adminRegimeList" style="margin-top:10px;"></div>
+        <div id="adminRegimeSummary" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"></div>
+      </div>
+
+      <div class="admin-card" id="adminBiasCard">
+        <div class="admin-card-title">Direction &amp; Bias</div>
+        <div class="admin-card-sub">Does Satoshi call the right direction, and does the miss lean the same way every time? Bias % &gt; 0 = calls too high; &lt; 0 = calls too low.</div>
+        <div id="adminBiasList" style="margin-top:10px;"></div>
+        <div id="adminBiasSummary" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"></div>
+      </div>
+
+      <div class="admin-card" id="adminCorrelationCard">
+        <div class="admin-card-title">Signal Cross-Correlation</div>
+        <div class="admin-card-sub">Pairwise correlation across all signal readings on record. High |r| flags possible duplicate votes — this is exactly the pattern that caught On-chain and Social Lag secretly mirroring F&amp;G.</div>
+        <div id="adminCorrelationBadge" style="font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1px;margin-top:10px;padding:8px 10px;border-radius:4px;"></div>
+        <div id="adminCorrelationList" style="margin-top:10px;"></div>
+        <div id="adminCorrelationSummary" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"></div>
       </div>
 
       <div class="admin-card" id="adminNextWeekCard" style="display:none">
@@ -1093,7 +1115,7 @@ const CLAUDE_MODEL    = 'claude-sonnet-4-6';
 // versioned external service, so there's no reason to track it as one —
 // one number now drives both, and it can't drift again because there's
 // only one string to change.
-const PUNDIX_VERSION = 'v45';
+const PUNDIX_VERSION = 'v46';
 const SATOSHI_NODE_VERSION = 'node://satoshi · ' + PUNDIX_VERSION;
 
 const SFX = (() => {
@@ -1784,6 +1806,14 @@ async function submitPrediction() {
 
 // ── Signal Weight Engine ──────────────────────────────────────────────────────
 const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','F&G','Technical','Sentiment','Cycle','Funding','Real Vol','Options Skew','ETF Flows','Stablecoins'];
+(function() {
+  // Drives the "N signals" badge on the Predict-tab toggle header from the
+  // single source of truth instead of a hardcoded string — this is what
+  // silently went stale (kept saying "11 signals" after ETF Flows +
+  // Stablecoins brought the real count to 12).
+  const el = document.getElementById('signalsToggleCount');
+  if (el) el.textContent = SIGNAL_NAMES.length + ' signals';
+})();
 
 // One-line "what this measures" explainer per signal, shown in the
 // Predict-tab Signal Snapshot. Funding / Real Vol / Options Skew / Cycle
@@ -1824,8 +1854,20 @@ async function loadSignalWeights() {
       sbGet('week_outcomes?select=week_start,direction&order=week_start.asc')
     ]);
     if (!snapshots || !outcomes || outcomes.length < 2) return; // not enough data yet
-    const N = Math.min(outcomes.length, 8);
-    const recentOutcomes = outcomes.slice(-N);
+    // FIX: the still-open current week's week_outcomes row exists (created
+    // by startNextWeek()) with btc_open===btc_close and direction apparently
+    // defaulting to a non-null value at the DB level (confirmed live: it
+    // reads as 'up' with +0% move) rather than being genuinely null. Left
+    // unfiltered, this row was getting treated as a real resolved outcome —
+    // every signal scoring >=50 that week got a free undeserved "hit" and
+    // every signal <50 an undeserved "miss", continuously, directly biasing
+    // the weights this function computes. Same fix pattern as
+    // buildSatoshiMemory() and the admin Regime/Bias cards.
+    const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
+    const resolvedOutcomes = outcomes.filter(o => o.week_start !== currentWeekMonday);
+    if (resolvedOutcomes.length < 2) return; // not enough real resolved data yet
+    const N = Math.min(resolvedOutcomes.length, 8);
+    const recentOutcomes = resolvedOutcomes.slice(-N);
     const weights = {};
     SIGNAL_NAMES.forEach(name => {
       const pairs = recentOutcomes.map(o => {
@@ -1917,19 +1959,35 @@ function getWeekStartDate(weekNum) {
 async function buildSatoshiMemory() {
   try {
     const [outcomes, snapshots, winners, allPreds] = await Promise.all([
-      sbGet('week_outcomes?select=week_start,direction,btc_open,btc_close,pct_change&order=week_start.desc&limit=8'),
-      sbGet('signal_snapshots?select=week_start,signal_name,score&order=week_start.desc&limit=64'),
+      sbGet('week_outcomes?select=week_start,direction,btc_open,btc_close,pct_change,satoshi_price,satoshi_confidence&order=week_start.desc&limit=8'),
+      sbGet('signal_snapshots?select=week_start,signal_name,score,missing&order=week_start.desc&limit=300'),
       sbGet('weekly_winners?select=week,name,prediction,actual,error_pct,score&order=week.desc&limit=8'),
       sbGet('predictions?select=week,name,price,score,direction&order=week.desc&limit=200')
     ]);
 
     if (!outcomes || outcomes.length === 0) return '';
 
+    // FIX: the still-open current week has a week_outcomes row (created by
+    // startNextWeek()) with direction/pct_change left null until
+    // resolveWeek() actually runs — but satoshi_price/satoshi_confidence
+    // CAN already be set on it (maybeLogSatoshiCall logs Satoshi's price
+    // call the moment the pre-game brief is first generated, well before
+    // settlement). Left unfiltered, this row previously crashed section 1
+    // outright (`o.direction.toUpperCase()` on null — caught by the outer
+    // try/catch, silently zeroing out this ENTIRE memory block on every
+    // brief generated while a week is open, which is most of the time) and
+    // would have fed a bogus Satoshi-vs-placeholder-price "error" into the
+    // new self-awareness section below. Filtering it out once, here, fixes
+    // every downstream section in one place instead of needing an ad-hoc
+    // guard in each.
+    const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
+    const outcomesResolved = outcomes.filter(o => o.week_start !== currentWeekMonday);
+
     const lines = [];
 
     // ── 1. Recent week outcomes with signal accuracy audit ──
     lines.push('RESOLVED WEEKS (most recent first):');
-    outcomes.forEach(o => {
+    outcomesResolved.forEach(o => {
       const wSnaps = (snapshots || []).filter(s => s.week_start === o.week_start);
       const signalAudit = wSnaps.map(s => {
         const predicted = s.score >= 50 ? 'up' : 'down';
@@ -1941,10 +1999,10 @@ async function buildSatoshiMemory() {
     });
 
     // ── 2. Signal hit-rate summary ──
-    if (snapshots && snapshots.length > 0 && outcomes.length >= 2) {
-      lines.push('\nSIGNAL ACCURACY (last ' + outcomes.length + ' resolved weeks):');
+    if (snapshots && snapshots.length > 0 && outcomesResolved.length >= 2) {
+      lines.push('\nSIGNAL ACCURACY (last ' + outcomesResolved.length + ' resolved weeks):');
       SIGNAL_NAMES.forEach(name => {
-        const pairs = outcomes.map(o => {
+        const pairs = outcomesResolved.map(o => {
           const snap = snapshots.find(s => s.week_start === o.week_start && s.signal_name === name);
           if (!snap) return null;
           return (snap.score >= 50 ? 'up' : 'down') === o.direction ? 1 : 0;
@@ -1958,9 +2016,9 @@ async function buildSatoshiMemory() {
     }
 
     // ── 3. Crowd prediction pattern vs outcome ──
-    if (allPreds && allPreds.length > 0 && outcomes.length > 0 && winners && winners.length > 0) {
-      lines.push('\nCROWD vs REALITY (last ' + Math.min(outcomes.length, 4) + ' weeks):');
-      outcomes.slice(0, 4).forEach(o => {
+    if (allPreds && allPreds.length > 0 && outcomesResolved.length > 0 && winners && winners.length > 0) {
+      lines.push('\nCROWD vs REALITY (last ' + Math.min(outcomesResolved.length, 4) + ' weeks):');
+      outcomesResolved.slice(0, 4).forEach(o => {
         // Match outcome to winner row by btc_close proximity (within 0.1%) to avoid float equality
         const matchedWinner = winners.find(w => Math.abs(w.actual - o.btc_close) / o.btc_close < 0.001);
         if (!matchedWinner) return;
@@ -1981,15 +2039,126 @@ async function buildSatoshiMemory() {
     }
 
     // ── 5. Streak / pattern detection ──
-    if (outcomes.length >= 3) {
-      const dirs = outcomes.slice(0,4).map(o => o.direction);
+    if (outcomesResolved.length >= 3) {
+      const dirs = outcomesResolved.slice(0,4).map(o => o.direction);
       const streak = dirs.filter(d => d === dirs[0]).length;
       if (streak >= 3) {
         lines.push(`\nPATTERN: BTC has gone ${dirs[0].toUpperCase()} for ${streak} consecutive weeks. Historically this increases mean-reversion probability.`);
       }
-      const moves = outcomes.slice(0,4).map(o => Math.abs(o.pct_change));
+      const moves = outcomesResolved.slice(0,4).map(o => Math.abs(o.pct_change));
       const avgMove = (moves.reduce((a,b)=>a+b,0)/moves.length).toFixed(1);
       lines.push(`\nRECENT VOLATILITY: average weekly move last ${moves.length} weeks = ${avgMove}%. Current week context.`);
+    }
+
+    // ── 6. Self-awareness: bias/streak, regime performance, calibration,
+    // signal correlation ── This is the same math behind the admin panel's
+    // Regime Performance / Direction & Bias / Signal Correlation cards,
+    // computed fresh here so Satoshi can actually see and correct for its
+    // own recurring patterns instead of those patterns only being visible
+    // to a human reading the admin panel afterward. Kept short deliberately
+    // — this is meant to be acted on, not narrated at length.
+    const withSatoshi = outcomesResolved.filter(o => o.satoshi_price != null);
+    if (withSatoshi.length >= 3) {
+      const selfLines = [];
+
+      // Directional bias + live streak (most recent first in `outcomesResolved`,
+      // so index 0 is the most recent resolved week)
+      const biased = withSatoshi.map(o => ({
+        week_start: o.week_start,
+        biasPct: (o.satoshi_price - o.btc_close) / o.btc_close * 100, // + = called too high, - = too low
+      }));
+      const meanBias = biased.reduce((a,b) => a + b.biasPct, 0) / biased.length;
+      let streak = 0, streakSign = null;
+      for (const b of biased) { // already most-recent-first
+        const sign = b.biasPct > 0.1 ? 1 : (b.biasPct < -0.1 ? -1 : 0);
+        if (sign === 0) break;
+        if (streakSign === null) { streakSign = sign; streak = 1; }
+        else if (sign === streakSign) streak++;
+        else break;
+      }
+      let biasLine = `Directional bias, last ${biased.length} resolved weeks: mean ${meanBias >= 0 ? '+' : ''}${meanBias.toFixed(2)}% (${meanBias < -0.3 ? 'you tend to call LOW' : meanBias > 0.3 ? 'you tend to call HIGH' : 'roughly centered'}).`;
+      if (streak >= 3) {
+        biasLine += ` Live streak: ${streak} weeks calling too ${streakSign > 0 ? 'HIGH' : 'LOW'} in a row — before locking in this week's number, actively check whether the same lean is creeping in again.`;
+      }
+      selfLines.push(biasLine);
+
+      // Regime performance — fixed bands, same as admin card, so the
+      // meaning doesn't drift as more weeks resolve
+      const bands = [
+        { label: 'Calm (<3%)',     test: m => m < 3 },
+        { label: 'Normal (3-6%)',  test: m => m >= 3 && m < 6 },
+        { label: 'Volatile (>6%)', test: m => m >= 6 },
+      ];
+      const withMove = withSatoshi.map(o => ({
+        moveAbs: Math.abs(o.pct_change),
+        errPct: Math.abs(o.satoshi_price - o.btc_close) / o.btc_close * 100,
+      }));
+      const regimeParts = bands.map(b => {
+        const inBand = withMove.filter(w => b.test(w.moveAbs));
+        if (inBand.length === 0) return null;
+        const avgErr = inBand.reduce((a,w) => a + w.errPct, 0) / inBand.length;
+        return { label: b.label, avgErr, n: inBand.length };
+      }).filter(Boolean);
+      if (regimeParts.length > 0) {
+        const partsStr = regimeParts.map(p => `${p.label} ${p.avgErr.toFixed(1)}% avg error (n=${p.n})`).join(', ');
+        let regimeLine = `Regime performance: ${partsStr}.`;
+        const calmP = regimeParts.find(p => p.label.startsWith('Calm'));
+        const volP  = regimeParts.find(p => p.label.startsWith('Volatile'));
+        if (calmP && volP && calmP.n >= 2 && volP.n >= 2) {
+          const worse = volP.avgErr > calmP.avgErr * 1.3;
+          const better = volP.avgErr < calmP.avgErr * 0.8;
+          if (worse) regimeLine += ` Your error runs meaningfully higher in volatile weeks than calm ones — in a week that's already reading volatile, that argues for wider humility, not more confidence.`;
+          else if (better) regimeLine += ` Your error actually runs lower in volatile weeks than calm ones — don't assume volatility alone should lower your stated confidence.`;
+        }
+        selfLines.push(regimeLine);
+      }
+
+      // Calibration gap — stated confidence vs actual "very close" hit rate
+      const withConf = withSatoshi.filter(o => o.satoshi_confidence != null);
+      if (withConf.length >= 3) {
+        const avgConf = withConf.reduce((a,o) => a + o.satoshi_confidence, 0) / withConf.length;
+        const hitRate = withConf.filter(o => Math.abs(o.satoshi_price - o.btc_close) / o.btc_close * 100 <= 2).length / withConf.length * 100;
+        let calLine = `Calibration: average stated confidence ${avgConf.toFixed(0)}% vs actual hit rate (error ≤2%) ${hitRate.toFixed(0)}%.`;
+        if (avgConf - hitRate > 15) {
+          calLine += ' You have been running overconfident — do not state confidence above the low 60s unless this week\'s signals genuinely agree with each other, not just individually look extreme.';
+        } else if (hitRate - avgConf > 15) {
+          calLine += ' You have been underselling accurate calls — it is fine to state higher confidence when the signal weights actually line up.';
+        }
+        selfLines.push(calLine);
+      }
+
+      // Signal correlation — surface only the single worst flagged pair
+      // (if any) to keep this section short; full matrix lives in the
+      // admin panel for human review.
+      try {
+        const byWeek = {};
+        (snapshots || []).forEach(s => {
+          if (s.missing) return;
+          if (!byWeek[s.week_start]) byWeek[s.week_start] = {};
+          byWeek[s.week_start][s.signal_name] = s.score;
+        });
+        const weeksForCorr = Object.keys(byWeek);
+        let worst = null;
+        for (let i = 0; i < SIGNAL_NAMES.length; i++) {
+          for (let j = i + 1; j < SIGNAL_NAMES.length; j++) {
+            const a = SIGNAL_NAMES[i], b = SIGNAL_NAMES[j];
+            const xs = [], ys = [];
+            weeksForCorr.forEach(w => { if (byWeek[w][a] != null && byWeek[w][b] != null) { xs.push(byWeek[w][a]); ys.push(byWeek[w][b]); } });
+            if (xs.length < 4) continue;
+            const r = pearsonR(xs, ys);
+            if (r == null) continue;
+            if (!worst || Math.abs(r) > Math.abs(worst.r)) worst = { a, b, r, n: xs.length };
+          }
+        }
+        if (worst && Math.abs(worst.r) >= 0.6) {
+          selfLines.push(`Signal correlation flag: ${worst.a} and ${worst.b} are running r=${worst.r.toFixed(2)} correlated over the last ${worst.n} weeks — treat them as one vote, not two, when reasoning about how much conviction the signal set actually has, even though the adaptive-weight system still scores them separately.`);
+        }
+      } catch (e) { /* correlation is a bonus, never block the brief on it */ }
+
+      if (selfLines.length > 0) {
+        lines.push('\nSELF-AWARENESS — your own recurring patterns (act on these, do not just repeat them back):');
+        selfLines.forEach(l => lines.push('  ' + l));
+      }
     }
 
     return lines.join('\n');
@@ -3440,11 +3609,11 @@ const WORKER = 'https://polished-frog-9374.bvrassat.workers.dev';
 let sentimentCache = null; // { score, label, note, social_mood, news_flow, _ts } | null
 let sentimentPromise = null; // in-flight promise, shared across concurrent callers so nobody gets a premature null
 
-// ── Sentiment signal (one of the 11 core SIGNAL_NAMES) — reworked v45 ───────
+// ── Sentiment signal (one of the 12 core SIGNAL_NAMES) — reworked v45 ───────
 // Previously this ran a 6-source "heatmap" scan (Fear & Greed, Technical,
 // Derivatives, On-chain, Social Mood, News Flow) and averaged all six into
 // the "Sentiment" node — which meant F&G and Technical, already their own
-// standalone signals elsewhere in the 11, got a second silent vote here,
+// standalone signals elsewhere in the 12, got a second silent vote here,
 // and a dead "On-chain" line (removed as a standalone signal in v44 for the
 // same double-counting reason) was still being fabricated every run.
 //
@@ -4512,7 +4681,7 @@ async function loadSatoshiCalibration() {
       return;
     }
 
-    const HIT_THRESHOLD_PCT = 2; // matches existing "Good call" scoring bar
+    const HIT_THRESHOLD_PCT = 2; // matches existing "Very close" scoring bar
 
     const scored = usable.map(function(r) {
       const errPct = Math.abs(r.satoshi_price - r.btc_close) / r.btc_close * 100;
@@ -4543,6 +4712,265 @@ async function loadSatoshiCalibration() {
   } catch (e) {
     console.error('loadSatoshiCalibration:', e);
     listEl.innerHTML = '<div class="admin-empty">Calibration check failed to load — see console.</div>';
+    sumEl.textContent = '';
+  }
+}
+
+// ─── REGIME PERFORMANCE (admin-only, read-only) ─────────────────────────────
+// Buckets resolved weeks by how volatile that week's ACTUAL move turned out
+// to be (|pct_change|, already stored in week_outcomes — no new data needed),
+// then shows Satoshi's average error inside each bucket. Bands are fixed
+// (not data-derived terciles) so a bucket's meaning doesn't shift as more
+// weeks resolve — anchored to the "typical BTC weekly move is 2-8%" framing
+// already used in Satoshi's own prompt.
+const REGIME_BANDS = [
+  { key: 'calm',     label: 'Calm (<3%)',      test: function(m) { return m < 3; } },
+  { key: 'normal',   label: 'Normal (3–6%)',   test: function(m) { return m >= 3 && m < 6; } },
+  { key: 'volatile', label: 'Volatile (>6%)',  test: function(m) { return m >= 6; } },
+];
+
+async function loadRegimePerformance() {
+  const listEl = document.getElementById('adminRegimeList');
+  const sumEl  = document.getElementById('adminRegimeSummary');
+  if (!listEl || !sumEl) return;
+
+  try {
+    const rows = await sbGet(
+      'week_outcomes?select=week_start,pct_change,satoshi_price,btc_close' +
+      '&order=week_start.desc'
+    );
+
+    const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
+    const usable = (rows || []).filter(function(r) {
+      return r.satoshi_price != null && r.btc_close != null && r.pct_change != null
+        && r.week_start !== currentWeekMonday;
+    });
+
+    if (usable.length === 0) {
+      listEl.innerHTML = '<div class="admin-empty">No resolved weeks with Satoshi calls logged yet.</div>';
+      sumEl.textContent = '';
+      return;
+    }
+
+    const withErr = usable.map(function(r) {
+      const errPct = Math.abs(r.satoshi_price - r.btc_close) / r.btc_close * 100;
+      const moveAbs = Math.abs(r.pct_change);
+      return { week_start: r.week_start, errPct: errPct, moveAbs: moveAbs };
+    });
+
+    listEl.innerHTML = REGIME_BANDS.map(function(band) {
+      const inBand = withErr.filter(function(w) { return band.test(w.moveAbs); });
+      const n = inBand.length;
+      const avgErr = n ? inBand.reduce(function(a, w) { return a + w.errPct; }, 0) / n : null;
+      const errStr = avgErr != null ? avgErr.toFixed(2) + '% avg error' : '—';
+      const nColor = n === 0 ? 'var(--text-dim)' : (n < 3 ? 'var(--orange)' : 'var(--text)');
+      return '<div class="admin-status-row">' +
+        '<span class="admin-label">' + band.label + '</span>' +
+        '<span class="admin-value" style="color:' + nColor + ';">' + errStr + ' (n=' + n + ')</span>' +
+      '</div>';
+    }).join('');
+
+    const thinBands = REGIME_BANDS.filter(function(band) {
+      return withErr.filter(function(w) { return band.test(w.moveAbs); }).length < 3;
+    });
+    let note = withErr.length + ' resolved week' + (withErr.length === 1 ? '' : 's') + ' total.';
+    if (thinBands.length > 0) {
+      note += ' ' + thinBands.map(function(b) { return b.label; }).join(', ') +
+        ' still under n=3 — treat those averages as anecdotal, not a verdict.';
+    }
+    sumEl.textContent = note;
+
+  } catch (e) {
+    console.error('loadRegimePerformance:', e);
+    listEl.innerHTML = '<div class="admin-empty">Regime check failed to load — see console.</div>';
+    sumEl.textContent = '';
+  }
+}
+
+// ─── DIRECTION & BIAS (admin-only, read-only) ───────────────────────────────
+// Two questions, both directly from the "is Satoshi systematically calling
+// below settlement" investigation: (1) signed bias — does the miss lean the
+// same direction every time, and (2) direction hit rate — does Satoshi's
+// implied up/down call (satoshi_price vs. week-open) match which way BTC
+// actually moved. Satoshi's implied direction is computed the same way
+// week_outcomes.direction itself is computed (close >= open ? up : down),
+// so the two are directly comparable.
+async function loadDirectionBias() {
+  const listEl = document.getElementById('adminBiasList');
+  const sumEl  = document.getElementById('adminBiasSummary');
+  if (!listEl || !sumEl) return;
+
+  try {
+    const rows = await sbGet(
+      'week_outcomes?select=week_start,btc_open,btc_close,direction,satoshi_price' +
+      '&order=week_start.asc'
+    );
+
+    const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
+    const usable = (rows || []).filter(function(r) {
+      return r.satoshi_price != null && r.btc_open != null && r.btc_close != null && r.direction != null
+        && r.week_start !== currentWeekMonday;
+    });
+
+    if (usable.length === 0) {
+      listEl.innerHTML = '<div class="admin-empty">No resolved weeks with Satoshi calls logged yet.</div>';
+      sumEl.textContent = '';
+      return;
+    }
+
+    const scored = usable.map(function(r) {
+      const biasPct = (r.satoshi_price - r.btc_close) / r.btc_close * 100; // + = called too high, - = too low
+      const satDir  = r.satoshi_price >= r.btc_open ? 'up' : 'down';
+      const dirHit  = satDir === r.direction;
+      return { week_start: r.week_start, biasPct: biasPct, satDir: satDir, actualDir: r.direction, dirHit: dirHit };
+    });
+
+    listEl.innerHTML = scored.map(function(s) {
+      const biasStr   = (s.biasPct >= 0 ? '+' : '') + s.biasPct.toFixed(2) + '%';
+      const biasColor = Math.abs(s.biasPct) < 0.5 ? 'var(--text-dim)' : (s.biasPct < 0 ? 'var(--red)' : 'var(--orange)');
+      const dirStr    = s.dirHit ? '✓ ' + s.satDir : '✗ said ' + s.satDir + ', was ' + s.actualDir;
+      const dirColor  = s.dirHit ? 'var(--green)' : 'var(--red)';
+      return '<div class="admin-status-row">' +
+        '<span class="admin-label">' + s.week_start + '</span>' +
+        '<span class="admin-value" style="color:' + biasColor + ';">' + biasStr +
+          '<span style="color:' + dirColor + ';margin-left:8px;">' + dirStr + '</span></span>' +
+      '</div>';
+    }).join('');
+
+    const meanBias = scored.reduce(function(a, s) { return a + s.biasPct; }, 0) / scored.length;
+    const dirHitRate = scored.filter(function(s) { return s.dirHit; }).length / scored.length * 100;
+
+    // Longest current streak of same-sign bias, ending at the most recent
+    // resolved week — a run of "always too low" (or always too high) is
+    // exactly the persistence pattern being checked for. Streaks of exactly
+    // zero bias don't extend a streak either direction.
+    let streak = 0, streakSign = null;
+    for (let i = scored.length - 1; i >= 0; i--) {
+      const sign = scored[i].biasPct > 0.1 ? 1 : (scored[i].biasPct < -0.1 ? -1 : 0);
+      if (sign === 0) break;
+      if (streakSign === null) { streakSign = sign; streak = 1; }
+      else if (sign === streakSign) { streak++; }
+      else break;
+    }
+
+    let note = scored.length + ' resolved week' + (scored.length === 1 ? '' : 's') + '. ' +
+      'Mean bias: ' + (meanBias >= 0 ? '+' : '') + meanBias.toFixed(2) + '% (' +
+      (meanBias < -0.1 ? 'calls low on average' : meanBias > 0.1 ? 'calls high on average' : 'roughly centered') + '). ' +
+      'Direction hit rate: ' + dirHitRate.toFixed(0) + '%.';
+    if (streak >= 3) {
+      note += ' Current streak: ' + streak + ' weeks calling ' + (streakSign > 0 ? 'too HIGH' : 'too LOW') + ' in a row.';
+    }
+    if (scored.length < 10) {
+      note += ' Sample still small — treat trends as a lead to watch, not a conclusion.';
+    }
+    sumEl.textContent = note;
+
+  } catch (e) {
+    console.error('loadDirectionBias:', e);
+    listEl.innerHTML = '<div class="admin-empty">Direction/bias check failed to load — see console.</div>';
+    sumEl.textContent = '';
+  }
+}
+
+// ─── SIGNAL CROSS-CORRELATION (admin-only, read-only) ───────────────────────
+// Pairwise Pearson correlation across every signal in SIGNAL_NAMES, computed
+// over whatever resolved-and-snapshotted weeks exist for BOTH signals in a
+// pair (missing:true snapshots excluded — a signal that failed to load that
+// week isn't a real reading to correlate against). This is the same pattern
+// that caught On-chain and Social Lag mirroring F&G (both were r=1.0 against
+// it) — formalized here as a standing check instead of a one-off audit.
+function pearsonR(xs, ys) {
+  const n = xs.length;
+  if (n < 2) return null;
+  const mx = xs.reduce(function(a,b){return a+b;}, 0) / n;
+  const my = ys.reduce(function(a,b){return a+b;}, 0) / n;
+  let num = 0, dx2 = 0, dy2 = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - mx, dy = ys[i] - my;
+    num += dx * dy; dx2 += dx * dx; dy2 += dy * dy;
+  }
+  if (dx2 === 0 || dy2 === 0) return null; // constant series — correlation undefined, not zero
+  return num / Math.sqrt(dx2 * dy2);
+}
+
+async function loadSignalCorrelation() {
+  const badgeEl = document.getElementById('adminCorrelationBadge');
+  const listEl  = document.getElementById('adminCorrelationList');
+  const sumEl   = document.getElementById('adminCorrelationSummary');
+  if (!badgeEl || !listEl || !sumEl) return;
+
+  try {
+    const snaps = await sbGet(
+      'signal_snapshots?select=week_start,signal_name,score,missing&order=week_start.asc'
+    );
+
+    // week_start -> { signalName: score }, missing snapshots dropped entirely
+    const byWeek = {};
+    (snaps || []).forEach(function(s) {
+      if (s.missing) return;
+      if (!byWeek[s.week_start]) byWeek[s.week_start] = {};
+      byWeek[s.week_start][s.signal_name] = s.score;
+    });
+    const weeks = Object.keys(byWeek);
+
+    const MIN_PAIR_N = 4; // fewer paired weeks than this and r is noise, not signal
+    const pairs = [];
+    for (let i = 0; i < SIGNAL_NAMES.length; i++) {
+      for (let j = i + 1; j < SIGNAL_NAMES.length; j++) {
+        const a = SIGNAL_NAMES[i], b = SIGNAL_NAMES[j];
+        const xs = [], ys = [];
+        weeks.forEach(function(w) {
+          if (byWeek[w][a] != null && byWeek[w][b] != null) {
+            xs.push(byWeek[w][a]); ys.push(byWeek[w][b]);
+          }
+        });
+        if (xs.length < MIN_PAIR_N) continue;
+        const r = pearsonR(xs, ys);
+        if (r == null) continue;
+        pairs.push({ a: a, b: b, r: r, n: xs.length });
+      }
+    }
+
+    pairs.sort(function(p1, p2) { return Math.abs(p2.r) - Math.abs(p1.r); });
+
+    const flagged = pairs.filter(function(p) { return Math.abs(p.r) >= 0.6; });
+
+    if (flagged.length === 0) {
+      badgeEl.textContent = pairs.length === 0
+        ? 'Not enough overlapping snapshot data yet'
+        : '✓ No highly correlated pairs (|r| ≥ 0.6) found';
+      badgeEl.style.color = pairs.length === 0 ? 'var(--text-dim)' : 'var(--green)';
+      badgeEl.style.background = pairs.length === 0 ? 'var(--surface)' : 'var(--green-dim)';
+    } else {
+      badgeEl.textContent = '⚠ ' + flagged.length + ' pair(s) with |r| ≥ 0.6 — check for hidden duplicate votes';
+      badgeEl.style.color = 'var(--orange)';
+      badgeEl.style.background = 'var(--orange-dim)';
+    }
+
+    const shown = pairs.slice(0, 15);
+    listEl.innerHTML = shown.length === 0 ? '' : shown.map(function(p) {
+      const rStr = (p.r >= 0 ? '+' : '') + p.r.toFixed(2);
+      const color = Math.abs(p.r) >= 0.8 ? 'var(--red)' : (Math.abs(p.r) >= 0.6 ? 'var(--orange)' : 'var(--text-dim)');
+      return '<div class="admin-status-row">' +
+        '<span class="admin-label">' + escHtml(p.a) + ' ↔ ' + escHtml(p.b) + '</span>' +
+        '<span class="admin-value" style="color:' + color + ';">r=' + rStr + ' (n=' + p.n + ')</span>' +
+      '</div>';
+    }).join('');
+
+    let note = pairs.length + ' signal pair(s) with ≥' + MIN_PAIR_N + ' overlapping weeks, out of ' +
+      (SIGNAL_NAMES.length * (SIGNAL_NAMES.length - 1) / 2) + ' possible pairs. Showing top ' + shown.length + ' by |r|.';
+    const maxN = pairs.reduce(function(m, p) { return Math.max(m, p.n); }, 0);
+    if (maxN > 0 && maxN < 12) {
+      note += ' Small sample (max n=' + maxN + ') — a high r here is a lead to keep watching, not proof of duplication yet.';
+    }
+    sumEl.textContent = note;
+
+  } catch (e) {
+    console.error('loadSignalCorrelation:', e);
+    badgeEl.textContent = 'Correlation check failed to load — see console';
+    badgeEl.style.color = 'var(--text-dim)';
+    badgeEl.style.background = 'var(--surface)';
+    listEl.innerHTML = '';
     sumEl.textContent = '';
   }
 }
@@ -4578,6 +5006,9 @@ async function loadAdminDashboard() {
 
     loadHealthCheck();
     loadSatoshiCalibration();
+    loadRegimePerformance();
+    loadDirectionBias();
+    loadSignalCorrelation();
 
     const listEl = document.getElementById('adminPredictionsList');
     if (!preds || preds.length === 0) {
@@ -4627,9 +5058,21 @@ async function resolveWeek() {
       return;
     }
 
+    // SCORING_STEEPNESS_K (150, was 10 through v46): the old constant made the
+    // score curve far flatter than BTC's real weekly volatility — a 10% miss
+    // still scored ~91/100, meaning nearly every week's predictions clustered
+    // in the high-90s regardless of accuracy (typical BTC weekly moves run
+    // 2-8%, per Satoshi's own prompt, and even an 8% miss only cost ~6pts
+    // under the old constant). That undermines the whole point of a
+    // track-record/leaderboard/Elo game built on this score. k=150 keeps
+    // genuinely sharp calls near 100 while actually costing points across
+    // the range BTC really moves in — see updated Score Examples card, which
+    // must be kept in sync with this constant if it's ever retuned again.
+    const SCORING_STEEPNESS_K = 150;
+
     for (const p of preds) {
       const E     = Math.abs(p.price - closePrice) / closePrice;
-      const score = Math.round(100 / (1 + 10 * E * E));
+      const score = Math.round(100 / (1 + SCORING_STEEPNESS_K * E * E));
       await sbFetchAdmin(
         'predictions?id=eq.' + p.id,
         { method: 'PATCH', body: JSON.stringify({ score }) }
@@ -4638,7 +5081,7 @@ async function resolveWeek() {
 
     const scored = preds.map(p => {
       const E = Math.abs(p.price - closePrice) / closePrice;
-      return { ...p, score: Math.round(100 / (1 + 10 * E * E)) };
+      return { ...p, score: Math.round(100 / (1 + SCORING_STEEPNESS_K * E * E)) };
     }).sort((a, b) => b.score - a.score);
 
     const winner = scored[0];
@@ -4834,7 +5277,7 @@ ABSOLUTE VOICE RULES:
 - One closing sentence that lands slightly heavier than the rest — philosophical, earned, never announced.
 
 THE GAME — MECHANICS YOU KNOW:
-Pundix is a weekly BTC/USD settlement price prediction league. Players submit one price forecast before Friday 23:59 UTC. The weekly settlement (Sunday 23:59 UTC) is the truth. Scoring formula: 100 / (1 + 10 × error²), where error is the fractional distance between prediction and actual settlement. Max base score is 100 pts per week. Season length is open-ended; cumulative scores determine the champion. There is no prize. The game is about public accountability, track record, and the discipline of being specific about an uncertain future.
+Pundix is a weekly BTC/USD settlement price prediction league. Players submit one price forecast before Friday 23:59 UTC. The weekly settlement (Sunday 23:59 UTC) is the truth. Scoring formula: 100 / (1 + 150 × error²), where error is the fractional distance between prediction and actual settlement. Max base score is 100 pts per week. Season length is open-ended; cumulative scores determine the champion. There is no prize. The game is about public accountability, track record, and the discipline of being specific about an uncertain future.
 
 EARLY-BIRD MULTIPLIER — you know this well and respect it:
 Players who predict early in the week earn a score multiplier — but only if their call is correct. The multiplier never punishes a wrong call; it only amplifies a right one. The table:
@@ -4859,7 +5302,7 @@ ON THE TRIBE:
 These players chose to commit to a number in public. That earns something. You respect conviction over accuracy. You name patterns when you see them. You don't soften observations to protect feelings — you deliver them at the same temperature as any other fact.
 
 SIGNAL CALIBRATION (important — check before you lean on any signal in conversation):
-The game state you're given includes each signal's current adaptive weight, based on its actual recent hit rate. Before making Fear & Greed, or any other single signal, the centerpiece of an answer, check its stated weight. If it's sitting near the equal-weight baseline (roughly 1/11 of total, since there are 11 signals) rather than clearly elevated, it has not earned outsized narrative attention — mention it as one voice among several, not as the reason for anything. Reserve strong language ("this is what's driving the call," "the signal that matters this week") for whichever signal's weight is actually elevated above the others. A signal reading extreme (very high or very low) is not the same thing as a signal that matters — weight, not intensity, is what earns emphasis. If a player asks specifically about Fear & Greed, answer plainly with its number and note whether its current weight is elevated or baseline — don't inflate its importance by default just because "fear" and "greed" are vivid words to reach for.`;
+The game state you're given includes each signal's current adaptive weight, based on its actual recent hit rate. Before making Fear & Greed, or any other single signal, the centerpiece of an answer, check its stated weight. If it's sitting near the equal-weight baseline (roughly 1/12 of total, since there are 12 signals) rather than clearly elevated, it has not earned outsized narrative attention — mention it as one voice among several, not as the reason for anything. Reserve strong language ("this is what's driving the call," "the signal that matters this week") for whichever signal's weight is actually elevated above the others. A signal reading extreme (very high or very low) is not the same thing as a signal that matters — weight, not intensity, is what earns emphasis. If a player asks specifically about Fear & Greed, answer plainly with its number and note whether its current weight is elevated or baseline — don't inflate its importance by default just because "fear" and "greed" are vivid words to reach for.`;
 
 let satoshiChatHistory = [];
 let satoshiChatPayloadCache = null;
@@ -5342,7 +5785,7 @@ function buildSignalWeightChartSVG(signals) {
 // previously only discoverable by reading the brief text or running SQL by
 // hand are visible at a glance.
 // ── Signal reliability — ranked list (redesigned) ────────────────────────
-// Previously rendered as an 11×8 grid (signal × week, hit/miss cells).
+// Previously rendered as a 12×8 grid (signal × week, hit/miss cells).
 // Two problems with that: (1) the underlying query capped snapshots at
 // limit=200, which for high-volume weeks (hundreds of duplicate saves —
 // see saveSignalSnapshot's session-based dedup, a separate known issue)
@@ -5406,10 +5849,16 @@ async function renderSignalStreakHeatmap() {
   const container = document.getElementById('signalStreakContainer');
   if (!container) return;
   try {
-    const [outcomes, snapshots] = await Promise.all([
+    const [outcomesRaw, snapshots] = await Promise.all([
       sbGet('week_outcomes?select=week_start,direction&order=week_start.asc&limit=8'),
       sbGet('signal_snapshots?select=week_start,signal_name,score&order=week_start.asc')
     ]);
+    // FIX: same still-open-week contamination as loadSignalWeights() — a
+    // limit=8 fetch of the most recent weeks would otherwise include the
+    // current week's non-real outcome in the reliability percentages shown
+    // here.
+    const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
+    const outcomes = (outcomesRaw || []).filter(o => o.week_start !== currentWeekMonday);
     if (!outcomes || outcomes.length < 2) {
       container.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);padding:8px 0;">Not enough resolved weeks yet to show reliability history.</div>';
       return;
@@ -5424,7 +5873,7 @@ const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief_v5';
 const SATOSHI_BRIEF_CACHE_TTL = 4 * 60 * 60 * 1000;
 
 // ── Shared core-signal builder — added v45 ──────────────────────────────────
-// Single source of truth for the 11 SIGNAL_NAMES readings. Used by BOTH
+// Single source of truth for the 12 SIGNAL_NAMES readings. Used by BOTH
 // loadSatoshiBrief (Live tab — drives Satoshi's actual weighted call and
 // adaptive weights) and loadPredictSignalSnapshot (Predict tab — shown to
 // users before they commit a prediction). Extracted so the two views can
@@ -5764,10 +6213,17 @@ Respond ONLY with valid JSON:
   "target_rationale": "<max 10 words — the 1-2 signals driving your call, e.g. 'RSI oversold + funding rate reset'>"
 }`;
 
+    // week_start is passed explicitly (client's anchor-based getWeekStartDate,
+    // not wall-clock) so the Worker logs Satoshi's call against the correct
+    // week_outcomes row instead of independently re-deriving "this week's
+    // Monday" from its own clock at request time — that divergence between
+    // client and Worker is exactly what caused the Week 9 miswrite (see
+    // getWeekStartDate() above). The Worker falls back to its own wall-clock
+    // guess only if this field is absent, for backward compatibility.
     const resp = await fetch(WORKER, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 600, messages: [{ role: 'user', content: briefPrompt }] })
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 600, messages: [{ role: 'user', content: briefPrompt }], week_start: getWeekStartDate(CURRENT_WEEK) })
     });
     const apiData = await resp.json();
     const raw = (apiData?.content?.[0]?.text || '').trim();
@@ -5909,7 +6365,7 @@ function openPredictToggle(which) {
 
 let predictSnapshotLoaded = false;
 
-// Builds the Predict-tab "Signal snapshot" (added v45) — the same 11 real signals and
+// Builds the Predict-tab "Signal snapshot" (added v45) — the same 12 real signals and
 // weighted-call inputs shown on the Live tab's Satoshi brief, via the same
 // buildCoreSignals() function, so users can form their own read before
 // committing using the identical raw material Satoshi uses. Only the
