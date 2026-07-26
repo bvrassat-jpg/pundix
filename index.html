@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v45 -->
+<!-- Pundix v47 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v46</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v47</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -405,6 +405,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
           <div style="font-family:var(--mono);font-size:11px;color:var(--text-mid);text-align:right;" id="lockedSatoshiDelta">—</div>
         </div>
         <div style="font-family:var(--mono);font-size:11px;color:var(--text-mid);font-style:italic;margin-top:8px;display:none;" id="lockedSatoshiRationale"></div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:6px;display:none;" id="lockedSatoshiConfidence"></div>
         <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:8px;" id="lockedSatoshiTimestamp"></div>
         <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);" id="lockedSatoshiRecord">—</div>
       </div>
@@ -545,7 +546,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="satoshi-footer">
         <div class="satoshi-commentary-type" id="satoshiType">—</div>
         <div style="display:flex;align-items:center;gap:16px;">
-          <div id="satoshiNodeLine" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:0.5px;">node://satoshi · v45</div>
+          <div id="satoshiNodeLine" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:0.5px;">node://satoshi · v47</div>
           <button class="satoshi-refresh" onclick="loadSatoshiCommentary(true)" id="satoshiRefreshBtn">↻ refresh</button>
         </div>
       </div>
@@ -1115,7 +1116,7 @@ const CLAUDE_MODEL    = 'claude-sonnet-4-6';
 // versioned external service, so there's no reason to track it as one —
 // one number now drives both, and it can't drift again because there's
 // only one string to change.
-const PUNDIX_VERSION = 'v46';
+const PUNDIX_VERSION = 'v47';
 const SATOSHI_NODE_VERSION = 'node://satoshi · ' + PUNDIX_VERSION;
 
 const SFX = (() => {
@@ -1835,6 +1836,105 @@ const SIGNAL_EXPLAINERS = {
   'ETF Flows':     'US spot BTC ETF net flow, 5-day rolling — sustained inflows absorb supply.',
   'Stablecoins':   'Total stablecoin supply, 7-day change — growing supply is fresh dry powder.'
 };
+// ── Macro Calendar (Fed rate / CPI / NFP / PCE / FOMC / ECB / BoJ / OPEX) ───
+// NOT weighted signals — deliberately kept out of SIGNAL_NAMES / the
+// adaptive weight engine. These are discrete/scheduled events, already
+// priced into Funding Rate + Options Skew within hours of any surprise, and
+// would sit null most weeks if forced into the weighted composite (breaking
+// the WEIGHT_SAMPLE_TARGET shrinkage math below). Instead this feeds
+// Satoshi's raw-data context in loadSatoshiBrief — and the EXACT SAME line
+// is rendered in the Signal Snapshot (see renderSignalSnapshotHTML), so
+// users see precisely what Satoshi sees.
+//
+// Maintained manually against official schedules — bls.gov/schedule (CPI,
+// NFP), bea.gov/news/schedule (PCE), federalreserve.gov/monetarypolicy/
+// fomccalendars.htm (FOMC), ecb.europa.eu/press/calendars/mgcgc (ECB),
+// boj.or.jp/en/mopo/mpmsche_minu (BoJ). Refresh each January when these
+// agencies publish next year's calendars. OPEX (Deribit quarterly BTC
+// options expiry — largest open interest / pinning risk of the year) is
+// computed, not looked up: last Friday of Mar/Jun/Sep/Dec, matching
+// Deribit's standing convention. Update FOMC_RATE_LOW/HIGH + FOMC_RATE_ASOF
+// after each of the 8 FOMC decisions.
+const FOMC_RATE_LOW  = 3.50;
+const FOMC_RATE_HIGH = 3.75;
+const FOMC_RATE_ASOF = '2026-06-17'; // date of the FOMC decision this range reflects — NOT the next meeting
+
+const MACRO_EVENT_LABELS = {
+  FOMC: 'FOMC decision', CPI: 'CPI print', NFP: 'Jobs report (NFP)',
+  PCE: 'PCE print', ECB: 'ECB decision', BOJ: 'BoJ decision', OPEX: 'Quarterly BTC options expiry'
+};
+
+const MACRO_EVENTS = [
+  // FOMC decision days, UTC — federalreserve.gov/monetarypolicy/fomccalendars.htm
+  { type: 'FOMC', date: '2026-01-28' }, { type: 'FOMC', date: '2026-03-18' },
+  { type: 'FOMC', date: '2026-04-29' }, { type: 'FOMC', date: '2026-06-17' },
+  { type: 'FOMC', date: '2026-07-29' }, { type: 'FOMC', date: '2026-09-16' },
+  { type: 'FOMC', date: '2026-10-28' }, { type: 'FOMC', date: '2026-12-09' },
+  // US CPI release days, UTC — bls.gov/schedule/news_release/cpi.htm
+  { type: 'CPI', date: '2026-01-13' }, { type: 'CPI', date: '2026-02-13' },
+  { type: 'CPI', date: '2026-03-11' }, { type: 'CPI', date: '2026-04-10' },
+  { type: 'CPI', date: '2026-05-12' }, { type: 'CPI', date: '2026-06-10' },
+  { type: 'CPI', date: '2026-07-14' }, { type: 'CPI', date: '2026-08-12' },
+  { type: 'CPI', date: '2026-09-11' }, { type: 'CPI', date: '2026-10-14' },
+  { type: 'CPI', date: '2026-11-10' }, { type: 'CPI', date: '2026-12-10' },
+  // US Employment Situation / jobs report (NFP), UTC — bls.gov/schedule/news_release/empsit.htm
+  { type: 'NFP', date: '2026-01-09' }, { type: 'NFP', date: '2026-02-11' },
+  { type: 'NFP', date: '2026-03-06' }, { type: 'NFP', date: '2026-04-03' },
+  { type: 'NFP', date: '2026-05-08' }, { type: 'NFP', date: '2026-06-05' },
+  { type: 'NFP', date: '2026-07-02' }, { type: 'NFP', date: '2026-08-07' },
+  { type: 'NFP', date: '2026-09-04' }, { type: 'NFP', date: '2026-10-02' },
+  { type: 'NFP', date: '2026-11-06' }, { type: 'NFP', date: '2026-12-04' },
+  // US PCE / Personal Income & Outlays (Fed's preferred inflation gauge), UTC — bea.gov/news/schedule
+  { type: 'PCE', date: '2026-01-30' }, { type: 'PCE', date: '2026-02-27' },
+  { type: 'PCE', date: '2026-03-13' }, { type: 'PCE', date: '2026-04-09' },
+  { type: 'PCE', date: '2026-04-30' }, { type: 'PCE', date: '2026-05-28' },
+  { type: 'PCE', date: '2026-06-25' }, { type: 'PCE', date: '2026-07-30' },
+  { type: 'PCE', date: '2026-08-26' }, { type: 'PCE', date: '2026-09-30' },
+  { type: 'PCE', date: '2026-10-29' }, { type: 'PCE', date: '2026-11-25' },
+  { type: 'PCE', date: '2026-12-23' },
+  // ECB Governing Council decision days (Day 2), UTC — ecb.europa.eu/press/calendars/mgcgc
+  { type: 'ECB', date: '2026-02-05' }, { type: 'ECB', date: '2026-03-19' },
+  { type: 'ECB', date: '2026-04-30' }, { type: 'ECB', date: '2026-06-11' },
+  { type: 'ECB', date: '2026-07-23' }, { type: 'ECB', date: '2026-09-10' },
+  { type: 'ECB', date: '2026-10-29' }, { type: 'ECB', date: '2026-12-17' },
+  // BoJ Monetary Policy Meeting decision days (Day 2), UTC — boj.or.jp/en/mopo/mpmsche_minu
+  { type: 'BOJ', date: '2026-01-23' }, { type: 'BOJ', date: '2026-03-19' },
+  { type: 'BOJ', date: '2026-04-28' }, { type: 'BOJ', date: '2026-06-16' },
+  { type: 'BOJ', date: '2026-07-31' }, { type: 'BOJ', date: '2026-09-18' },
+  { type: 'BOJ', date: '2026-10-30' }, { type: 'BOJ', date: '2026-12-18' },
+  // Deribit quarterly BTC options expiry — last Friday of Mar/Jun/Sep/Dec
+  { type: 'OPEX', date: '2026-03-27' }, { type: 'OPEX', date: '2026-06-26' },
+  { type: 'OPEX', date: '2026-09-25' }, { type: 'OPEX', date: '2026-12-25' }
+];
+
+function getMacroCalendarContext() {
+  const todayStr = new Date().toISOString().slice(0,10);
+  function nextOfType(type) {
+    const upcoming = MACRO_EVENTS
+      .filter(function(e){ return e.type === type && e.date >= todayStr; })
+      .sort(function(a,b){ return a.date.localeCompare(b.date); })[0];
+    if (!upcoming) return null;
+    const daysAway = Math.round((new Date(upcoming.date+'T00:00:00Z') - new Date(todayStr+'T00:00:00Z')) / 86400000);
+    return { type: type, date: upcoming.date, daysAway: daysAway, inThisWeek: daysAway <= 4 };
+  }
+  const events = ['FOMC','CPI','NFP','PCE','ECB','BOJ','OPEX'].map(nextOfType).filter(Boolean);
+  return {
+    rateLabel: FOMC_RATE_LOW.toFixed(2) + '\u2013' + FOMC_RATE_HIGH.toFixed(2) + '%',
+    rateAsOf: FOMC_RATE_ASOF,
+    events: events,
+    inThisWeek: events.some(function(e){ return e.inThisWeek; })
+  };
+}
+
+function formatMacroCalendarLine(ctx) {
+  const parts = ctx.events.map(function(e) {
+    const dayWord = e.daysAway === 0 ? 'today' : e.daysAway === 1 ? 'tomorrow' : 'in ' + e.daysAway + ' days';
+    return MACRO_EVENT_LABELS[e.type] + ': ' + e.date + ' (' + dayWord + ')' + (e.inThisWeek ? ' \u2014 this week' : '');
+  });
+  return 'Fed funds target: ' + ctx.rateLabel + ' (as of ' + ctx.rateAsOf + ').' + (parts.length ? ' ' + parts.join(' \u00b7 ') + '.' : '');
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const SIGNAL_BASE_WEIGHT = 1 / SIGNAL_NAMES.length;
 // A signal's weight only reaches full divergence from equal once it has this
 // many resolved weeks of its own hit/miss history. Below that, the bonus is
@@ -2703,7 +2803,7 @@ async function renderSatoshiReveal() {
   if (!wrap || !myPrediction) return;
   try {
     const weekMonday = getWeekStartDate(CURRENT_WEEK);
-    const rows = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price,satoshi_rationale,satoshi_logged_at&limit=1');
+    const rows = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price,satoshi_rationale,satoshi_logged_at,satoshi_confidence&limit=1');
     const row = rows && rows[0];
     if (!row || row.satoshi_price == null) { wrap.style.display = 'none'; return; }
 
@@ -2716,6 +2816,25 @@ async function renderSatoshiReveal() {
 
     document.getElementById('lockedSatoshiPrice').textContent = '$' + Math.round(satPrice).toLocaleString('en-US');
     document.getElementById('lockedSatoshiDelta').textContent = diffLabel;
+
+    // One compact line, not a new box — this card's job is a fast glance
+    // right after submit, not analysis (that's the Live tab). Folds the
+    // calendar-risk flag into the same line only when an event actually
+    // falls this week, so most weeks this stays a single short sentence.
+    const confEl = document.getElementById('lockedSatoshiConfidence');
+    if (confEl) {
+      if (row.satoshi_confidence != null) {
+        const macroCtx = getMacroCalendarContext();
+        const riskEvents = macroCtx.events.filter(function(e){ return e.inThisWeek; });
+        const riskNote = riskEvents.length
+          ? ' — ' + riskEvents.map(function(e){ return MACRO_EVENT_LABELS[e.type]; }).join(' + ') + ' this week'
+          : '';
+        confEl.textContent = Math.round(row.satoshi_confidence) + '% confidence' + riskNote;
+        confEl.style.display = 'block';
+      } else {
+        confEl.style.display = 'none';
+      }
+    }
 
     // Show when each call was actually made — Satoshi's is fixed once per week
     // (first brief generated that week), yours is your own submit time.
@@ -6164,6 +6283,13 @@ async function loadSatoshiBrief(forceRefresh) {
     // Save snapshot to Supabase for future weight learning (non-blocking)
     saveSignalSnapshot(signals, CURRENT_WEEK, price);
 
+    // Computed once here so the exact same event list drives both Satoshi's
+    // confidence instruction below AND the risk badge rendered in the HTML
+    // further down — no separate calls that could see different "now".
+    const macroCtx        = getMacroCalendarContext();
+    const macroLine        = formatMacroCalendarLine(macroCtx);
+    const macroEventsThisWeek = macroCtx.events.filter(function(e){ return e.inThisWeek; });
+
     const memoryBlock = satoshiMemory ? `\n\n---\nYOUR MEMORY — what has actually happened in recent weeks:\n${satoshiMemory}\n---` : '';
 
     const briefPrompt = `You are Satoshi — the market desk analyst and institutional conscience of Pundix, a weekly BTC price prediction league. You have been running this desk for multiple weeks. You remember what happened. You remember which signals lied and which delivered. You remember which players called it right and how the crowd was positioned.
@@ -6188,6 +6314,7 @@ ${realVolData ? 'Realised vol (7d annualised): ' + realVolData.vol7d + '% vs 30d
 ${optSkewData ? 'Options skew (Deribit 25-delta): ' + (optSkewData.skew >= 0 ? '+' : '') + optSkewData.skew + '% — ' + optSkewData.label + '. Negative skew = market paying premium for put protection = bearish positioning. Positive = call demand = upside bias.' : ''}
 ${onchainData?.etfFlow?.flow5d != null ? 'US spot BTC ETF net flow (5-day rolling): ' + (onchainData.etfFlow.flow5d >= 0 ? '+' : '') + onchainData.etfFlow.flow5d + 'M USD — ' + onchainData.etfFlow.label + '. Sustained inflows mean institutional demand is absorbing supply; sustained outflows mean it is being sold back into the market.' : ''}
 ${onchainData?.stablecoin?.chg7d != null ? 'Stablecoin supply (7-day change, all chains): ' + (onchainData.stablecoin.chg7d >= 0 ? '+' : '') + onchainData.stablecoin.chg7d + '% — ' + onchainData.stablecoin.label + '. Growing supply is fresh capital parked on-chain, ready to deploy into risk assets; contracting supply means capital is leaving crypto rails.' : ''}
+${macroLine} This is calendar context, not a scored signal — it must never move the weighted composite score above. It DOES directly govern your stated "confidence" field: an event landing inside this prediction week (flagged "this week" above) is real, event-driven uncertainty, separate from how bullish or bearish you are. Baseline confidence with no major event this week: roughly 55-75, depending on how well the signals agree. If one of FOMC/CPI/NFP/PCE falls inside this week, cut baseline confidence by roughly 10-15 points. If two or more of those four land in the same week, cut by 15-25 points combined. ECB, BoJ, and the quarterly options expiry have a smaller, secondary effect on BTC specifically — cut only 3-5 points for those alone, more if one stacks with a US event. If calendar risk lowered your confidence, say so in one short clause in the brief text — never move the number silently.
 ${memoryBlock}
 
 YOUR VOICE: You are a cypherpunk analyst. Direct. No hedging. No "could" or "might". You call it as you read it and own the call. When you have been wrong before, you say so plainly and adjust. When a signal has been consistently misleading, you call it out by name. When the crowd is leaning the wrong way based on history, you flag it. You are not here to make players feel good — you are here to sharpen their thinking.
@@ -6205,7 +6332,7 @@ Respond ONLY with valid JSON:
 {
   "verdict": "<Bearish|Cautious|Neutral|Constructive|Bullish>",
   "score": <0-100>,
-  "confidence": <integer 0-100 — how sure you are this specific target_price will be close to Sunday's actual settlement, independent of how bullish or bearish you are>,
+  "confidence": <integer 0-100 — how sure you are this specific target_price will be close to Sunday's actual settlement, independent of how bullish or bearish you are. Must follow the calendar-risk guidance above — lower this when a scheduled macro event lands inside this prediction week.>,
   "dominant_signal": "<signal name and what it is saying — 1 sentence>",
   "brief": "<memory-informed sentence + closing weight sentence>",
   "target_return_pct": <number, e.g. -4.2 or 3.1 — your Sunday settlement call as a % move from week open. Decide this FIRST, before target_price. Typical weekly move is 2-8% in magnitude.>,
@@ -6239,6 +6366,18 @@ Respond ONLY with valid JSON:
     const verdictBdr   = verdictScore >= 65 ? 'rgba(16,185,129,.4)'  : verdictScore >= 42 ? 'rgba(245,158,11,.35)' : 'rgba(239,68,68,.4)';
     const briefText    = (brief.dominant_signal || '') + ' ' + (brief.brief || '');
 
+    // Confidence + calendar-risk badge — surfaces the same "confidence"
+    // field that's always been logged to satoshi_confidence (used in the
+    // admin Calibration card) but was never shown to users. macroEventsThisWeek
+    // is the same list that shaped the confidence instruction in the prompt
+    // above, so the badge and the number it explains can't drift apart.
+    const confidenceVal = (typeof brief.confidence === 'number') ? Math.max(0, Math.min(100, Math.round(brief.confidence))) : null;
+    const confColor     = confidenceVal == null ? 'var(--text-dim)' : confidenceVal >= 65 ? 'var(--green)' : confidenceVal >= 40 ? 'var(--orange)' : 'var(--red)';
+    const riskEventText = macroEventsThisWeek.map(function(e) {
+      const dayWord = e.daysAway === 0 ? 'today' : e.daysAway === 1 ? 'tomorrow' : 'in ' + e.daysAway + 'd';
+      return MACRO_EVENT_LABELS[e.type] + ' ' + dayWord;
+    }).join(' · ');
+
     // Satoshi's price target for this week (target_price / target_rationale) is
     // now auto-logged into week_outcomes.satoshi_price / satoshi_rationale
     // server-side by the worker (polished-frog-9374), the moment this brief
@@ -6263,14 +6402,18 @@ Respond ONLY with valid JSON:
             <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">This week's read</div>
             <div style="font-family:var(--sans);font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:${verdictColor};">${escHtml(verdictLabel)}</div>
           </div>
-          <div style="background:${verdictBg};border:1px solid ${verdictBdr};border-radius:5px;padding:10px 14px;text-align:center;flex-shrink:0;">
-            <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:${verdictColor};">${verdictScore}</div>
-            <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,.4);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">Signal score</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <div style="background:${verdictBg};border:1px solid ${verdictBdr};border-radius:5px;padding:10px 14px;text-align:center;">
+              <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:${verdictColor};">${verdictScore}</div>
+              <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,.4);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">Signal score</div>
+              ${confidenceVal != null ? `<div style="font-family:var(--mono);font-size:9px;color:${confColor};margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.12);">${confidenceVal}% sure</div>` : ''}
+            </div>
           </div>
         </div>
         <div style="border-left:2px solid rgba(16,185,129,.4);padding-left:12px;">
           <div style="font-family:var(--sans);font-size:14px;color:var(--text);line-height:1.75;">${escHtml(briefText)}</div>
         </div>
+        ${riskEventText ? `<div style="margin-top:10px;padding:8px 10px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);border-radius:4px;font-family:var(--mono);font-size:10px;color:var(--orange);letter-spacing:.3px;">⚡ Elevated volatility risk this week — ${escHtml(riskEventText)}. Confidence above already accounts for this.</div>` : ''}
         <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-top:10px;font-style:italic;">— Satoshi · ${SATOSHI_NODE_VERSION}</div>
       </div>
 
@@ -6415,7 +6558,11 @@ function renderSignalSnapshotHTML(signals) {
     '</div>';
   }).join('');
 
+  const macroCtx  = getMacroCalendarContext();
+  const macroLine = formatMacroCalendarLine(macroCtx);
+
   return '<div class="signal-snap-list">' + rows + '</div>' +
+    '<div class="signal-snap-footer"' + (macroCtx.inThisWeek ? ' style="color:var(--orange);"' : '') + '>\uD83D\uDCC5 ' + escHtml(macroLine) + ' Same macro context Satoshi sees — not a scored signal, doesn\'t move the weighted composite.</div>' +
     '<div class="signal-snap-footer">Same ' + SIGNAL_NAMES.length + ' signals feeding Satoshi\'s weighted call this week. Tap Fear &amp; Greed or Technical for the full breakdown. Adaptive weights and Satoshi\'s composite verdict stay hidden until after you submit — this shows raw readings only.</div>';
 }
 // ────────────────────────────────────────────────────────────────────
@@ -6761,7 +6908,7 @@ function closePlayerDrawer(e) {
   if (closedWk) closedWk.textContent = CURRENT_WEEK;
   if (nextWk)   nextWk.textContent   = CURRENT_WEEK + 1;
 
-  // Version display — driven from the single PUNDIX_VERSION constant (v45)
+  // Version display — driven from the single PUNDIX_VERSION constant above
   // so the header badge and Satoshi's node line can't drift apart again.
   const versionTag = document.getElementById('pundixVersionTag');
   if (versionTag) versionTag.textContent = PUNDIX_VERSION;
