@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v47 -->
+<!-- Pundix v48 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v47</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v48</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         <span style="flex:1;height:1px;background:var(--border);display:block;"></span>
       </div>
 
-      <!-- Signal snapshot — the same 12 signals that feed Satoshi's
+      <!-- Signal snapshot — the same signals that feed Satoshi's
            weighted call, shown here with real readings before you commit,
            so you're working from the same raw material he is. The
            adaptive weights and the composite verdict stay hidden until
@@ -546,7 +546,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="satoshi-footer">
         <div class="satoshi-commentary-type" id="satoshiType">—</div>
         <div style="display:flex;align-items:center;gap:16px;">
-          <div id="satoshiNodeLine" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:0.5px;">node://satoshi · v47</div>
+          <div id="satoshiNodeLine" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:0.5px;">node://satoshi · v48</div>
           <button class="satoshi-refresh" onclick="loadSatoshiCommentary(true)" id="satoshiRefreshBtn">↻ refresh</button>
         </div>
       </div>
@@ -1116,7 +1116,7 @@ const CLAUDE_MODEL    = 'claude-sonnet-4-6';
 // versioned external service, so there's no reason to track it as one —
 // one number now drives both, and it can't drift again because there's
 // only one string to change.
-const PUNDIX_VERSION = 'v47';
+const PUNDIX_VERSION = 'v48';
 const SATOSHI_NODE_VERSION = 'node://satoshi · ' + PUNDIX_VERSION;
 
 const SFX = (() => {
@@ -1806,7 +1806,7 @@ async function submitPrediction() {
 }
 
 // ── Signal Weight Engine ──────────────────────────────────────────────────────
-const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','F&G','Technical','Sentiment','Cycle','Funding','Real Vol','Options Skew','ETF Flows','Stablecoins'];
+const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','F&G','Technical','Sentiment','Cycle','Funding','Real Vol','Options Skew','ETF Flows','Stablecoins','CVD','Open Interest'];
 (function() {
   // Drives the "N signals" badge on the Predict-tab toggle header from the
   // single source of truth instead of a hardcoded string — this is what
@@ -1834,7 +1834,9 @@ const SIGNAL_EXPLAINERS = {
   'Real Vol':      '7-day realised volatility trend — compression often precedes a big move.',
   'Options Skew':  'Deribit put/call skew — negative = bearish hedging, positive = call demand.',
   'ETF Flows':     'US spot BTC ETF net flow, 5-day rolling — sustained inflows absorb supply.',
-  'Stablecoins':   'Total stablecoin supply, 7-day change — growing supply is fresh dry powder.'
+  'Stablecoins':   'Total stablecoin supply, 7-day change — growing supply is fresh dry powder.',
+  'CVD':           'Spot taker buy/sell imbalance, 7-day — real trade flow, not inferred.',
+  'Open Interest': 'Futures leverage outstanding, 7-day change — read against price for divergence.'
 };
 // ── Macro Calendar (Fed rate / CPI / NFP / PCE / FOMC / ECB / BoJ / OPEX) ───
 // NOT weighted signals — deliberately kept out of SIGNAL_NAMES / the
@@ -3728,7 +3730,7 @@ const WORKER = 'https://polished-frog-9374.bvrassat.workers.dev';
 let sentimentCache = null; // { score, label, note, social_mood, news_flow, _ts } | null
 let sentimentPromise = null; // in-flight promise, shared across concurrent callers so nobody gets a premature null
 
-// ── Sentiment signal (one of the 12 core SIGNAL_NAMES) — reworked v45 ───────
+// ── Sentiment signal (one of the core SIGNAL_NAMES) — reworked v45 ───────
 // Previously this ran a 6-source "heatmap" scan (Fear & Greed, Technical,
 // Derivatives, On-chain, Social Mood, News Flow) and averaged all six into
 // the "Sentiment" node — which meant F&G and Technical, already their own
@@ -4399,6 +4401,61 @@ async function fetchOnchainData() {
   }
 }
 
+
+const DERIVATIVES_CACHE_KEY = 'pundix_derivatives_cache';
+// Both underlying sources (OKX taker-volume, Bybit open-interest history)
+// update at most once per day — same cadence as ETF Flows / Stablecoins —
+// so this matches ONCHAIN_CACHE_TTL / MACRO_CACHE_TTL rather than the
+// faster 1h/30min TTLs used for Options Skew / Funding.
+const DERIVATIVES_CACHE_TTL = 6 * 60 * 60 * 1000;
+
+// Feeds the CVD (Cumulative Volume Delta) and Open Interest signals — added
+// (v48) to answer a specific gap in the signal stack: everything else here
+// reads sentiment, positioning price (funding, skew), or macro backdrop,
+// but nothing read actual trade flow or leverage size directly. Both are
+// fetched server-side by the Worker's /derivatives route and scored
+// client-side here, same division of labour as /macro, /deribit, /onchain.
+//
+// Deliberately NOT sourced from Binance — fapi.binance.com AND its
+// public-data mirror (data-api.binance.vision) both 403 from Cloudflare's
+// edge network (confirmed by direct testing, not assumed). CVD comes from
+// OKX (taker-volume, BTC spot), Open Interest from Bybit (v5, linear
+// perps) — two different exchanges/infrastructures, neither affected by
+// Binance's specific block.
+//
+// The Worker returns cvd/open_interest independently (Promise.allSettled
+// server-side) with an optional errors object — either one can be null
+// without taking the other down, which this function respects: it doesn't
+// throw just because one leg failed, so a CVD outage doesn't also blank
+// out an otherwise-healthy Open Interest reading.
+async function fetchDerivativesData() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(DERIVATIVES_CACHE_KEY) || 'null');
+    if (cached && Date.now() - cached.ts < DERIVATIVES_CACHE_TTL) return cached;
+  } catch(e) {}
+  try {
+    const resp = await fetch(WORKER + '/derivatives', { method: 'GET' });
+    if (!resp.ok) throw new Error('Worker /derivatives ' + resp.status);
+    const json = await resp.json();
+
+    const cvdDeltaPct   = json.cvd?.net_delta_pct != null ? parseFloat(json.cvd.net_delta_pct) : null;
+    const oiChangePct7d = json.open_interest?.oi_change_pct_7d != null ? parseFloat(json.open_interest.oi_change_pct_7d) : null;
+    const oiBtcNow       = json.open_interest?.oi_btc_now != null ? parseFloat(json.open_interest.oi_btc_now) : null;
+
+    const result = {
+      cvdDeltaPct: cvdDeltaPct,
+      oiChangePct7d: oiChangePct7d,
+      oiBtcNow: oiBtcNow,
+      errors: json.errors || null, // e.g. { cvd: '...' } or { open_interest: '...' } if one leg failed
+      ts: Date.now()
+    };
+    try { localStorage.setItem(DERIVATIVES_CACHE_KEY, JSON.stringify(result)); } catch(e) {}
+    return result;
+  } catch(e) {
+    console.warn('fetchDerivativesData failed:', e.message);
+    return null;
+  }
+}
 
 function compute200DMA(closes) {
   if (!closes || closes.length < 1) return null;
@@ -5421,7 +5478,7 @@ ON THE TRIBE:
 These players chose to commit to a number in public. That earns something. You respect conviction over accuracy. You name patterns when you see them. You don't soften observations to protect feelings — you deliver them at the same temperature as any other fact.
 
 SIGNAL CALIBRATION (important — check before you lean on any signal in conversation):
-The game state you're given includes each signal's current adaptive weight, based on its actual recent hit rate. Before making Fear & Greed, or any other single signal, the centerpiece of an answer, check its stated weight. If it's sitting near the equal-weight baseline (roughly 1/12 of total, since there are 12 signals) rather than clearly elevated, it has not earned outsized narrative attention — mention it as one voice among several, not as the reason for anything. Reserve strong language ("this is what's driving the call," "the signal that matters this week") for whichever signal's weight is actually elevated above the others. A signal reading extreme (very high or very low) is not the same thing as a signal that matters — weight, not intensity, is what earns emphasis. If a player asks specifically about Fear & Greed, answer plainly with its number and note whether its current weight is elevated or baseline — don't inflate its importance by default just because "fear" and "greed" are vivid words to reach for.`;
+The game state you're given includes each signal's current adaptive weight, based on its actual recent hit rate. Before making Fear & Greed, or any other single signal, the centerpiece of an answer, check its stated weight. If it's sitting near the equal-weight baseline (roughly 1/${SIGNAL_NAMES.length} of total, since there are ${SIGNAL_NAMES.length} signals) rather than clearly elevated, it has not earned outsized narrative attention — mention it as one voice among several, not as the reason for anything. Reserve strong language ("this is what's driving the call," "the signal that matters this week") for whichever signal's weight is actually elevated above the others. A signal reading extreme (very high or very low) is not the same thing as a signal that matters — weight, not intensity, is what earns emphasis. If a player asks specifically about Fear & Greed, answer plainly with its number and note whether its current weight is elevated or baseline — don't inflate its importance by default just because "fear" and "greed" are vivid words to reach for.`;
 
 let satoshiChatHistory = [];
 let satoshiChatPayloadCache = null;
@@ -5749,8 +5806,19 @@ function renderSatoshiText(text) {
 
 function buildSignalWebSVG(signals) {
   const cx = 170, cy = 154, cr = 34;
-  const leftNodes  = signals.slice(0, 6);
-  const rightNodes = signals.slice(6);
+  // Split into two even-ish columns rather than a hardcoded slice(0,6)/(6) —
+  // that was only ever correct for exactly 12 signals. Generalized (v48,
+  // when the count moved to 14) so this doesn't silently mis-layout again
+  // the next time a signal is added or removed.
+  const half        = Math.ceil(signals.length / 2);
+  const leftNodes    = signals.slice(0, half);
+  const rightNodes   = signals.slice(half);
+  const rowSpacing   = 52;
+  const leftYs  = leftNodes.map(function(_, i)  { return 8 + i * rowSpacing; });
+  const rightYs = rightNodes.map(function(_, i) { return 8 + i * rowSpacing; });
+  const maxRows      = Math.max(leftNodes.length, rightNodes.length);
+  const nodeH = 40;
+  const svgHeight = Math.max(338, 8 + (maxRows - 1) * rowSpacing + nodeH + 70); // +70 for legend/margin
 
   function nodeColor(score) {
     if (score >= 65) return { bg: 'rgba(16,185,129,.22)', border: 'rgba(16,185,129,.5)', text: '#6EE7B7', line: 'rgba(16,185,129,.65)' };
@@ -5759,12 +5827,10 @@ function buildSignalWebSVG(signals) {
   }
   function markerId(score) { return score >= 65 ? 'sw-grn' : score >= 42 ? 'sw-amb' : 'sw-red'; }
 
-  const leftYs  = [8, 60, 112, 164, 216, 268];
-  const rightYs = [8, 60, 112, 164, 216, 268];
-  const nodeW = 82, nodeH = 40;
+  const nodeW = 82;
   const lx = 4, rx = 254;
 
-  let svgParts = [`<svg viewBox="0 0 340 338" width="100%" height="auto" style="display:block;width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">
+  let svgParts = [`<svg viewBox="0 0 340 ${svgHeight}" width="100%" height="auto" style="display:block;width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <marker id="sw-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="rgba(239,68,68,.75)"/></marker>
     <marker id="sw-grn" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="rgba(16,185,129,.75)"/></marker>
@@ -5810,10 +5876,12 @@ function buildSignalWebSVG(signals) {
     svgParts.push(`<text x="${rx+nodeW/2}" y="${y+34}" text-anchor="middle" font-family="Space Mono" font-size="6" fill="${c.text}" opacity=".45">${wPct}% wt</text>`);
   });
 
-  // Legend
-  svgParts.push(`<line x1="8" y1="316" x2="34" y2="316" stroke="rgba(239,68,68,.65)" stroke-width="3"/><text x="38" y="320" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BEARISH</text>`);
-  svgParts.push(`<line x1="100" y1="316" x2="126" y2="316" stroke="rgba(245,158,11,.6)" stroke-width="1.5"/><text x="130" y="320" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">NEUTRAL</text>`);
-  svgParts.push(`<line x1="200" y1="316" x2="226" y2="316" stroke="rgba(16,185,129,.65)" stroke-width="1"/><text x="230" y="320" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BULLISH · LINE=WEIGHT</text>`);
+  // Legend — positioned relative to the dynamic svgHeight rather than a
+  // fixed offset, so it stays below the last row regardless of node count.
+  const legendY = svgHeight - 22;
+  svgParts.push(`<line x1="8" y1="${legendY}" x2="34" y2="${legendY}" stroke="rgba(239,68,68,.65)" stroke-width="3"/><text x="38" y="${legendY+4}" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BEARISH</text>`);
+  svgParts.push(`<line x1="100" y1="${legendY}" x2="126" y2="${legendY}" stroke="rgba(245,158,11,.6)" stroke-width="1.5"/><text x="130" y="${legendY+4}" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">NEUTRAL</text>`);
+  svgParts.push(`<line x1="200" y1="${legendY}" x2="226" y2="${legendY}" stroke="rgba(16,185,129,.65)" stroke-width="1"/><text x="230" y="${legendY+4}" font-family="Space Mono" font-size="7" fill="#4A6A8A" letter-spacing=".5">BULLISH · LINE=WEIGHT</text>`);
 
   svgParts.push('</svg>');
   return svgParts.join('');
@@ -5992,7 +6060,7 @@ const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief_v5';
 const SATOSHI_BRIEF_CACHE_TTL = 4 * 60 * 60 * 1000;
 
 // ── Shared core-signal builder — added v45 ──────────────────────────────────
-// Single source of truth for the 12 SIGNAL_NAMES readings. Used by BOTH
+// Single source of truth for the SIGNAL_NAMES readings. Used by BOTH
 // loadSatoshiBrief (Live tab — drives Satoshi's actual weighted call and
 // adaptive weights) and loadPredictSignalSnapshot (Predict tab — shown to
 // users before they commit a prediction). Extracted so the two views can
@@ -6001,6 +6069,45 @@ const SATOSHI_BRIEF_CACHE_TTL = 4 * 60 * 60 * 1000;
 let coreSignalsCache = null;
 let coreSignalsCacheTs = 0;
 const CORE_SIGNALS_CACHE_TTL = 3 * 60 * 1000; // 3 min
+
+// Open Interest is scored as a divergence read against price, not on its
+// own magnitude — the same OI change means something different depending
+// on what price is doing:
+//   rising OI + rising price   = trend confirmation (fresh leveraged
+//                                 conviction agreeing with the move) — mildly
+//                                 bullish-leaning, not extreme, since
+//                                 leverage-driven moves are the ones prone
+//                                 to snapping back
+//   rising OI + flat/falling price = leverage building without price
+//                                 agreement — the more interesting case,
+//                                 reads as fragile/bearish (longs stacking
+//                                 in without the market confirming them)
+//   falling OI + falling price = deleveraging into weakness — capitulation,
+//                                 mildly bullish-leaning (the forced selling
+//                                 that's usually behind this tends to be
+//                                 late-cycle, not early)
+//   falling OI + rising price  = short covering into strength — bullish,
+//                                 continuation-friendly
+//   |oiChg| small               = leverage roughly steady, neutral
+function scoreOpenInterest(oiChg, priceChg) {
+  if (oiChg == null) return { score: 50, label: 'no data' };
+  if (priceChg == null) {
+    // No price context available — fall back to magnitude-only reading.
+    if (oiChg > 5)       return { score: 58, label: 'leverage building' };
+    if (oiChg < -5)      return { score: 44, label: 'leverage unwinding' };
+    return { score: 50, label: 'steady' };
+  }
+  const oiRising  = oiChg > 3;
+  const oiFalling = oiChg < -3;
+  const priceUp   = priceChg > 1;
+  const priceDown = priceChg < -1;
+
+  if (oiRising && priceUp)              return { score: 62, label: 'OI + price rising — trend confirmed' };
+  if (oiRising && !priceUp)             return { score: 32, label: 'leverage building, price flat/down — fragile' };
+  if (oiFalling && priceDown)           return { score: 56, label: 'deleveraging into weakness' };
+  if (oiFalling && priceUp)             return { score: 66, label: 'short covering into strength' };
+  return { score: 50, label: 'leverage roughly steady' };
+}
 
 async function buildCoreSignals(force) {
   // Without this cache, loadSatoshiBrief (Live tab, fires on init) and
@@ -6022,13 +6129,21 @@ async function buildCoreSignals(force) {
 
   const dma200      = dailyCloses ? compute200DMA(dailyCloses) : null;
   const cycleRegime = await fetchCycleRegime(dailyCloses);
-  const [fundingData, realVolData, optSkewData, onchainData] = await Promise.all([
+  const [fundingData, realVolData, optSkewData, onchainData, derivData] = await Promise.all([
     fetchFundingRate(),
     fetchRealisedVol(dailyCloses),
     fetchOptionsSkew(),
-    fetchOnchainData()
+    fetchOnchainData(),
+    fetchDerivativesData()
   ]);
   const dma200Dev  = (dma200 && liveBTC) ? parseFloat(((liveBTC - dma200) / dma200 * 100).toFixed(1)) : null;
+  // 7-day price change from the same daily closes 200DMA/Cycle already use —
+  // needed to score Open Interest as a divergence read (rising OI + rising
+  // price = trend confirmation; rising OI + flat/falling price = leverage
+  // building without price agreement) rather than OI's magnitude in isolation.
+  const priceChg7d = (dailyCloses && dailyCloses.length >= 8)
+    ? parseFloat((((dailyCloses[dailyCloses.length - 1] - dailyCloses[dailyCloses.length - 8]) / dailyCloses[dailyCloses.length - 8]) * 100).toFixed(2))
+    : null;
   const fngRaw     = fngCache ? fngCache[0] : null;
   const fng        = fngRaw ? { value: parseInt(fngRaw.value), label: fngRaw.value_classification } : null;
   // FIX (v46): this used to read taCache directly without waiting, which
@@ -6174,10 +6289,49 @@ async function buildCoreSignals(force) {
       weight: 'med',
       live: !!(onchainData && onchainData.stablecoin && onchainData.stablecoin.chg7d != null),
       missing: !(onchainData && onchainData.stablecoin && onchainData.stablecoin.chg7d != null)
-    }
+    },
+    // CVD and Open Interest — added v48. Real trade-flow and leverage-size
+    // data, distinct from every other signal here: Funding and Options Skew
+    // read the *price* of positioning, these read its *volume*/size. See
+    // fetchDerivativesData for source details (OKX + Bybit, not Binance).
+    (function() {
+      const cvdPct = derivData ? derivData.cvdDeltaPct : null;
+      let score = 50, label = 'neutral';
+      if (cvdPct != null) {
+        if (cvdPct < -8)      { score = 22; label = 'heavy net selling'; }
+        else if (cvdPct < -4) { score = 35; label = 'net selling'; }
+        else if (cvdPct < -1) { score = 46; label = 'slight sell bias'; }
+        else if (cvdPct < 1)  { score = 52; label = 'balanced'; }
+        else if (cvdPct < 4)  { score = 60; label = 'slight buy bias'; }
+        else if (cvdPct < 8)  { score = 70; label = 'net buying'; }
+        else                    { score = 80; label = 'heavy net buying'; }
+      }
+      return {
+        name: 'CVD',
+        score: score,
+        label: cvdPct != null ? (cvdPct >= 0 ? '+' : '') + cvdPct + '%' : '—',
+        note:  cvdPct != null ? label + ' · OKX spot, 7d' : 'OKX spot taker flow, 7d',
+        weight: 'med',
+        live: cvdPct != null,
+        missing: cvdPct == null
+      };
+    })(),
+    (function() {
+      const oiChg = derivData ? derivData.oiChangePct7d : null;
+      const oiRead = scoreOpenInterest(oiChg, priceChg7d);
+      return {
+        name: 'Open Interest',
+        score: oiRead.score,
+        label: oiChg != null ? (oiChg >= 0 ? '+' : '') + oiChg + '%' : '—',
+        note:  oiChg != null ? oiRead.label + ' · Bybit, 7d' : 'Bybit futures OI, 7d',
+        weight: 'med',
+        live: oiChg != null,
+        missing: oiChg == null
+      };
+    })()
   ];
 
-  const result = { signals: signals, macro: macro, dma200: dma200, dma200Dev: dma200Dev, cycleRegime: cycleRegime, fundingData: fundingData, realVolData: realVolData, optSkewData: optSkewData, onchainData: onchainData, fng: fng, ta: ta };
+  const result = { signals: signals, macro: macro, dma200: dma200, dma200Dev: dma200Dev, cycleRegime: cycleRegime, fundingData: fundingData, realVolData: realVolData, optSkewData: optSkewData, onchainData: onchainData, derivData: derivData, priceChg7d: priceChg7d, fng: fng, ta: ta };
   coreSignalsCache = result;
   coreSignalsCacheTs = Date.now();
   return result;
@@ -6269,6 +6423,8 @@ async function loadSatoshiBrief(forceRefresh) {
     const realVolData  = core.realVolData;
     const optSkewData  = core.optSkewData;
     const onchainData  = core.onchainData;
+    const derivData    = core.derivData;
+    const priceChg7d   = core.priceChg7d;
 
     // Build Claude prompt
     const today   = new Date().toISOString().slice(0,10);
@@ -6314,6 +6470,8 @@ ${realVolData ? 'Realised vol (7d annualised): ' + realVolData.vol7d + '% vs 30d
 ${optSkewData ? 'Options skew (Deribit 25-delta): ' + (optSkewData.skew >= 0 ? '+' : '') + optSkewData.skew + '% — ' + optSkewData.label + '. Negative skew = market paying premium for put protection = bearish positioning. Positive = call demand = upside bias.' : ''}
 ${onchainData?.etfFlow?.flow5d != null ? 'US spot BTC ETF net flow (5-day rolling): ' + (onchainData.etfFlow.flow5d >= 0 ? '+' : '') + onchainData.etfFlow.flow5d + 'M USD — ' + onchainData.etfFlow.label + '. Sustained inflows mean institutional demand is absorbing supply; sustained outflows mean it is being sold back into the market.' : ''}
 ${onchainData?.stablecoin?.chg7d != null ? 'Stablecoin supply (7-day change, all chains): ' + (onchainData.stablecoin.chg7d >= 0 ? '+' : '') + onchainData.stablecoin.chg7d + '% — ' + onchainData.stablecoin.label + '. Growing supply is fresh capital parked on-chain, ready to deploy into risk assets; contracting supply means capital is leaving crypto rails.' : ''}
+${derivData?.cvdDeltaPct != null ? 'CVD / spot taker flow (OKX, 7-day): ' + (derivData.cvdDeltaPct >= 0 ? '+' : '') + derivData.cvdDeltaPct + '% net — positive means aggressive market buyers outweighed sellers over the week (real trade flow, not positioning price like Funding/Skew). This is a different axis from Funding and Options Skew — those show what traders are willing to pay for exposure; this shows what they actually did.' : ''}
+${derivData?.oiChangePct7d != null ? 'Open Interest (Bybit BTC perps, 7-day change): ' + (derivData.oiChangePct7d >= 0 ? '+' : '') + derivData.oiChangePct7d + '%' + (priceChg7d != null ? ' vs price ' + (priceChg7d >= 0 ? '+' : '') + priceChg7d + '% over the same window' : '') + '. Rising OI with rising price is trend confirmation — fresh leveraged conviction agreeing with the move. Rising OI with flat or falling price is the more important case: leverage building without price agreement, i.e. fragile positioning vulnerable to a squeeze. Falling OI with falling price is deleveraging/capitulation; falling OI with rising price is short covering.' : ''}
 ${macroLine} This is calendar context, not a scored signal — it must never move the weighted composite score above. It DOES directly govern your stated "confidence" field: an event landing inside this prediction week (flagged "this week" above) is real, event-driven uncertainty, separate from how bullish or bearish you are. Baseline confidence with no major event this week: roughly 55-75, depending on how well the signals agree. If one of FOMC/CPI/NFP/PCE falls inside this week, cut baseline confidence by roughly 10-15 points. If two or more of those four land in the same week, cut by 15-25 points combined. ECB, BoJ, and the quarterly options expiry have a smaller, secondary effect on BTC specifically — cut only 3-5 points for those alone, more if one stacks with a US event. If calendar risk lowered your confidence, say so in one short clause in the brief text — never move the number silently.
 ${memoryBlock}
 
@@ -6508,7 +6666,7 @@ function openPredictToggle(which) {
 
 let predictSnapshotLoaded = false;
 
-// Builds the Predict-tab "Signal snapshot" (added v45) — the same 12 real signals and
+// Builds the Predict-tab "Signal snapshot" (added v45) — the same real signals and
 // weighted-call inputs shown on the Live tab's Satoshi brief, via the same
 // buildCoreSignals() function, so users can form their own read before
 // committing using the identical raw material Satoshi uses. Only the
