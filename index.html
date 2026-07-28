@@ -5293,7 +5293,15 @@ async function resolveWeek() {
           pct_change: pctChg
         })
       });
-    } catch(e) { console.warn('week_outcomes insert failed (non-blocking):', e.message); }
+    } catch(e) {
+      console.warn('week_outcomes insert failed (non-blocking):', e.message);
+      // Surfaced, not just logged: this is the exact write that left Week
+      // 10 (2026-07-20) stuck on its startNextWeek() placeholder — btc_close
+      // silently never updated to the real settlement price. Data Health
+      // Check catches it eventually, but only once the week stops being
+      // "current" — this toast catches it immediately instead.
+      showToast('⚠ week_outcomes settlement write failed — btc_close may still show the placeholder. Check console.');
+    }
 
     await sbFetchAdmin('config?id=eq.1', {
       method: 'PATCH',
@@ -5351,13 +5359,23 @@ async function startNextWeek() {
     // at insert time — use liveBTC as the best available price at the moment
     // the week opens (mirrors the fallback already used in resolveWeek()).
     try {
+      // direction/pct_change are NOT NULL columns on week_outcomes — without
+      // them this insert throws 23502 and is caught below, silently. At
+      // creation btc_open === btc_close, so direction is an arbitrary
+      // placeholder ('up') and pct_change is genuinely 0; both get
+      // overwritten with real values by resolveWeek() at settlement.
       await sbFetchAdmin('week_outcomes', {
         method: 'POST',
         prefer: 'resolution=merge-duplicates,return=minimal',
-        body: JSON.stringify({ week_start: getWeekStartDate(nextWeek), btc_open: liveBTC, btc_close: liveBTC })
+        body: JSON.stringify({ week_start: getWeekStartDate(nextWeek), btc_open: liveBTC, btc_close: liveBTC, direction: 'up', pct_change: 0 })
       });
     } catch (e) {
       console.warn('week_outcomes row creation for new week failed (non-blocking):', e.message);
+      // Surfaced, not just logged: a silent failure here means Satoshi's
+      // price call for the whole week can never be logged (the Worker only
+      // PATCHes, never inserts) — that's exactly the bug that motivated
+      // this comment. See Week 11, 2026-07-28.
+      showToast('⚠ week_outcomes row creation failed — Satoshi\'s call may not log this week. Check console.');
     }
 
     clearMyPrediction();
