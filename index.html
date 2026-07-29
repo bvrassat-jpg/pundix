@@ -3788,7 +3788,7 @@ function measureWrapLines(ctx, text, maxWidth) {
   return lines;
 }
 
-async function renderCallCardX(satoshiPrice, livePrice, confidence, quote, week) {
+async function renderCallCardX(satoshiPrice, livePrice, confidence, quote, week, hook) {
   const canvas = document.getElementById('shareCanvas');
   const W = 540;
   const ctx = canvas.getContext('2d');
@@ -3849,10 +3849,10 @@ async function renderCallCardX(satoshiPrice, livePrice, confidence, quote, week)
     wrapCanvasText(ctx, '\u201c' + quote + '\u201d', 32, quoteTop + 18, W - 60, QUOTE_LINE_H);
   }
 
-  drawXCardFooter(ctx, W, H, pickHook(CALL_HOOKS), APP_URL + ' \u00b7 Week ' + week + ' opens now');
+  drawXCardFooter(ctx, W, H, hook, APP_URL + ' \u00b7 Week ' + week + ' opens now');
 }
 
-async function renderTopDriversCardX(signals, week) {
+async function renderTopDriversCardX(signals, week, hook) {
   const canvas = document.getElementById('shareCanvas');
   const W = 540, H = 520;
   canvas.width = W; canvas.height = H;
@@ -3892,7 +3892,7 @@ async function renderTopDriversCardX(signals, week) {
     rowY += 46;
   });
 
-  drawXCardFooter(ctx, W, H, pickHook(DRIVERS_HOOKS).replace('SIGNAL_COUNT', SIGNAL_NAMES.length), APP_URL);
+  drawXCardFooter(ctx, W, H, hook, APP_URL);
 }
 
 async function renderSettlementCardX(satoshiPrice, actualPrice, week, isHit, errorPct, streak, wins, losses) {
@@ -4003,8 +4003,9 @@ async function openAdminCallCard() {
       return;
     }
     document.getElementById('shareModalTitle').textContent = 'Satoshi\u2019s Call \u2014 Week ' + CURRENT_WEEK;
-    await renderCallCardX(row.satoshi_price, liveBTC, row.satoshi_confidence, row.satoshi_rationale, CURRENT_WEEK);
-    currentShareText = pickHook(CALL_HOOKS) + '\n\n' + APP_URL + ' \u2014 Week ' + CURRENT_WEEK;
+    const callHook = pickHook(CALL_HOOKS);
+    await renderCallCardX(row.satoshi_price, liveBTC, row.satoshi_confidence, row.satoshi_rationale, CURRENT_WEEK, callHook);
+    currentShareText = callHook + '\n\n' + APP_URL + ' \u2014 Week ' + CURRENT_WEEK;
     document.getElementById('shareModal').classList.add('open');
     document.getElementById('adminXPostStatus').style.display = 'none';
   } catch (e) {
@@ -4017,8 +4018,9 @@ async function openAdminSignalStackCard() {
   try {
     const core = await buildCoreSignals(false);
     document.getElementById('shareModalTitle').textContent = 'Satoshi\u2019s Top Drivers \u2014 Week ' + CURRENT_WEEK;
-    await renderTopDriversCardX(core.signals, CURRENT_WEEK);
-    currentShareText = pickHook(DRIVERS_HOOKS) + '\n\n' + APP_URL;
+    const driversHook = pickHook(DRIVERS_HOOKS).replace('SIGNAL_COUNT', SIGNAL_NAMES.length);
+    await renderTopDriversCardX(core.signals, CURRENT_WEEK, driversHook);
+    currentShareText = driversHook + '\n\n' + APP_URL;
     document.getElementById('shareModal').classList.add('open');
     document.getElementById('adminXPostStatus').style.display = 'none';
   } catch (e) {
