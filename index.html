@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Pundix v48 -->
+<!-- Pundix v49 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pundix — BTC Weekly League</title>
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v48</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v49</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -362,7 +362,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
     <div class="locked-card" id="lockedCard">
       <div class="locked-icon" style="font-size:36px;color:var(--orange);">◈</div>
       <div class="locked-title">Your call is locked in</div>
-      <div class="locked-sub" id="lockedSub">Your prediction is set. Results are published Sunday night after the weekly settlement.</div>
+      <div class="locked-sub" id="lockedSub">Your prediction is set. BTC settles Sunday 23:59 UTC — results are published once the week is resolved, typically Monday morning.</div>
 
       <!-- Live position tracker -->
       <div id="lockedLiveTracker" style="display:none;margin:16px 0 4px;">
@@ -546,7 +546,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="satoshi-footer">
         <div class="satoshi-commentary-type" id="satoshiType">—</div>
         <div style="display:flex;align-items:center;gap:16px;">
-          <div id="satoshiNodeLine" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:0.5px;">node://satoshi · v48</div>
+          <div id="satoshiNodeLine" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:0.5px;">node://satoshi · v49</div>
           <button class="satoshi-refresh" onclick="loadSatoshiCommentary(true)" id="satoshiRefreshBtn">↻ refresh</button>
         </div>
       </div>
@@ -819,7 +819,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         <div class="timing-row">
           <div class="timing-day">Sunday</div>
           <div class="timing-dot" style="background:var(--green);"></div>
-          <div class="timing-event">BTC weekly settlement fixed at 23:59 UTC · Rankings published</div>
+          <div class="timing-event">BTC weekly settlement fixed at 23:59 UTC</div>
+        </div>
+        <div class="timing-row">
+          <div class="timing-day">Monday</div>
+          <div class="timing-dot" style="background:var(--orange);"></div>
+          <div class="timing-event">Rankings published · New week opens</div>
         </div>
       </div>
     </div>
@@ -927,10 +932,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         <button class="submit-btn" id="adminCallCardBtn" onclick="openAdminCallCard()" style="width:100%;margin-top:12px;">
           Generate Satoshi's Call Card →
         </button>
-        <button class="submit-btn" id="adminSignalCardBtn" onclick="openAdminSignalStackCard()" style="width:100%;margin-top:8px;background:var(--surface);">
+        <button class="submit-btn" id="adminSignalCardBtn" onclick="openAdminSignalStackCard()" style="width:100%;margin-top:8px;background:var(--surface);color:var(--text);">
           Generate Top Drivers Card →
         </button>
-        <button class="submit-btn" id="adminSettlementCardBtn" onclick="openAdminSettlementCard()" style="width:100%;margin-top:8px;background:var(--surface);">
+        <button class="submit-btn" id="adminSettlementCardBtn" onclick="openAdminSettlementCard()" style="width:100%;margin-top:8px;background:var(--surface);color:var(--text);">
           Generate Settlement Card →
         </button>
         <div id="adminXPostStatus" style="font-family:var(--mono);font-size:11px;margin-top:10px;display:none;"></div>
@@ -960,7 +965,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         <button class="submit-btn" id="adminEloUpdateBtn" onclick="runEloUpdate()" style="width:100%;margin-top:12px;">
           Update Elo (last resolved week) →
         </button>
-        <button class="submit-btn" id="adminEloBackfillBtn" onclick="runEloBackfill()" style="width:100%;margin-top:8px;background:var(--surface);">
+        <button class="submit-btn" id="adminEloBackfillBtn" onclick="runEloBackfill()" style="width:100%;margin-top:8px;background:var(--surface);color:var(--text);">
           Backfill All Elo History →
         </button>
         <div id="eloUpdateStatus" style="font-family:var(--mono);font-size:11px;margin-top:10px;display:none;"></div>
@@ -1131,7 +1136,7 @@ const CLAUDE_MODEL    = 'claude-sonnet-4-6';
 // versioned external service, so there's no reason to track it as one —
 // one number now drives both, and it can't drift again because there's
 // only one string to change.
-const PUNDIX_VERSION = 'v48';
+const PUNDIX_VERSION = 'v49';
 const SATOSHI_NODE_VERSION = 'node://satoshi · ' + PUNDIX_VERSION;
 
 const SFX = (() => {
@@ -1547,7 +1552,7 @@ function refreshPredictPanelState() {
       if (shareResultSection) shareResultSection.style.display = 'block';
     } else {
       if (lockedSubEl) lockedSubEl.textContent =
-        `${myPrediction.name}, your call is locked in for Week ${CURRENT_WEEK}. Results published Sunday night.`;
+        `${myPrediction.name}, your call is locked in for Week ${CURRENT_WEEK}. Results published once the week resolves, typically Monday morning.`;
       renderSatoshiReveal();
     }
   } else if (WEEK_STATUS === 'resolved' || !isOpen) {
@@ -1563,7 +1568,7 @@ function refreshPredictPanelState() {
         if (subEl)   subEl.innerHTML = 'Check the <strong>Leaderboard</strong> for results. New week opens Monday.';
       } else {
         if (titleEl) titleEl.textContent = 'Predictions closed for this week';
-        if (subEl)   subEl.innerHTML = 'Settlement resolves Sunday 23:59 UTC · New week opens Monday.<br>Check the <strong>Live Week</strong> tab for current standings.';
+        if (subEl)   subEl.innerHTML = 'BTC settlement fixes Sunday 23:59 UTC · Results typically posted Monday morning, new week opens same day.<br>Check the <strong>Live Week</strong> tab for current standings.';
       }
     }
   } else {
@@ -1642,7 +1647,7 @@ function updateWindowStatus() {
     if (submitBtn) submitBtn.disabled = false;
   } else {
     if (dotEl)  dotEl.className = 'window-dot-closed';
-    if (textEl) textEl.innerHTML = 'Predictions <strong>closed</strong> · Resolves Sunday 23:59 UTC';
+    if (textEl) textEl.innerHTML = 'Predictions <strong>closed</strong> · BTC settles Sunday 23:59 UTC · Results Monday';
     if (cdEl)   cdEl.textContent = formatCountdown(resolveDate - now);
     if (submitBtn) submitBtn.disabled = true;
   }
@@ -1795,7 +1800,7 @@ async function submitPrediction() {
     document.getElementById('lockedSub').textContent =
       WEEK_STATUS === 'resolved'
         ? `${name}, your prediction for Week ${CURRENT_WEEK} is final. Check the Leaderboard for results.`
-        : `${name}, your call is locked in for Week ${CURRENT_WEEK}. Results are published Sunday night.`;
+        : `${name}, your call is locked in for Week ${CURRENT_WEEK}. Results are published once the week resolves, typically Monday morning.`;
 
     // Update toggles section label to engagement state
     const togglesLabel = document.getElementById('togglesSectionLabel');
