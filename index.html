@@ -921,6 +921,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         </div>
       </div>
 
+      <div class="admin-card" id="adminXPostCard">
+        <div class="admin-card-title">X Post Cards</div>
+        <div class="admin-card-sub">Branded images, ready to save and post. Call shows this week's number and Satoshi's own words; Top Drivers shows the engine behind it; Settlement grades the last call. Post them across the week.</div>
+        <button class="submit-btn" id="adminCallCardBtn" onclick="openAdminCallCard()" style="width:100%;margin-top:12px;">
+          Generate Satoshi's Call Card →
+        </button>
+        <button class="submit-btn" id="adminSignalCardBtn" onclick="openAdminSignalStackCard()" style="width:100%;margin-top:8px;background:var(--surface);">
+          Generate Top Drivers Card →
+        </button>
+        <button class="submit-btn" id="adminSettlementCardBtn" onclick="openAdminSettlementCard()" style="width:100%;margin-top:8px;background:var(--surface);">
+          Generate Settlement Card →
+        </button>
+        <div id="adminXPostStatus" style="font-family:var(--mono);font-size:11px;margin-top:10px;display:none;"></div>
+      </div>
+
       <div class="admin-card">
         <div class="admin-card-title">This Week's Predictions</div>
         <div id="adminPredictionsList"></div>
@@ -1966,7 +1981,12 @@ async function loadSignalWeights() {
     // the weights this function computes. Same fix pattern as
     // buildSatoshiMemory() and the admin Regime/Bias cards.
     const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
-    const resolvedOutcomes = outcomes.filter(o => o.week_start !== currentWeekMonday);
+    // FIX: was excluding by date match alone, which wrongly drops the week
+    // you just resolved during the gap between clicking "Resolve Week" and
+    // "Start Next Week" (CURRENT_WEEK hasn't advanced yet, but this row
+    // already holds real settlement data). WEEK_STATUS is the actual
+    // signal for "is this still the startNextWeek() placeholder."
+    const resolvedOutcomes = outcomes.filter(o => !(o.week_start === currentWeekMonday && WEEK_STATUS === 'open'));
     if (resolvedOutcomes.length < 2) return; // not enough real resolved data yet
     const N = Math.min(resolvedOutcomes.length, 8);
     const recentOutcomes = resolvedOutcomes.slice(-N);
@@ -2083,7 +2103,8 @@ async function buildSatoshiMemory() {
     // every downstream section in one place instead of needing an ad-hoc
     // guard in each.
     const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
-    const outcomesResolved = outcomes.filter(o => o.week_start !== currentWeekMonday);
+    // Same WEEK_STATUS fix as loadSignalWeights() — see comment there.
+    const outcomesResolved = outcomes.filter(o => !(o.week_start === currentWeekMonday && WEEK_STATUS === 'open'));
 
     const lines = [];
 
@@ -2800,9 +2821,20 @@ async function renderSatoshiDuelCard() {
 // sitting in week_outcomes.satoshi_price by the time anyone predicts. This
 // just surfaces it right after the player locks in, instead of waiting for
 // Sunday settlement like the Duel Card does.
-async function renderSatoshiReveal() {
+let _satoshiRevealRenderedForWeek = null;
+async function renderSatoshiReveal(force) {
   const wrap = document.getElementById('lockedSatoshiReveal');
   if (!wrap || !myPrediction) return;
+  // Without this guard this re-fetches on every 1s tick from
+  // updateWindowStatus() -> refreshPredictPanelState() for as long as
+  // someone sits on the Predict tab after locking in — three unbounded
+  // Supabase round trips (full predictions table, full week_outcomes
+  // table, twice) for data that cannot change without a page action
+  // (Satoshi's call is fixed once per week; the record vs Satoshi only
+  // depends on already-resolved weeks). Same bug class already fixed
+  // once in this file for the resolve chime (_resolvedSfxPlayedForWeek,
+  // see loadAdminDashboard-adjacent code) — same fix here.
+  if (!force && _satoshiRevealRenderedForWeek === CURRENT_WEEK) { wrap.style.display = 'block'; return; }
   try {
     const weekMonday = getWeekStartDate(CURRENT_WEEK);
     const rows = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price,satoshi_rationale,satoshi_logged_at,satoshi_confidence&limit=1');
@@ -2898,6 +2930,7 @@ async function renderSatoshiReveal() {
     }
 
     wrap.style.display = 'block';
+    _satoshiRevealRenderedForWeek = CURRENT_WEEK;
   } catch(e) {
     console.warn('renderSatoshiReveal:', e.message);
     wrap.style.display = 'none';
@@ -3128,7 +3161,8 @@ async function renderOracleChart() {
     // placeholder set by startNextWeek(), not a real settlement, so grading
     // it here produces a false hit/miss reading every single week).
     const currentWeekMondayForChart = getWeekStartDate(CURRENT_WEEK);
-    const points = outcomes.filter(function(o){ return o.btc_close && o.week_start !== currentWeekMondayForChart; }).map(function(o, i) {
+    // Same WEEK_STATUS fix as loadSignalWeights() — see comment there.
+    const points = outcomes.filter(function(o){ return o.btc_close && !(o.week_start === currentWeekMondayForChart && WEEK_STATUS === 'open'); }).map(function(o, i) {
       const weekNum  = weekNumFromDate(o.week_start);
       const crowdMed = median(predsByWeek[weekNum]);
       return {
@@ -3632,6 +3666,316 @@ function saveShareImage() {
   link.href     = canvas.toDataURL('image/png');
   link.click();
   showToast('Image saved — share it!');
+}
+
+// ── X Post Cards (admin) ───────────────────────────────────────────────────
+// Three branded images built for copy-paste posting to X, reusing the same
+// canvas + share-modal (#shareModal/#shareCanvas) already wired up for
+// copyShareText()/saveShareImage(). Deliberately no QR here (these are
+// posted by Bertrand, not scanned by a player mid-flow) — just the wordmark,
+// the number, and a link.
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = String(text).split(' ');
+  let line = '';
+  let lines = 0;
+  for (let i = 0; i < words.length; i++) {
+    const test = line + words[i] + ' ';
+    if (ctx.measureText(test).width > maxWidth && line !== '') {
+      ctx.fillText(line.trim(), x, y + lines * lineHeight);
+      line = words[i] + ' ';
+      lines++;
+    } else {
+      line = test;
+    }
+  }
+  ctx.fillText(line.trim(), x, y + lines * lineHeight);
+  return lines + 1; // total lines drawn
+}
+
+function drawXCardChrome(ctx, W, H, badgeText, badgeColor, borderColor) {
+  ctx.fillStyle = '#080D14';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = borderColor;
+  ctx.fillRect(0, 0, 4, H);
+  ctx.fillStyle = badgeColor === '#EF4444' ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.15)';
+  ctx.fillRect(4, 0, W - 4, 56);
+  ctx.fillStyle = '#F59E0B';
+  ctx.font = '800 24px "Barlow Condensed", sans-serif';
+  ctx.fillText('PUNDIX', 20, 36);
+  ctx.fillStyle = badgeColor;
+  ctx.font = '700 10px "Space Mono", monospace';
+  ctx.textAlign = 'right';
+  const bw = ctx.measureText(badgeText).width + 20;
+  ctx.fillStyle = badgeColor === '#EF4444' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)';
+  roundRect(ctx, W - bw - 16, 14, bw, 24, 4);
+  ctx.fill();
+  ctx.fillStyle = badgeColor;
+  ctx.fillText(badgeText, W - 24, 30);
+  ctx.textAlign = 'left';
+}
+
+function drawXCardFooter(ctx, W, H, hookLine, subText) {
+  ctx.strokeStyle = 'rgba(245,158,11,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H - 68); ctx.lineTo(W, H - 68); ctx.stroke();
+  ctx.fillStyle = '#A8BCCE';
+  ctx.font = '700 16px "Barlow Condensed", sans-serif';
+  ctx.fillText(hookLine, 20, H - 40);
+  ctx.fillStyle = '#6E8BA8';
+  ctx.font = '400 10px "Space Mono", monospace';
+  ctx.fillText(subText, 20, H - 18);
+}
+
+const CALL_HOOKS = [
+  'Think you can call it closer than this? Prove it.',
+  'Can you beat Satoshi? The league is open.',
+  'One AI, one number, no hedging. Beat it if you can.'
+];
+const DRIVERS_HOOKS = [
+  'SIGNAL_COUNT signals feed the engine. Weights shift weekly \u2014 earned, not fixed.',
+  'Not vibes. A calibrated engine.',
+  'This is what\u2019s actually moving the call.'
+];
+function pickHook(pool) { return pool[Math.floor(Math.random() * pool.length)]; }
+
+function getSettlementHook(isHit, streak) {
+  if (isHit) {
+    return streak >= 2 ? `Called it again \u2014 ${streak} in a row now.` : 'Called it \u2014 right where it counts.';
+  }
+  return streak >= 2 ? `Wrong again \u2014 ${streak} misses running.` : 'Wrong \u2014 the record stays on-chain either way.';
+}
+
+async function renderCallCardX(satoshiPrice, livePrice, confidence, quote, week) {
+  const canvas = document.getElementById('shareCanvas');
+  const W = 540, H = 430;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  drawXCardChrome(ctx, W, H, 'WEEK ' + week, '#F59E0B', '#F59E0B');
+
+  ctx.fillStyle = '#6E8BA8';
+  ctx.font = '400 11px "Space Mono", monospace';
+  ctx.fillText('SATOSHI PREDICTS', 20, 84);
+
+  const fmtPrice = '$' + Math.round(satoshiPrice).toLocaleString('en-US');
+  ctx.fillStyle = '#F0F4FA';
+  ctx.font = '800 56px "Barlow Condensed", sans-serif';
+  ctx.fillText('BTC ' + fmtPrice, 18, 148);
+
+  const diffPct = (((satoshiPrice - livePrice) / livePrice) * 100).toFixed(1);
+  const isUp = parseFloat(diffPct) >= 0;
+  const pillColor = isUp ? '#10B981' : '#EF4444';
+  const pillLabel = (isUp ? '\u25b2 +' : '\u25bc ') + diffPct + '%';
+  ctx.fillStyle = isUp ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+  roundRect(ctx, 20, 162, 110, 28, 4); ctx.fill();
+  ctx.strokeStyle = pillColor; ctx.lineWidth = 1.5;
+  roundRect(ctx, 20, 162, 110, 28, 4); ctx.stroke();
+  ctx.fillStyle = pillColor;
+  ctx.font = '700 12px "Space Mono", monospace';
+  ctx.fillText(pillLabel, 30, 180);
+  ctx.fillStyle = '#6E8BA8';
+  ctx.font = '400 11px "Space Mono", monospace';
+  ctx.fillText('vs current $' + Math.round(livePrice).toLocaleString('en-US'), 140, 180);
+  if (confidence != null) {
+    ctx.fillText('Confidence ' + Math.round(confidence) + '%', 140, 196);
+  }
+
+  if (quote) {
+    ctx.strokeStyle = 'rgba(245,158,11,0.4)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(20, 218); ctx.lineTo(20, 300); ctx.stroke();
+    ctx.fillStyle = '#D8E2EC';
+    ctx.font = 'italic 400 13px "Space Mono", monospace';
+    wrapCanvasText(ctx, '\u201c' + quote + '\u201d', 32, 236, W - 60, 20);
+  }
+
+  drawXCardFooter(ctx, W, H, pickHook(CALL_HOOKS), APP_URL + ' \u00b7 Week ' + week + ' opens now');
+}
+
+async function renderTopDriversCardX(signals, week) {
+  const canvas = document.getElementById('shareCanvas');
+  const W = 540, H = 520;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  drawXCardChrome(ctx, W, H, 'WEEK ' + week, '#F59E0B', '#F59E0B');
+
+  ctx.fillStyle = '#F0F4FA';
+  ctx.font = '800 26px "Barlow Condensed", sans-serif';
+  ctx.fillText('Satoshi\u2019s top drivers', 20, 92);
+  ctx.fillStyle = '#6E8BA8';
+  ctx.font = '400 11px "Space Mono", monospace';
+  ctx.fillText('6 of ' + SIGNAL_NAMES.length + ' live signals \u00b7 today\u2019s most impactful by weight', 20, 112);
+
+  const ranked = signals.slice().sort((a, b) => (signalWeights[b.name] || 0) - (signalWeights[a.name] || 0)).slice(0, 6);
+  const maxW = Math.max.apply(null, ranked.map(s => signalWeights[s.name] || 0));
+  let rowY = 150;
+  ranked.forEach(sig => {
+    const w = signalWeights[sig.name] || SIGNAL_BASE_WEIGHT;
+    const barMaxWidth = 300;
+    const barWidth = Math.max(6, (w / maxW) * barMaxWidth);
+    ctx.fillStyle = '#F0F4FA';
+    ctx.font = '700 14px "Barlow Condensed", sans-serif';
+    ctx.fillText(sig.name, 20, rowY);
+    ctx.fillStyle = '#1E2D42';
+    roundRect(ctx, 150, rowY - 14, barMaxWidth, 12, 3); ctx.fill();
+    ctx.fillStyle = '#F59E0B';
+    roundRect(ctx, 150, rowY - 14, barWidth, 12, 3); ctx.fill();
+    ctx.fillStyle = '#F59E0B';
+    ctx.font = '700 13px "Space Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(w * 100) + '%', W - 24, rowY);
+    ctx.textAlign = 'left';
+    rowY += 46;
+  });
+
+  drawXCardFooter(ctx, W, H, pickHook(DRIVERS_HOOKS).replace('SIGNAL_COUNT', SIGNAL_NAMES.length), APP_URL);
+}
+
+async function renderSettlementCardX(satoshiPrice, actualPrice, week, isHit, errorPct, streak, wins, losses) {
+  const canvas = document.getElementById('shareCanvas');
+  const W = 540, H = 430;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const accent = isHit ? '#10B981' : '#EF4444';
+  drawXCardChrome(ctx, W, H, 'WEEK ' + week + ' \u00b7 SETTLED', accent, accent);
+
+  ctx.fillStyle = '#6E8BA8';
+  ctx.font = '400 11px "Space Mono", monospace';
+  ctx.fillText('SUNDAY SETTLEMENT', 20, 84);
+
+  function box(x, label, value, labelColor, valueColor, highlight) {
+    const bw = 250;
+    ctx.fillStyle = highlight ? 'rgba(245,158,11,0.08)' : '#0D1520';
+    roundRect(ctx, x, 96, bw, 68, 6); ctx.fill();
+    ctx.strokeStyle = highlight ? 'rgba(245,158,11,0.4)' : '#1E2D42';
+    ctx.lineWidth = 1;
+    roundRect(ctx, x, 96, bw, 68, 6); ctx.stroke();
+    ctx.fillStyle = labelColor;
+    ctx.font = '400 10px "Space Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, x + bw / 2, 116);
+    ctx.fillStyle = valueColor;
+    ctx.font = '700 20px "Space Mono", monospace';
+    ctx.fillText('$' + Math.round(value).toLocaleString('en-US'), x + bw / 2, 146);
+    ctx.textAlign = 'left';
+  }
+  box(20, 'SATOSHI', satoshiPrice, '#6E8BA8', '#F0F4FA', false);
+  box(280, 'ACTUAL', actualPrice, '#F59E0B', '#F59E0B', true);
+  ctx.fillStyle = '#6E8BA8';
+  ctx.font = '400 10px "Space Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('vs', 275, 134);
+  ctx.textAlign = 'left';
+
+  const verdictLabel = (isHit ? 'HIT \u00b7 ' : 'MISS \u00b7 ') + (satoshiPrice >= actualPrice ? '+' : '') + (((satoshiPrice - actualPrice) / actualPrice) * 100).toFixed(1) + '%';
+  ctx.fillStyle = isHit ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+  const vw = ctx.measureText(verdictLabel).width + 24;
+  roundRect(ctx, 20, 186, vw + 20, 30, 4); ctx.fill();
+  ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
+  roundRect(ctx, 20, 186, vw + 20, 30, 4); ctx.stroke();
+  ctx.fillStyle = accent;
+  ctx.font = '700 12px "Space Mono", monospace';
+  ctx.fillText(verdictLabel, 30, 205);
+  ctx.fillStyle = '#6E8BA8';
+  ctx.font = '400 11px "Space Mono", monospace';
+  ctx.fillText('off by $' + Math.round(Math.abs(satoshiPrice - actualPrice)).toLocaleString('en-US'), 40 + vw, 205);
+
+  drawXCardFooter(ctx, W, H, getSettlementHook(isHit, streak), 'Season record: ' + wins + 'W \u2013 ' + losses + 'L \u00b7 ' + APP_URL);
+}
+
+async function computeSettlementCardData() {
+  // Deliberately NOT filtering by "week_start !== getWeekStartDate(CURRENT_WEEK)" —
+  // CURRENT_WEEK only advances when startNextWeek() is clicked, which is a
+  // separate, later admin action from resolveWeek(). In the (very normal)
+  // window between resolving a week and starting the next one, CURRENT_WEEK
+  // still points at the week that was just resolved — that filter would
+  // have excluded exactly the week this card is meant to show. Instead,
+  // exclude the placeholder sentinel startNextWeek() writes on creation
+  // (btc_open === btc_close, direction hardcoded 'up', pct_change 0) — the
+  // same "still open, not really resolved" signal loadSignalWeights()
+  // already relies on elsewhere in this file.
+  const outcomes = await sbGet('week_outcomes?select=week_start,btc_open,btc_close,satoshi_price&order=week_start.desc&limit=52');
+  const resolved = (outcomes || []).filter(o => o.satoshi_price != null && o.btc_close != null && o.btc_open !== o.btc_close);
+  if (!resolved.length) return null;
+  const graded = resolved.map(o => {
+    const errorPct = Math.abs(o.satoshi_price - o.btc_close) / o.btc_close * 100;
+    return { week_start: o.week_start, satoshi_price: o.satoshi_price, btc_close: o.btc_close, errorPct: errorPct, hit: errorPct <= 2 };
+  });
+  const latest = graded[0];
+  let streak = 1;
+  for (let i = 1; i < graded.length; i++) {
+    if (graded[i].hit === latest.hit) streak++; else break;
+  }
+  const wins = graded.filter(g => g.hit).length;
+  const losses = graded.length - wins;
+  // Week number derived from the row's own week_start against the same
+  // ANCHOR_WEEK/ANCHOR_MONDAY reference getWeekStartDate() uses — matches
+  // the weekNumFromDate() pattern already established (see ~line 3100)
+  // rather than assuming CURRENT_WEEK - 1, which breaks in the window
+  // described above and after any gap in week_outcomes.
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const diffDays = (new Date(latest.week_start + 'T00:00:00Z') - new Date(ANCHOR_MONDAY + 'T00:00:00Z')) / MS_PER_DAY;
+  const weekNum = ANCHOR_WEEK + Math.round(diffDays / 7);
+  return { satoshiPrice: latest.satoshi_price, actualPrice: latest.btc_close, isHit: latest.hit, errorPct: latest.errorPct, streak: streak, wins: wins, losses: losses, weekNum: weekNum };
+}
+
+function showAdminXPostStatus(msg, isError) {
+  const el = document.getElementById('adminXPostStatus');
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.color = isError ? 'var(--red)' : 'var(--text-mid)';
+  el.textContent = msg;
+}
+
+async function openAdminCallCard() {
+  showAdminXPostStatus('Loading this week\u2019s call\u2026', false);
+  try {
+    const weekMonday = getWeekStartDate(CURRENT_WEEK);
+    const rows = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=satoshi_price,satoshi_rationale,satoshi_confidence&limit=1');
+    const row = rows && rows[0];
+    if (!row || row.satoshi_price == null) {
+      showAdminXPostStatus('Satoshi hasn\u2019t logged a call for this week yet.', true);
+      return;
+    }
+    document.getElementById('shareModalTitle').textContent = 'Satoshi\u2019s Call \u2014 Week ' + CURRENT_WEEK;
+    await renderCallCardX(row.satoshi_price, liveBTC, row.satoshi_confidence, row.satoshi_rationale, CURRENT_WEEK);
+    currentShareText = pickHook(CALL_HOOKS) + '\n\n' + APP_URL + ' \u2014 Week ' + CURRENT_WEEK;
+    document.getElementById('shareModal').classList.add('open');
+    document.getElementById('adminXPostStatus').style.display = 'none';
+  } catch (e) {
+    showAdminXPostStatus('Could not build the card \u2014 check your connection.', true);
+  }
+}
+
+async function openAdminSignalStackCard() {
+  showAdminXPostStatus('Reading the signal stack\u2026', false);
+  try {
+    const core = await buildCoreSignals(false);
+    document.getElementById('shareModalTitle').textContent = 'Satoshi\u2019s Top Drivers \u2014 Week ' + CURRENT_WEEK;
+    await renderTopDriversCardX(core.signals, CURRENT_WEEK);
+    currentShareText = pickHook(DRIVERS_HOOKS) + '\n\n' + APP_URL;
+    document.getElementById('shareModal').classList.add('open');
+    document.getElementById('adminXPostStatus').style.display = 'none';
+  } catch (e) {
+    showAdminXPostStatus('Could not build the card \u2014 check your connection.', true);
+  }
+}
+
+async function openAdminSettlementCard() {
+  showAdminXPostStatus('Grading the last settlement\u2026', false);
+  try {
+    const data = await computeSettlementCardData();
+    if (!data) {
+      showAdminXPostStatus('No resolved weeks yet \u2014 settle a week first.', true);
+      return;
+    }
+    document.getElementById('shareModalTitle').textContent = 'Settlement \u2014 Week ' + data.weekNum;
+    await renderSettlementCardX(data.satoshiPrice, data.actualPrice, data.weekNum, data.isHit, data.errorPct, data.streak, data.wins, data.losses);
+    currentShareText = getSettlementHook(data.isHit, data.streak) + '\n\n' + APP_URL;
+    document.getElementById('shareModal').classList.add('open');
+    document.getElementById('adminXPostStatus').style.display = 'none';
+  } catch (e) {
+    showAdminXPostStatus('Could not build the card \u2014 check your connection.', true);
+  }
 }
 
 const PWA_DISMISSED_KEY = 'pundix_pwa_dismissed';
@@ -4846,9 +5190,10 @@ async function loadSatoshiCalibration() {
     // not a real Sunday settlement — grading against it produces a spurious
     // "miss" every week regardless of how good Satoshi's call actually is.
     const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
+    // Same WEEK_STATUS fix as loadSignalWeights() — see comment there.
     const usable = (rows || []).filter(function(r) {
       return r.satoshi_confidence != null && r.satoshi_price != null && r.btc_close != null
-        && r.week_start !== currentWeekMonday;
+        && !(r.week_start === currentWeekMonday && WEEK_STATUS === 'open');
     });
 
     if (usable.length === 0) {
@@ -4917,9 +5262,10 @@ async function loadRegimePerformance() {
     );
 
     const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
+    // Same WEEK_STATUS fix as loadSignalWeights() — see comment there.
     const usable = (rows || []).filter(function(r) {
       return r.satoshi_price != null && r.btc_close != null && r.pct_change != null
-        && r.week_start !== currentWeekMonday;
+        && !(r.week_start === currentWeekMonday && WEEK_STATUS === 'open');
     });
 
     if (usable.length === 0) {
@@ -4983,9 +5329,10 @@ async function loadDirectionBias() {
     );
 
     const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
+    // Same WEEK_STATUS fix as loadSignalWeights() — see comment there.
     const usable = (rows || []).filter(function(r) {
       return r.satoshi_price != null && r.btc_open != null && r.btc_close != null && r.direction != null
-        && r.week_start !== currentWeekMonday;
+        && !(r.week_start === currentWeekMonday && WEEK_STATUS === 'open');
     });
 
     if (usable.length === 0) {
@@ -6063,7 +6410,8 @@ async function renderSignalStreakHeatmap() {
     // current week's non-real outcome in the reliability percentages shown
     // here.
     const currentWeekMonday = getWeekStartDate(CURRENT_WEEK);
-    const outcomes = (outcomesRaw || []).filter(o => o.week_start !== currentWeekMonday);
+    // Same WEEK_STATUS fix as loadSignalWeights() — see comment there.
+    const outcomes = (outcomesRaw || []).filter(o => !(o.week_start === currentWeekMonday && WEEK_STATUS === 'open'));
     if (!outcomes || outcomes.length < 2) {
       container.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);padding:8px 0;">Not enough resolved weeks yet to show reliability history.</div>';
       return;
