@@ -1030,12 +1030,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <canvas id="shareCanvas"></canvas>
     </div>
     <div class="share-modal-btns">
-      <button class="share-modal-btn share-modal-btn-copy" onclick="copyShareText()">↗ Copy text</button>
+      <button class="share-modal-btn share-modal-btn-copy" onclick="copyShareImage()" id="copyImgBtn">⧉ Copy image</button>
+      <button class="share-modal-btn share-modal-btn-save" onclick="copyShareText()">↗ Copy text</button>
       <button class="share-modal-btn share-modal-btn-save" onclick="saveShareImage()" id="saveImgBtn">⬇ Save image</button>
       <button class="share-modal-btn share-modal-btn-close" onclick="closeShareModal()">Close</button>
     </div>
     <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);text-align:center;margin-top:12px;line-height:1.6;">
-      Save the image · post it · viewers scan QR to join
+      Copy image · Ctrl+V into X · or save/scan QR to join
     </div>
   </div>
 </div>
@@ -3655,6 +3656,26 @@ function closeShareModal(e) {
   }
 }
 
+async function copyShareImage() {
+  const btn = document.getElementById('copyImgBtn');
+  const original = btn ? btn.textContent : null;
+  try {
+    if (!navigator.clipboard || !window.ClipboardItem) {
+      throw new Error('Clipboard image API not supported in this browser');
+    }
+    const canvas = document.getElementById('shareCanvas');
+    const blob = await new Promise(function(resolve, reject) {
+      canvas.toBlob(function(b) { b ? resolve(b) : reject(new Error('canvas.toBlob returned null')); }, 'image/png');
+    });
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    showToast('Image copied — paste it (Ctrl+V) directly into X');
+    if (btn) { btn.textContent = '\u2713 Copied'; setTimeout(function(){ btn.textContent = original; }, 1500); }
+  } catch (e) {
+    console.warn('copyShareImage:', e.message);
+    showToast('Copy failed — use Save Image instead (Chrome on desktop works best for this).');
+  }
+}
+
 function copyShareText() {
   navigator.clipboard.writeText(currentShareText).then(() => {
     showToast('Copied — paste it on X / WhatsApp');
@@ -3751,11 +3772,45 @@ function getSettlementHook(isHit, streak) {
   return streak >= 2 ? `Wrong again \u2014 ${streak} misses running.` : 'Wrong \u2014 the record stays on-chain either way.';
 }
 
+function measureWrapLines(ctx, text, maxWidth) {
+  const words = String(text).split(' ');
+  let line = '';
+  let lines = 1;
+  for (let i = 0; i < words.length; i++) {
+    const test = line + words[i] + ' ';
+    if (ctx.measureText(test).width > maxWidth && line !== '') {
+      lines++;
+      line = words[i] + ' ';
+    } else {
+      line = test;
+    }
+  }
+  return lines;
+}
+
 async function renderCallCardX(satoshiPrice, livePrice, confidence, quote, week) {
   const canvas = document.getElementById('shareCanvas');
-  const W = 540, H = 430;
-  canvas.width = W; canvas.height = H;
+  const W = 540;
   const ctx = canvas.getContext('2d');
+
+  // Card height (and the quote box within it) tracks the actual quote
+  // length instead of reserving a fixed block — a one-line quote used to
+  // leave a large dead gap before the footer; a long one could have
+  // overflowed. Measuring first means no dead space either direction.
+  const TOP_BLOCK_H    = 218; // header + price + delta pill + confidence line
+  const FOOTER_BLOCK_H = 82;  // separator + hook line + link line + margin
+  const QUOTE_LINE_H   = 20;
+  const QUOTE_PAD      = 30;  // top+bottom padding inside the quote block
+  let quoteLines = 0;
+  let quoteBlockH = 0;
+  if (quote) {
+    ctx.font = 'italic 400 13px "Space Mono", monospace';
+    quoteLines = measureWrapLines(ctx, '\u201c' + quote + '\u201d', W - 60);
+    quoteBlockH = quoteLines * QUOTE_LINE_H + QUOTE_PAD;
+  }
+  const H = TOP_BLOCK_H + quoteBlockH + FOOTER_BLOCK_H;
+  canvas.width = W; canvas.height = H;
+
   drawXCardChrome(ctx, W, H, 'WEEK ' + week, '#F59E0B', '#F59E0B');
 
   ctx.fillStyle = '#6E8BA8';
@@ -3786,11 +3841,12 @@ async function renderCallCardX(satoshiPrice, livePrice, confidence, quote, week)
   }
 
   if (quote) {
+    const quoteTop = TOP_BLOCK_H;
     ctx.strokeStyle = 'rgba(245,158,11,0.4)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(20, 218); ctx.lineTo(20, 300); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(20, quoteTop); ctx.lineTo(20, quoteTop + quoteBlockH - 12); ctx.stroke();
     ctx.fillStyle = '#D8E2EC';
     ctx.font = 'italic 400 13px "Space Mono", monospace';
-    wrapCanvasText(ctx, '\u201c' + quote + '\u201d', 32, 236, W - 60, 20);
+    wrapCanvasText(ctx, '\u201c' + quote + '\u201d', 32, quoteTop + 18, W - 60, QUOTE_LINE_H);
   }
 
   drawXCardFooter(ctx, W, H, pickHook(CALL_HOOKS), APP_URL + ' \u00b7 Week ' + week + ' opens now');
@@ -3817,14 +3873,18 @@ async function renderTopDriversCardX(signals, week) {
     const w = signalWeights[sig.name] || SIGNAL_BASE_WEIGHT;
     const barMaxWidth = 300;
     const barWidth = Math.max(6, (w / maxW) * barMaxWidth);
+    // Same bullish/neutral/bearish thresholds already used in
+    // renderSignalSnapshotHTML's scoreColor, so a signal reads the same
+    // color here as it does inside the app itself.
+    const barColor = sig.score >= 65 ? '#10B981' : (sig.score >= 42 ? '#F59E0B' : '#EF4444');
     ctx.fillStyle = '#F0F4FA';
     ctx.font = '700 14px "Barlow Condensed", sans-serif';
     ctx.fillText(sig.name, 20, rowY);
     ctx.fillStyle = '#1E2D42';
     roundRect(ctx, 150, rowY - 14, barMaxWidth, 12, 3); ctx.fill();
-    ctx.fillStyle = '#F59E0B';
+    ctx.fillStyle = barColor;
     roundRect(ctx, 150, rowY - 14, barWidth, 12, 3); ctx.fill();
-    ctx.fillStyle = '#F59E0B';
+    ctx.fillStyle = barColor;
     ctx.font = '700 13px "Space Mono", monospace';
     ctx.textAlign = 'right';
     ctx.fillText(Math.round(w * 100) + '%', W - 24, rowY);
@@ -3837,7 +3897,7 @@ async function renderTopDriversCardX(signals, week) {
 
 async function renderSettlementCardX(satoshiPrice, actualPrice, week, isHit, errorPct, streak, wins, losses) {
   const canvas = document.getElementById('shareCanvas');
-  const W = 540, H = 430;
+  const W = 540, H = 310;
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   const accent = isHit ? '#10B981' : '#EF4444';
@@ -3880,9 +3940,10 @@ async function renderSettlementCardX(satoshiPrice, actualPrice, week, isHit, err
   ctx.fillStyle = accent;
   ctx.font = '700 12px "Space Mono", monospace';
   ctx.fillText(verdictLabel, 30, 205);
+  const pillRight = 20 + vw + 20;
   ctx.fillStyle = '#6E8BA8';
   ctx.font = '400 11px "Space Mono", monospace';
-  ctx.fillText('off by $' + Math.round(Math.abs(satoshiPrice - actualPrice)).toLocaleString('en-US'), 40 + vw, 205);
+  ctx.fillText('off by $' + Math.round(Math.abs(satoshiPrice - actualPrice)).toLocaleString('en-US'), pillRight + 16, 205);
 
   drawXCardFooter(ctx, W, H, getSettlementHook(isHit, streak), 'Season record: ' + wins + 'W \u2013 ' + losses + 'L \u00b7 ' + APP_URL);
 }
