@@ -3758,10 +3758,26 @@ const CALL_HOOKS = [
   'Can you beat Satoshi? The league is open.',
   'One AI, one number, no hedging. Beat it if you can.'
 ];
+// Distinct from CALL_HOOKS on purpose — that pool is baked into the image
+// itself, so the tweet text uses this one instead of just repeating it.
+// These carry a CTA or detail the image doesn't already show (deadline,
+// timestamp guarantee, invitation to reply) rather than restating the hook.
+const CALL_CAPTIONS = [
+  'Submit your own call before Friday 23:59 UTC.',
+  'Locked in and timestamped \u2014 no edits after the fact.',
+  'Bullish or bearish? Drop your number in the replies.'
+];
 const DRIVERS_HOOKS = [
   'SIGNAL_COUNT signals feed the engine. Weights shift weekly \u2014 earned, not fixed.',
   'Not vibes. A calibrated engine.',
   'This is what\u2019s actually moving the call.'
+];
+// Same reasoning as CALL_CAPTIONS: distinct from DRIVERS_HOOKS, which is
+// already printed on the card itself.
+const DRIVERS_CAPTIONS = [
+  'Which of these would you have weighted differently?',
+  'Every signal here is graded weekly against real outcomes.',
+  'This is the part most crypto callers never show you.'
 ];
 function pickHook(pool) { return pool[Math.floor(Math.random() * pool.length)]; }
 
@@ -3770,6 +3786,17 @@ function getSettlementHook(isHit, streak) {
     return streak >= 2 ? `Called it again \u2014 ${streak} in a row now.` : 'Called it \u2014 right where it counts.';
   }
   return streak >= 2 ? `Wrong again \u2014 ${streak} misses running.` : 'Wrong \u2014 the record stays on-chain either way.';
+}
+
+// Caption counterpart to getSettlementHook — same hit/miss/streak awareness
+// (so tone stays appropriate: no triumphant CTA on a miss), but different
+// wording from what's printed on the card, plus a next-step CTA the image
+// doesn't carry.
+function getSettlementCaption(isHit, streak) {
+  if (isHit) {
+    return streak >= 2 ? 'The streak is real. Full history on the site.' : 'One in the win column. Next call goes up Monday.';
+  }
+  return streak >= 2 ? 'Still public, still on the record. That\u2019s the whole point.' : 'The oracle misses too. Next call goes up Monday.';
 }
 
 function measureWrapLines(ctx, text, maxWidth) {
@@ -4005,7 +4032,7 @@ async function openAdminCallCard() {
     document.getElementById('shareModalTitle').textContent = 'Satoshi\u2019s Call \u2014 Week ' + CURRENT_WEEK;
     const callHook = pickHook(CALL_HOOKS);
     await renderCallCardX(row.satoshi_price, liveBTC, row.satoshi_confidence, row.satoshi_rationale, CURRENT_WEEK, callHook);
-    currentShareText = callHook + '\n\n' + APP_URL + ' \u2014 Week ' + CURRENT_WEEK;
+    currentShareText = pickHook(CALL_CAPTIONS) + '\n\n' + APP_URL + ' \u2014 Week ' + CURRENT_WEEK;
     document.getElementById('shareModal').classList.add('open');
     document.getElementById('adminXPostStatus').style.display = 'none';
   } catch (e) {
@@ -4020,7 +4047,7 @@ async function openAdminSignalStackCard() {
     document.getElementById('shareModalTitle').textContent = 'Satoshi\u2019s Top Drivers \u2014 Week ' + CURRENT_WEEK;
     const driversHook = pickHook(DRIVERS_HOOKS).replace('SIGNAL_COUNT', SIGNAL_NAMES.length);
     await renderTopDriversCardX(core.signals, CURRENT_WEEK, driversHook);
-    currentShareText = driversHook + '\n\n' + APP_URL;
+    currentShareText = pickHook(DRIVERS_CAPTIONS) + '\n\n' + APP_URL;
     document.getElementById('shareModal').classList.add('open');
     document.getElementById('adminXPostStatus').style.display = 'none';
   } catch (e) {
@@ -4038,7 +4065,7 @@ async function openAdminSettlementCard() {
     }
     document.getElementById('shareModalTitle').textContent = 'Settlement \u2014 Week ' + data.weekNum;
     await renderSettlementCardX(data.satoshiPrice, data.actualPrice, data.weekNum, data.isHit, data.errorPct, data.streak, data.wins, data.losses);
-    currentShareText = getSettlementHook(data.isHit, data.streak) + '\n\n' + APP_URL;
+    currentShareText = getSettlementCaption(data.isHit, data.streak) + '\n\n' + APP_URL;
     document.getElementById('shareModal').classList.add('open');
     document.getElementById('adminXPostStatus').style.display = 'none';
   } catch (e) {
