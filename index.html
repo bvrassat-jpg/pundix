@@ -5778,7 +5778,15 @@ async function startNextWeek() {
   const btn    = document.getElementById('adminNextWeekBtn');
   const status = document.getElementById('adminNextWeekStatus');
   btn.disabled = true;
-  btn.textContent = 'Starting…';
+  // NOTE: this button has a child <span id="admin-next-week-btn-num"> that
+  // loadAdminDashboard() updates on every call. btn.textContent = '...'
+  // wipes ALL child nodes, permanently destroying that span — the next
+  // loadAdminDashboard() call then throws on
+  // document.getElementById('admin-next-week-btn-num').textContent = ...
+  // (null), aborting the rest of that function. Toggling opacity/pointer
+  // events instead of the label text avoids touching the button's DOM.
+  btn.style.opacity = '0.5';
+  btn.style.pointerEvents = 'none';
 
   try {
     const nextWeek = CURRENT_WEEK + 1;
@@ -5832,7 +5840,13 @@ async function startNextWeek() {
     status.style.color   = 'var(--green)';
     status.textContent   = '✓ Week ' + CURRENT_WEEK + ' is now open.';
 
-    btn.textContent = '✓ Done';
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
+    // Don't set btn.disabled = false here — loadAdminDashboard() below will
+    // hide this whole card anyway now that WEEK_STATUS is 'open' (see
+    // nextWeekCard.style.display logic), so there's nothing stale left
+    // clickable. It also re-populates admin-next-week-btn-num from
+    // CURRENT_WEEK, which is why that span must survive this function.
     loadAdminDashboard();
 
     const form     = document.getElementById('predictForm');
@@ -5865,7 +5879,8 @@ async function startNextWeek() {
 
   } catch(e) {
     btn.disabled = false;
-    btn.textContent = 'Start Week ' + (CURRENT_WEEK + 1) + ' →';
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
     status.style.display = 'block';
     status.style.color   = 'var(--red)';
     status.textContent   = 'Error: ' + e.message;
@@ -6152,7 +6167,12 @@ function getSatoshiCommentaryType() {
   if (day === 0 && h >= 20)  return 'final_recap';
   // Mon–Fri before close: pre-game brief
   if (WEEK_STATUS === 'open') return 'monday_brief';
-  return 'saturday_update';
+  // WEEK_STATUS !== 'open' here means the week is resolved but "Start Next
+  // Week" hasn't been clicked yet — there is no active week to brief on.
+  // This used to fall through to 'saturday_update' regardless of the real
+  // day, mislabeling a closed/not-yet-started week as "Saturday · Mid-Race"
+  // and having Satoshi narrate stale prior-week data as if it were current.
+  return 'week_closed';
 }
 
 function getSatoshiTypeLabel(type) {
@@ -6162,6 +6182,7 @@ function getSatoshiTypeLabel(type) {
     saturday_update:  'Saturday · Mid-Race',
     sunday_tension:   'Sunday · Final Hours',
     final_recap:      'Sunday · Verdict',
+    week_closed:      'Week Closed · Awaiting Next Week',
   };
   return labels[type] || type;
 }
@@ -7095,6 +7116,11 @@ Respond ONLY with valid JSON:
     console.error('loadSatoshiBrief error:', err);
     contentEl.className = 'satoshi-body';
     contentEl.innerHTML = '<div class="satoshi-error">Brief unavailable. Markets continue regardless.</div>';
+    // Without this, a failed refresh leaves whatever label was already in
+    // typeEl from the last successful render (e.g. a stale "Saturday ·
+    // Mid-Race" from a prior week), which misrepresents what state the app
+    // is actually in when the brief itself has failed.
+    if (typeEl) typeEl.textContent = '—';
   } finally {
     if (refreshBtn) refreshBtn.style.opacity = '';
   }
