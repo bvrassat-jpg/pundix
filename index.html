@@ -5918,20 +5918,25 @@ async function runWeeklyHealthCheck() {
 
   const results = [];
 
-  // Check 1: does the current (or just-resolved) week's week_outcomes row
-  // still show the startNextWeek() placeholder pattern — btc_open === btc_close
-  // and pct_change === 0? That pattern is only ever legitimate if BTC
-  // genuinely closed the week completely flat, which is vanishingly rare,
-  // so it's a reliable proxy for "the resolve write never landed" (e.g. the
-  // missing UPDATE RLS policy bug found 2026-08-03).
+  // Check 1: does the current week's week_outcomes row still show the
+  // startNextWeek() placeholder pattern — btc_open === btc_close and
+  // pct_change === 0? This is only ever a real problem for a week that's
+  // supposed to be *resolved* — an open week legitimately sits on that
+  // placeholder all the way until Sunday's settlement write happens, so
+  // WEEK_STATUS has to gate this check or it false-positives on every
+  // open week (caught 2026-08-03: this check originally fired on Week 12
+  // while it was still open and hadn't been resolved yet).
   try {
     const weekMonday = getWeekStartDate(CURRENT_WEEK);
     const rows = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=btc_open,btc_close,pct_change&limit=1');
     const row = rows && rows[0];
+    const isPlaceholder = row && row.btc_open === row.btc_close && Number(row.pct_change) === 0;
     if (!row) {
       results.push({ pass: null, label: 'week_outcomes row', detail: 'No row found for week_start ' + weekMonday + ' — expected if this week hasn\'t opened yet.' });
-    } else if (row.btc_open === row.btc_close && Number(row.pct_change) === 0) {
-      results.push({ pass: false, label: 'week_outcomes still on placeholder', detail: 'btc_open === btc_close === ' + row.btc_close + ', pct_change = 0. If this week is meant to be resolved, the settlement write failed silently (check RLS UPDATE policy on week_outcomes) — same bug as Week 11.' });
+    } else if (isPlaceholder && WEEK_STATUS === 'open') {
+      results.push({ pass: true, label: 'week_outcomes on placeholder (expected)', detail: 'Week ' + CURRENT_WEEK + ' is still open — btc_close won\'t reflect the real settlement until Resolve Week runs on Sunday. Not a bug.' });
+    } else if (isPlaceholder && WEEK_STATUS === 'resolved') {
+      results.push({ pass: false, label: 'week_outcomes still on placeholder', detail: 'btc_open === btc_close === ' + row.btc_close + ', pct_change = 0, but WEEK_STATUS is \'resolved\' — the settlement write failed silently (check RLS UPDATE policy on week_outcomes) — same bug as Week 11.' });
     } else {
       results.push({ pass: true, label: 'week_outcomes looks real', detail: 'btc_open ' + row.btc_open + ' → btc_close ' + row.btc_close + ' (' + row.pct_change + '%)' });
     }
