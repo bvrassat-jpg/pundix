@@ -6968,7 +6968,7 @@ Write a pre-game brief in exactly this structure:
 2. One sentence that references something from your memory — a pattern, a streak, a signal that has been hot or cold, or how the crowd has been wrong
 3. One sentence that creates genuine weight for the decision ahead — specific, not generic
 
-Respond ONLY with valid JSON:
+Respond ONLY with valid JSON. Do not include any reasoning, preamble, commentary, or explanation before or after it — your entire response must be nothing but the JSON object itself, starting with { and ending with }. Any text before the opening brace risks the response being cut off before the JSON is ever written:
 {
   "verdict": "<Bearish|Cautious|Neutral|Constructive|Bullish>",
   "score": <0-100>,
@@ -6990,12 +6990,12 @@ Respond ONLY with valid JSON:
     const resp = await fetch(WORKER, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 600, messages: [{ role: 'user', content: briefPrompt }], week_start: getWeekStartDate(CURRENT_WEEK) })
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1200, messages: [{ role: 'user', content: briefPrompt }], week_start: getWeekStartDate(CURRENT_WEEK) })
     });
     const apiData = await resp.json();
     const raw = (apiData?.content?.[0]?.text || '').trim();
     const m = raw.replace(/```json|```/g,'').match(/\{[\s\S]*\}/);
-    if (!m) throw new Error('No JSON from brief');
+    if (!m) throw new Error('No JSON from brief — raw response started with: ' + JSON.stringify(raw.slice(0, 200)));
     const brief = JSON.parse(m[0]);
 
     // Override centre node score with Claude's synthesised score
