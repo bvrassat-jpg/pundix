@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Pundix v51 — 2026-08-18: fixed week_outcomes/weekly_winners upserts silently inserting duplicate rows instead of updating — Prefer: resolution=merge-duplicates was missing the on_conflict= query param PostgREST needs to target week_start/week, so it fell back to the primary key (never collides on a fresh insert) and every resolveWeek() call left the startNextWeek() placeholder orphaned instead of overwriting it. This is what the Data Health Check was catching for 2026-08-03 and 2026-08-10 — not a recurrence of the v50 RLS bug, a new bug the v50 fix introduced. -->
 <!-- Pundix v50 — 2026-08-03: fixed missing week_outcomes UPDATE RLS policy (root cause of stuck btc_close placeholder), startNextWeek() button destroying its own child span, getSatoshiCommentaryType() Saturday fallback mislabeling closed weeks, Satoshi brief preamble/token-truncation causing "No JSON from brief", added admin Health Check panel -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -5714,7 +5715,13 @@ async function resolveWeek() {
     const winner = scored[0];
     const errPct = parseFloat(((Math.abs(winner.price - closePrice) / closePrice) * 100).toFixed(2));
 
-    await sbFetchAdmin('weekly_winners', {
+    // on_conflict=week required: without it, merge-duplicates' ON CONFLICT
+    // target defaults to the primary key (id), which never collides on a
+    // fresh insert — so a week that already has a winner row (e.g. Resolve
+    // Week run twice) would silently get a second row instead of updating
+    // the first. week is the real one-winner-per-week key (see the
+    // week=eq.CURRENT_WEEK&limit=1 reads elsewhere).
+    await sbFetchAdmin('weekly_winners?on_conflict=week', {
       method: 'POST',
       prefer: 'resolution=merge-duplicates,return=minimal',
       body: JSON.stringify({
@@ -5733,7 +5740,17 @@ async function resolveWeek() {
     const btcOpen = openSnap?.[0]?.btc_price_at_snapshot || closePrice;
     const pctChg = parseFloat(((closePrice - btcOpen) / btcOpen * 100).toFixed(2));
     try {
-      await sbFetchAdmin('week_outcomes', {
+      // on_conflict=week_start required: merge-duplicates without it targets
+      // the primary key (id) for ON CONFLICT, which never collides on a
+      // fresh insert. That silently turned this "upsert" into a plain
+      // INSERT — it left the startNextWeek() placeholder row (btc_open ===
+      // btc_close) orphaned instead of overwriting it with the real
+      // settlement, and inserted a second row alongside it. No error, no
+      // toast — the Health Check only caught it later because it doesn't
+      // dedupe by week_start. Requires a unique constraint on
+      // week_outcomes.week_start in Supabase for on_conflict to have
+      // anything to target; see cleanup notes for 2026-08-03/2026-08-10.
+      await sbFetchAdmin('week_outcomes?on_conflict=week_start', {
         method: 'POST',
         prefer: 'resolution=merge-duplicates,return=minimal',
         body: JSON.stringify({
@@ -5813,7 +5830,9 @@ async function startNextWeek() {
     // row silently updates zero rows, and Satoshi's price/confidence/
     // rationale for the whole week is lost even though the brief generated
     // fine. resolution=merge-duplicates makes this safe to run more than
-    // once (e.g. if "Start Next Week" is ever clicked twice by accident).
+    // once (e.g. if "Start Next Week" is ever clicked twice by accident) —
+    // but only with on_conflict=week_start attached (see resolveWeek() for
+    // the full story on why that param is required, not optional).
     // btc_open is a NOT NULL column in week_outcomes, so it must be supplied
     // at insert time — use liveBTC as the best available price at the moment
     // the week opens (mirrors the fallback already used in resolveWeek()).
@@ -5823,7 +5842,7 @@ async function startNextWeek() {
       // creation btc_open === btc_close, so direction is an arbitrary
       // placeholder ('up') and pct_change is genuinely 0; both get
       // overwritten with real values by resolveWeek() at settlement.
-      await sbFetchAdmin('week_outcomes', {
+      await sbFetchAdmin('week_outcomes?on_conflict=week_start', {
         method: 'POST',
         prefer: 'resolution=merge-duplicates,return=minimal',
         body: JSON.stringify({ week_start: getWeekStartDate(nextWeek), btc_open: liveBTC, btc_close: liveBTC, direction: 'up', pct_change: 0 })
