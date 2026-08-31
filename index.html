@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Pundix v52 — 2026-08-31: Track Record rebuilt. Added a PRICE/ACCURACY view toggle — the price chart could never show a 2% forecasting gap on a $44k axis, so all series overlapped; the accuracy view plots signed % distance from settlement, collapsing BTC to a flat zero line. Added the random-walk baseline (btc_open = "the price won't move this week"), the benchmark that actually matters: over the 11 weeks Satoshi has a call, he averages 3.41% against the baseline's 3.12% and beats it 5/11 weeks, i.e. no edge yet. Fixed the stats row averaging Satoshi (11 wks) against the crowd (14 wks) and calling the difference an "edge" — now one matched window. Crowd points with n<3 render hollow (9 of 14 weeks). btc_open is rejected from the chart when it drifts >8% from the previous settlement (Week 1 carries a stale 106,760 open that was stretching the y-axis to $114k). Legend no longer display:none under 600px. Health Check gained 3 checks: missing week numbers (Week 3 has 5 orphan predictions and no outcome row), week_start rows off the Monday grid (2026-05-19, 2026-05-26), and btc_open continuity. -->
 <!-- Pundix v51 — 2026-08-18: fixed week_outcomes/weekly_winners upserts silently inserting duplicate rows instead of updating — Prefer: resolution=merge-duplicates was missing the on_conflict= query param PostgREST needs to target week_start/week, so it fell back to the primary key (never collides on a fresh insert) and every resolveWeek() call left the startNextWeek() placeholder orphaned instead of overwriting it. This is what the Data Health Check was catching for 2026-08-03 and 2026-08-10 — not a recurrence of the v50 RLS bug, a new bug the v50 fix introduced. -->
 <!-- Pundix v50 — 2026-08-03: fixed missing week_outcomes UPDATE RLS policy (root cause of stuck btc_close placeholder), startNextWeek() button destroying its own child span, getSatoshiCommentaryType() Saturday fallback mislabeling closed weeks, Satoshi brief preamble/token-truncation causing "No JSON from brief", added admin Health Check panel -->
 <meta charset="UTF-8">
@@ -121,7 +122,39 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .oracle-admin-input:focus{border-color:var(--green);}
 .oracle-admin-btn{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;background:var(--green-dim);border:1px solid rgba(16,185,129,.4);color:var(--green);padding:7px 12px;border-radius:3px;cursor:pointer;white-space:nowrap;transition:all .15s;}
 .oracle-admin-btn:hover{background:rgba(16,185,129,.2);}
-@media(max-width:600px){.oracle-legend{display:none;}.oracle-stats{grid-template-columns:1fr 1fr;}.oracle-stat:nth-child(3){grid-column:1/-1;border-right:none;border-top:1px solid var(--border);}}
+@media(max-width:600px){.oracle-stats{grid-template-columns:1fr 1fr;}}
+
+/* ── Track Record v52 — legend, view toggle, 4-up stats ─────────────── */
+/* The legend used to be display:none under 600px, which is where almost
+   every reader actually sees this card — three unlabelled lines. It now
+   sits on its own row under the header and wraps instead of hiding. */
+.oracle-header{flex-wrap:wrap;}
+.oracle-legend{display:flex;flex-wrap:wrap;gap:10px 14px;padding:10px 18px;border-bottom:1px solid var(--border);background:var(--surface);}
+.oracle-legend-item{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);}
+.oracle-legend-key{width:16px;height:0;border-top-width:2px;flex-shrink:0;border-top-style:solid;}
+.oracle-legend-key.dash{border-top-style:dashed;}
+.oracle-legend-key.dot{border-top-style:dotted;}
+
+.oracle-view-toggle{display:flex;gap:0;flex-shrink:0;border:1px solid var(--border-hi);border-radius:4px;overflow:hidden;}
+.oracle-view-btn{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;background:transparent;border:none;color:var(--text-dim);padding:7px 11px;cursor:pointer;transition:all .15s;}
+.oracle-view-btn:hover{color:var(--text-mid);}
+.oracle-view-btn.active{background:var(--green-dim);color:var(--green);}
+
+.oracle-caption{font-family:var(--mono);font-size:9px;line-height:1.6;letter-spacing:.4px;color:var(--text-dim);padding:2px 18px 12px;background:var(--bg);}
+.oracle-caption strong{color:var(--text-mid);font-weight:700;}
+
+.oracle-stats{grid-template-columns:repeat(4,1fr);}
+.oracle-stat:last-child{border-right:none;}
+.oracle-stat-value.dim{color:var(--text-dim);}
+.oracle-stat-sub{font-family:var(--mono);font-size:8px;letter-spacing:.5px;color:var(--text-dim);margin-top:3px;opacity:.8;}
+@media(max-width:600px){
+  .oracle-stats{grid-template-columns:1fr 1fr;}
+  .oracle-stat:nth-child(1),.oracle-stat:nth-child(2){border-bottom:1px solid var(--border);}
+  .oracle-stat:nth-child(2n){border-right:none;}
+  .oracle-view-toggle{margin-top:2px;}
+  .oracle-caption{padding:2px 14px 12px;}
+  .oracle-legend{padding:9px 14px;}
+}
 </style>
 </head>
 <body>
@@ -746,13 +779,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         <div class="oracle-header">
           <div class="oracle-header-left">
             <div class="oracle-title">Track Record</div>
-            <div class="oracle-sub">Weekly settlement · All resolved weeks</div>
+            <div class="oracle-sub" id="oracleSub">Weekly settlement · All resolved weeks</div>
           </div>
-          <div class="oracle-legend">
-            <div class="oracle-legend-item"><div class="oracle-legend-dot" style="background:#fff;"></div>BTC Close</div>
-            <div class="oracle-legend-item"><div class="oracle-legend-dot" style="background:var(--orange);"></div>Crowd</div>
-            <div class="oracle-legend-item"><div class="oracle-legend-dot" style="background:var(--green);"></div>Satoshi</div>
+          <div class="oracle-view-toggle">
+            <button class="oracle-view-btn active" id="oracleViewBtnPrice" onclick="setOracleView('price')">Price</button>
+            <button class="oracle-view-btn" id="oracleViewBtnError" onclick="setOracleView('error')">Accuracy</button>
           </div>
+        </div>
+        <div class="oracle-legend" id="oracleLegend">
+          <div class="oracle-legend-item"><div class="oracle-legend-key" style="border-top-color:#fff;"></div><span id="oracleLegendBtc">BTC Close</span></div>
+          <div class="oracle-legend-item"><div class="oracle-legend-key dash" style="border-top-color:var(--orange);"></div>Crowd median</div>
+          <div class="oracle-legend-item"><div class="oracle-legend-key dot" style="border-top-color:var(--green);"></div>Satoshi</div>
+          <div class="oracle-legend-item"><div class="oracle-legend-key dash" style="border-top-color:#94A3B8;"></div>Random walk</div>
         </div>
         <div class="oracle-chart-wrap" id="oracleChartWrap">
           <div class="oracle-empty" id="oracleEmpty">
@@ -765,21 +803,31 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
             <div class="oracle-tooltip-row"><div class="oracle-tooltip-dot" style="background:#fff;"></div><span id="oracleTipBtc"></span></div>
             <div class="oracle-tooltip-row"><div class="oracle-tooltip-dot" style="background:var(--orange);"></div><span id="oracleTipCrowd"></span></div>
             <div class="oracle-tooltip-row" id="oracleTipSatoshiRow"><div class="oracle-tooltip-dot" style="background:var(--green);"></div><span id="oracleTipSatoshi"></span></div>
+            <div class="oracle-tooltip-row" id="oracleTipNaiveRow"><div class="oracle-tooltip-dot" style="background:#94A3B8;"></div><span id="oracleTipNaive"></span></div>
             <div class="oracle-tooltip-rationale" id="oracleTipRationale" style="display:none;font-family:var(--mono);font-size:9px;color:rgba(110,231,183,.75);margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08);line-height:1.5;letter-spacing:0.3px;"></div>
           </div>
         </div>
+        <div class="oracle-caption" id="oracleCaption"></div>
         <div class="oracle-stats" id="oracleStats" style="display:none;">
           <div class="oracle-stat">
             <div class="oracle-stat-label">Satoshi avg error</div>
             <div class="oracle-stat-value" id="oracleStatSatoshi">—</div>
+            <div class="oracle-stat-sub" id="oracleStatSatoshiSub"></div>
           </div>
           <div class="oracle-stat">
             <div class="oracle-stat-label">Crowd avg error</div>
             <div class="oracle-stat-value" id="oracleStatCrowd">—</div>
+            <div class="oracle-stat-sub" id="oracleStatCrowdSub"></div>
           </div>
           <div class="oracle-stat">
-            <div class="oracle-stat-label">Satoshi's edge</div>
+            <div class="oracle-stat-label">Random walk</div>
+            <div class="oracle-stat-value" id="oracleStatNaive">—</div>
+            <div class="oracle-stat-sub" id="oracleStatNaiveSub"></div>
+          </div>
+          <div class="oracle-stat">
+            <div class="oracle-stat-label">Satoshi vs baseline</div>
             <div class="oracle-stat-value" id="oracleStatEdge">—</div>
+            <div class="oracle-stat-sub" id="oracleStatEdgeSub"></div>
           </div>
         </div>
         <!-- Admin: override Satoshi's auto-logged call (only shown to admin) -->
@@ -3091,6 +3139,43 @@ async function runEloBackfill() {
 // Data model: week_outcomes has btc_open, btc_close, week_start, satoshi_price (nullable)
 // predictions has price per week — we compute crowd median client-side
 // satoshi_price column must exist on week_outcomes (add in Supabase: alter table week_outcomes add column if not exists satoshi_price numeric;)
+//
+// v52 — two views instead of one overloaded price chart.
+//
+//   PRICE    the original absolute-price chart. Good for the narrative
+//            ("here's what BTC did"), useless for the question the card
+//            actually asks, because a 1-3% forecasting difference is
+//            invisible on an axis that spans $53k-$97k. All four series
+//            sit on top of each other for most of the season.
+//
+//   ACCURACY signed % distance from settlement. BTC collapses to a flat
+//            line at zero and every forecaster becomes a curve around it,
+//            on a 0-20% axis instead of a $44k one. This is the view that
+//            answers "who was closer", and the only one where the new
+//            random-walk baseline is readable.
+//
+// The random walk (btc_open, i.e. "the price won't move this week") is the
+// benchmark that matters. Beating the crowd is easy when the crowd is one
+// person; beating the naive forecast is the minimum bar that proves the
+// 14-signal engine contributes anything at all. Measured over the weeks
+// Satoshi actually has a call for, he currently does NOT clear it — which
+// is precisely why it belongs on the chart rather than in a spreadsheet.
+
+let ORACLE_VIEW = 'price';   // 'price' | 'error'
+
+// Below this many predictions, a "crowd median" is not a crowd — it's one
+// person's guess wearing a consensus label. Those points still render (a
+// gap would be worse) but as hollow, dimmed dots, and the tooltip states n.
+const CROWD_MIN_N = 3;
+
+function setOracleView(v) {
+  ORACLE_VIEW = (v === 'error') ? 'error' : 'price';
+  const bp = document.getElementById('oracleViewBtnPrice');
+  const be = document.getElementById('oracleViewBtnError');
+  if (bp) bp.classList.toggle('active', ORACLE_VIEW === 'price');
+  if (be) be.classList.toggle('active', ORACLE_VIEW === 'error');
+  renderOracleChart();
+}
 
 async function renderOracleChart() {
   const wrap  = document.getElementById('oracleChartWrap');
@@ -3124,7 +3209,8 @@ async function renderOracleChart() {
   }
 
   try {
-    // Fetch outcomes + all predictions in parallel
+    // Fetch outcomes + all predictions in parallel.
+    // btc_open added in v52: it IS the random-walk forecast for that week.
     const [outcomes, allPreds] = await Promise.all([
       sbGet('week_outcomes?select=week_start,btc_open,btc_close,satoshi_price,satoshi_rationale&order=week_start.asc'),
       sbGet('predictions?select=week,price&order=week.asc')
@@ -3177,15 +3263,51 @@ async function renderOracleChart() {
     // placeholder set by startNextWeek(), not a real settlement, so grading
     // it here produces a false hit/miss reading every single week).
     const currentWeekMondayForChart = getWeekStartDate(CURRENT_WEEK);
+
+    // btc_open is only as trustworthy as the earliest signal_snapshots
+    // reading of that week — it's whatever BTC was worth the first time
+    // anyone opened the Live tab. When that snapshot is stale, btc_open is
+    // fiction, and since btc_open IS the random-walk forecast, plotting it
+    // would put a fabricated point on the chart AND stretch the y-axis
+    // around it. Confirmed live: Week 1 carries open 106,760 against a
+    // 77,558 close, which alone pushed the price axis from $97k to $114k
+    // and flattened all fourteen real weeks against the bottom.
+    //
+    // Rule (same one the Data Health Check reports): a week's open must sit
+    // within 8% of the previous week's settlement. Weeks with no immediate
+    // predecessor can't be checked that way, so they fall back to rejecting
+    // an implausible >25% single-week move. A rejected open drops only that
+    // week's baseline point — btc_close, crowd and Satoshi are untouched.
+    const OPEN_MAX_DRIFT_PCT = 8;
+    const OPEN_MAX_MOVE_PCT  = 25;
+    const byDate = {};
+    (outcomes || []).forEach(function(o){ byDate[o.week_start] = o; });
+    function trustedOpen(o) {
+      if (o.btc_open == null || o.btc_close == null) return null;
+      const open = parseFloat(o.btc_open);
+      const MS   = 24 * 60 * 60 * 1000;
+      const prevDate = new Date(new Date(o.week_start + 'T00:00:00Z').getTime() - 7 * MS).toISOString().slice(0,10);
+      const prev = byDate[prevDate];
+      if (prev && prev.btc_close) {
+        return Math.abs(open - prev.btc_close) / prev.btc_close * 100 > OPEN_MAX_DRIFT_PCT ? null : open;
+      }
+      return Math.abs(o.btc_close - open) / open * 100 > OPEN_MAX_MOVE_PCT ? null : open;
+    }
+
     // Same WEEK_STATUS fix as loadSignalWeights() — see comment there.
-    const points = outcomes.filter(function(o){ return o.btc_close && !(o.week_start === currentWeekMondayForChart && WEEK_STATUS === 'open'); }).map(function(o, i) {
+    const points = outcomes.filter(function(o){ return o.btc_close && !(o.week_start === currentWeekMondayForChart && WEEK_STATUS === 'open'); }).map(function(o) {
       const weekNum  = weekNumFromDate(o.week_start);
-      const crowdMed = median(predsByWeek[weekNum]);
+      const bucket   = predsByWeek[weekNum] || [];
+      const crowdMed = median(bucket);
       return {
         week:    weekNum,
         date:    o.week_start,
         btc:     o.btc_close,
         crowd:   crowdMed,
+        crowdN:  bucket.length,
+        // The random walk: "Monday's price is Sunday's price." No signals,
+        // no model. btc_open is exactly that forecast, already stored.
+        naive:   trustedOpen(o),
         satoshi:   o.satoshi_price != null ? parseFloat(o.satoshi_price) : null,
         rationale: o.satoshi_rationale || null,
         satoshiStatus: satoshiStatus(o)
@@ -3197,6 +3319,23 @@ async function renderOracleChart() {
     // Hide empty state, show stats
     if (empty) empty.style.display = 'none';
     if (stats) stats.style.display = 'grid';
+
+    const isErr = ORACLE_VIEW === 'error';
+
+    // ── View-dependent series accessor ────────────────────────────────────
+    // Price view plots the raw dollar call. Accuracy view plots signed %
+    // distance from that week's settlement, which makes BTC a flat zero
+    // line and turns the other three into readable curves around it.
+    // Signed rather than absolute on purpose: it exposes directional bias
+    // (a forecaster who is always below the line is structurally bearish,
+    // which is a different problem from being imprecise).
+    function sval(p, key) {
+      const raw = p[key];
+      if (raw == null || p.btc == null) return null;
+      if (!isErr) return raw;
+      if (key === 'btc') return 0;
+      return (raw - p.btc) / p.btc * 100;
+    }
 
     // ── SVG chart ──────────────────────────────────────────────────────────
     const SVG_H = 180;
@@ -3212,25 +3351,40 @@ async function renderOracleChart() {
     const plotW = Math.max(containerW - PAD_L - PAD_R, 200);
     const plotH = SVG_H - PAD_T - PAD_B;
 
-    // Price range across all three series
-    const allPrices = points.flatMap(function(p) {
-      return [p.btc, p.crowd, p.satoshi].filter(function(v){ return v != null; });
+    const SERIES = ['btc', 'naive', 'crowd', 'satoshi'];
+
+    // Y domain across every plotted series.
+    const allVals = points.flatMap(function(p) {
+      return SERIES.map(function(k){ return sval(p, k); }).filter(function(v){ return v != null; });
     });
-    const rawMin = Math.min.apply(null, allPrices);
-    const rawMax = Math.max.apply(null, allPrices);
-    const pad    = (rawMax - rawMin) * 0.14 || rawMax * 0.05;
-    const yMin   = rawMin - pad;
-    const yMax   = rawMax + pad;
+    let yMin, yMax;
+    if (isErr) {
+      // Symmetric around zero so "10% too high" and "10% too low" are the
+      // same visual distance — an asymmetric axis would make identical
+      // errors look different depending on their sign.
+      const m = Math.max.apply(null, allVals.map(Math.abs)) || 1;
+      yMax = m * 1.18;
+      yMin = -yMax;
+    } else {
+      const rawMin = Math.min.apply(null, allVals);
+      const rawMax = Math.max.apply(null, allVals);
+      const pad    = (rawMax - rawMin) * 0.14 || rawMax * 0.05;
+      yMin = rawMin - pad;
+      yMax = rawMax + pad;
+    }
 
     function xPos(i) {
       if (points.length === 1) return PAD_L + plotW / 2;
       return PAD_L + (i / (points.length - 1)) * plotW;
     }
-    function yPos(price) {
-      return PAD_T + plotH - ((price - yMin) / (yMax - yMin)) * plotH;
+    function yPos(v) {
+      return PAD_T + plotH - ((v - yMin) / (yMax - yMin)) * plotH;
     }
     function fmtK(v) {
       return v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + Math.round(v);
+    }
+    function fmtAxis(v) {
+      return isErr ? (v > 0 ? '+' : '') + v.toFixed(0) + '%' : fmtK(v);
     }
 
     // Y-axis grid lines
@@ -3238,10 +3392,10 @@ async function renderOracleChart() {
     let gridLines = '';
     let yLabels   = '';
     for (let t = 0; t <= yTicks; t++) {
-      const price = yMin + (yMax - yMin) * (t / yTicks);
-      const y     = yPos(price);
+      const v = yMin + (yMax - yMin) * (t / yTicks);
+      const y = yPos(v);
       gridLines += `<line x1="${PAD_L}" y1="${y.toFixed(1)}" x2="${(PAD_L + plotW).toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,.06)" stroke-width="1"/>`;
-      yLabels   += `<text x="${PAD_L - 5}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-family="Space Mono,monospace" font-size="8" fill="rgba(255,255,255,.3)">${fmtK(price)}</text>`;
+      yLabels   += `<text x="${PAD_L - 5}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-family="Space Mono,monospace" font-size="8" fill="rgba(255,255,255,.3)">${fmtAxis(v)}</text>`;
     }
 
     // X-axis week labels
@@ -3257,7 +3411,7 @@ async function renderOracleChart() {
     // For 1 point we still want the dot, just no connecting line — that's fine.
     // Also return null gracefully if no valid points at all.
     function buildPath(series) {
-      const validPts = points.map(function(p, i){ return {v: p[series], i: i}; })
+      const validPts = points.map(function(p, i){ return {v: sval(p, series), i: i}; })
                              .filter(function(d){ return d.v != null; });
       if (validPts.length < 2) return null;
       return validPts.map(function(d, idx){
@@ -3268,11 +3422,24 @@ async function renderOracleChart() {
     const btcPath     = buildPath('btc');
     const crowdPath   = buildPath('crowd');
     const satoshiPath = buildPath('satoshi');
+    const naivePath   = buildPath('naive');
 
     let lines = '';
-    if (btcPath)     lines += `<path d="${btcPath}" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.5" stroke-linejoin="round"/>`;
+    // Baseline drawn first and thinnest — it's a reference, not a competitor.
+    // Faint in the price view (where it's a near-duplicate of the BTC line
+    // shifted by a week, i.e. clutter), full strength in the accuracy view
+    // (where it's the bar Satoshi has to clear).
+    if (naivePath)   lines += `<path d="${naivePath}" fill="none" stroke="#94A3B8" stroke-width="${isErr ? 1.9 : 1.4}" stroke-dasharray="6 4" stroke-linejoin="round" opacity="${isErr ? 1 : 0.6}"/>`;
+    if (btcPath)     lines += `<path d="${btcPath}" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="${isErr ? 2 : 1.5}" stroke-linejoin="round"/>`;
     if (crowdPath)   lines += `<path d="${crowdPath}" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="4 3" stroke-linejoin="round"/>`;
     if (satoshiPath) lines += `<path d="${satoshiPath}" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="2 2" stroke-linejoin="round"/>`;
+
+    // In the accuracy view the zero line IS the settlement — label it, so
+    // nobody has to work out what the flat white line means.
+    // No inline label on the zero line: at this width it lands on top of the
+    // W12-W15 dots. The legend names it ("Actual settlement (0%)") and the
+    // thicker white stroke below already reads as the reference.
+    let zeroLabel = '';
 
     // Status ring color: green=hit, red=wrong direction, amber=right direction but off target
     function ringColor(status) {
@@ -3288,13 +3455,26 @@ async function renderOracleChart() {
     let dots = '';
     points.forEach(function(p, i) {
       const x = xPos(i).toFixed(1);
-      if (p.satoshi != null && p.satoshiStatus) {
+      const vSat   = sval(p, 'satoshi');
+      const vBtc   = sval(p, 'btc');
+      const vCrowd = sval(p, 'crowd');
+      const vNaive = sval(p, 'naive');
+      if (vSat != null && p.satoshiStatus) {
         const rc = ringColor(p.satoshiStatus);
-        if (rc) dots += `<circle cx="${x}" cy="${yPos(p.satoshi).toFixed(1)}" r="7" fill="none" stroke="${rc}" stroke-width="1.5" opacity="0.9"/>`;
+        if (rc) dots += `<circle cx="${x}" cy="${yPos(vSat).toFixed(1)}" r="7" fill="none" stroke="${rc}" stroke-width="1.5" opacity="0.9"/>`;
       }
-      if (p.btc    != null) dots += `<circle cx="${x}" cy="${yPos(p.btc).toFixed(1)}"     r="3.5" fill="#fff"     stroke="#080D14" stroke-width="1.5"/>`;
-      if (p.crowd  != null) dots += `<circle cx="${x}" cy="${yPos(p.crowd).toFixed(1)}"   r="3.5" fill="#F59E0B" stroke="#080D14" stroke-width="1.5"/>`;
-      if (p.satoshi!= null) dots += `<circle cx="${x}" cy="${yPos(p.satoshi).toFixed(1)}" r="3.5" fill="#10B981" stroke="#080D14" stroke-width="1.5"/>`;
+      if (vNaive != null) dots += `<circle cx="${x}" cy="${yPos(vNaive).toFixed(1)}" r="${isErr ? 3 : 2.6}" fill="#94A3B8" stroke="#080D14" stroke-width="1.2" opacity="${isErr ? 1 : 0.7}"/>`;
+      if (vBtc != null && !isErr) dots += `<circle cx="${x}" cy="${yPos(vBtc).toFixed(1)}" r="3.5" fill="#fff" stroke="#080D14" stroke-width="1.5"/>`;
+      if (vCrowd != null) {
+        // Thin crowd weeks render hollow + dimmed: still there, but visibly
+        // not a consensus. This is what stops a single 92k call from reading
+        // as "the crowd said 92k".
+        const thin = p.crowdN < CROWD_MIN_N;
+        dots += thin
+          ? `<circle cx="${x}" cy="${yPos(vCrowd).toFixed(1)}" r="3.5" fill="#080D14" stroke="#F59E0B" stroke-width="1.5" opacity="0.5"/>`
+          : `<circle cx="${x}" cy="${yPos(vCrowd).toFixed(1)}" r="3.5" fill="#F59E0B" stroke="#080D14" stroke-width="1.5"/>`;
+      }
+      if (vSat   != null) dots += `<circle cx="${x}" cy="${yPos(vSat).toFixed(1)}" r="3.5" fill="#10B981" stroke="#080D14" stroke-width="1.5"/>`;
     });
 
     // BUG FIX 4: hit area calculation was wrong for rightmost point
@@ -3316,6 +3496,7 @@ async function renderOracleChart() {
       ${xLabels}
       <line x1="${PAD_L}" y1="${PAD_T}" x2="${PAD_L}" y2="${PAD_T + plotH}" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
       ${lines}
+      ${zeroLabel}
       ${dots}
       ${hitAreas}
     </svg>`;
@@ -3324,6 +3505,22 @@ async function renderOracleChart() {
     if (oldSvg) oldSvg.remove();
     wrap.insertAdjacentHTML('afterbegin', svg);
 
+    // Legend label + caption follow the active view.
+    const legendBtc = document.getElementById('oracleLegendBtc');
+    if (legendBtc) legendBtc.textContent = isErr ? 'Actual settlement (0%)' : 'BTC Close';
+
+    const thinWeeks = points.filter(function(p){ return p.crowd != null && p.crowdN < CROWD_MIN_N; });
+    const capEl = document.getElementById('oracleCaption');
+    if (capEl) {
+      const thinNote = thinWeeks.length
+        ? ` Hollow orange dots — ${thinWeeks.length} of ${points.length} weeks — had fewer than ${CROWD_MIN_N} predictions, so that "crowd median" is one or two players, not a consensus.`
+        : '';
+      capEl.innerHTML = (isErr
+        ? 'How far each call landed from the settlement. <strong>0% is the actual close</strong> — above it the call was too high, below too low. <strong>Random walk</strong> = assuming the price never moved all week: the bar any real model has to clear.'
+        : 'Raw dollar calls per week. The lines overlap by nature — a 2% forecasting gap is invisible on a $44k axis. Switch to <strong>Accuracy</strong> to see who was closer.'
+      ) + escHtml(thinNote);
+    }
+
     // Tooltip
     const tooltip = document.getElementById('oracleTooltip');
     wrap.querySelectorAll('.oracle-hit').forEach(function(rect) {
@@ -3331,14 +3528,30 @@ async function renderOracleChart() {
         const idx = parseInt(rect.dataset.idx);
         const p   = points[idx];
         if (!tooltip) return;
-        document.getElementById('oracleTipWeek').textContent    = 'Week ' + p.week + ' · ' + p.date;
-        document.getElementById('oracleTipBtc').textContent     = 'BTC close  ' + (p.btc    != null ? '$' + Math.round(p.btc).toLocaleString('en-US')     : '—');
-        document.getElementById('oracleTipCrowd').textContent   = 'Crowd med  ' + (p.crowd  != null ? '$' + Math.round(p.crowd).toLocaleString('en-US')   : '—');
+        // In the accuracy view the tooltip shows the % error alongside the
+        // dollar call — the number the reader is actually pointing at.
+        function pct(v) {
+          if (v == null || p.btc == null) return '';
+          const e = (v - p.btc) / p.btc * 100;
+          return '  (' + (e > 0 ? '+' : '') + e.toFixed(2) + '%)';
+        }
+        function money(v) { return '$' + Math.round(v).toLocaleString('en-US'); }
+
+        document.getElementById('oracleTipWeek').textContent  = 'Week ' + p.week + ' · ' + p.date;
+        document.getElementById('oracleTipBtc').textContent   = 'Settled    ' + (p.btc != null ? money(p.btc) : '—');
+        document.getElementById('oracleTipCrowd').textContent = 'Crowd med  ' + (p.crowd != null ? money(p.crowd) + pct(p.crowd) + '  n=' + p.crowdN : '—');
+
         let statusSuffix = '';
         if (p.satoshiStatus === 'hit') statusSuffix = '  ✓ hit';
         else if (p.satoshiStatus === 'miss-direction') statusSuffix = '  ✗ wrong direction';
         else if (p.satoshiStatus === 'miss-magnitude') statusSuffix = '  △ off target';
-        document.getElementById('oracleTipSatoshi').textContent = 'Satoshi    ' + (p.satoshi != null ? '$' + Math.round(p.satoshi).toLocaleString('en-US') + statusSuffix : 'no call');
+        document.getElementById('oracleTipSatoshi').textContent = 'Satoshi    ' + (p.satoshi != null ? money(p.satoshi) + pct(p.satoshi) + statusSuffix : 'no call');
+
+        const naiveEl  = document.getElementById('oracleTipNaive');
+        const naiveRow = document.getElementById('oracleTipNaiveRow');
+        if (naiveEl) naiveEl.textContent = 'Rand walk  ' + (p.naive != null ? money(p.naive) + pct(p.naive) : '—');
+        if (naiveRow) naiveRow.style.opacity = p.naive != null ? '1' : '0.35';
+
         const satRow = document.getElementById('oracleTipSatoshiRow');
         if (satRow) satRow.style.opacity = p.satoshi != null ? '1' : '0.35';
         const ratEl = document.getElementById('oracleTipRationale');
@@ -3366,44 +3579,61 @@ async function renderOracleChart() {
     });
 
     // ── Stats row ──────────────────────────────────────────────────────────
-    const satWeeks   = points.filter(function(p){ return p.satoshi != null; });
-    const crowdWeeks = points.filter(function(p){ return p.crowd   != null; });
+    // FIX (v52): these three numbers used to be averaged over three DIFFERENT
+    // sets of weeks. Satoshi's average covered only weeks with a logged call
+    // (satoshi_price is null for the first weeks of the season); the crowd's
+    // covered every resolved week, including early ones Satoshi never played
+    // — and those early weeks happened to be the most volatile of the season.
+    // The "edge" was then the difference of two unrelated samples, which is
+    // not an edge, it's an artefact. Everything below is now computed on ONE
+    // window: the weeks where Satoshi actually has a call.
+    const matched = points.filter(function(p){ return p.satoshi != null && p.btc != null; });
 
     function avgErrPct(subset, key) {
-      if (!subset.length) return null;
-      const sum = subset.reduce(function(acc, p) {
-        return acc + Math.abs(p[key] - p.btc) / p.btc * 100;
-      }, 0);
-      return (sum / subset.length).toFixed(2);
+      const vals = subset.filter(function(p){ return p[key] != null; })
+                         .map(function(p){ return Math.abs(p[key] - p.btc) / p.btc * 100; });
+      if (!vals.length) return null;
+      return vals.reduce(function(a,b){ return a+b; }, 0) / vals.length;
     }
 
-    const satErr   = avgErrPct(satWeeks,   'satoshi');
-    const crowdErr = avgErrPct(crowdWeeks, 'crowd');
+    const satErr   = avgErrPct(matched, 'satoshi');
+    const crowdErr = avgErrPct(matched, 'crowd');
+    const naiveErr = avgErrPct(matched, 'naive');
 
-    const satEl   = document.getElementById('oracleStatSatoshi');
-    const crowdEl = document.getElementById('oracleStatCrowd');
-    const edgeEl  = document.getElementById('oracleStatEdge');
-
-    if (satEl)   satEl.textContent   = satErr   != null ? satErr   + '%' : '—';
-    if (crowdEl) crowdEl.textContent = crowdErr != null ? crowdErr + '%' : '—';
-
-    if (satErr != null && crowdErr != null && edgeEl) {
-      const edge = parseFloat(crowdErr) - parseFloat(satErr);
-      if (edge > 0.005) {
-        edgeEl.textContent = '+' + edge.toFixed(2) + '%';
-        edgeEl.className   = 'oracle-stat-value green';
-        edgeEl.title       = 'Satoshi beats crowd by ' + edge.toFixed(2) + '%';
-      } else if (edge < -0.005) {
-        edgeEl.textContent = edge.toFixed(2) + '%';
-        edgeEl.className   = 'oracle-stat-value orange';
-        edgeEl.title       = 'Crowd beats Satoshi by ' + Math.abs(edge).toFixed(2) + '%';
-      } else {
-        edgeEl.textContent = 'Tied';
-        edgeEl.className   = 'oracle-stat-value';
+    function setStat(id, subId, val, subText, cls) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.textContent = val;
+        el.className = 'oracle-stat-value' + (cls ? ' ' + cls : '');
       }
-    } else if (edgeEl) {
-      edgeEl.textContent = satWeeks.length === 0 ? 'No calls yet' : '—';
-      edgeEl.className   = 'oracle-stat-value';
+      const sub = document.getElementById(subId);
+      if (sub) sub.textContent = subText || '';
+    }
+
+    const nLabel = matched.length ? matched.length + ' wk sample' : '';
+    setStat('oracleStatSatoshi', 'oracleStatSatoshiSub', satErr   != null ? satErr.toFixed(2)   + '%' : '—', nLabel);
+    setStat('oracleStatCrowd',   'oracleStatCrowdSub',   crowdErr != null ? crowdErr.toFixed(2) + '%' : '—', nLabel);
+    setStat('oracleStatNaive',   'oracleStatNaiveSub',   naiveErr != null ? naiveErr.toFixed(2) + '%' : '—', 'do-nothing baseline', 'dim');
+
+    // The headline is now Satoshi vs the baseline, not Satoshi vs the crowd.
+    // Beating a crowd that is one person on 5 of 14 weeks proves nothing;
+    // beating the naive forecast is the claim worth making.
+    if (satErr != null && naiveErr != null) {
+      const edge  = naiveErr - satErr;                 // >0 → Satoshi better
+      const beats = matched.filter(function(p){
+        return p.naive != null &&
+               Math.abs(p.satoshi - p.btc) < Math.abs(p.naive - p.btc);
+      }).length;
+      const sub = beats + '/' + matched.length + ' weeks beaten';
+      if (edge > 0.005)       setStat('oracleStatEdge', 'oracleStatEdgeSub', '+' + edge.toFixed(2) + '%', sub, 'green');
+      else if (edge < -0.005) setStat('oracleStatEdge', 'oracleStatEdgeSub', edge.toFixed(2) + '%',       sub, 'orange');
+      else                    setStat('oracleStatEdge', 'oracleStatEdgeSub', 'Tied', sub);
+      const edgeEl = document.getElementById('oracleStatEdge');
+      if (edgeEl) edgeEl.title = edge >= 0
+        ? 'Satoshi beats the random-walk baseline by ' + edge.toFixed(2) + '% average error'
+        : 'The random-walk baseline beats Satoshi by ' + Math.abs(edge).toFixed(2) + '% average error';
+    } else {
+      setStat('oracleStatEdge', 'oracleStatEdgeSub', matched.length === 0 ? 'No calls yet' : '—', '');
     }
 
   } catch(e) {
@@ -5933,7 +6163,9 @@ async function runWeeklyHealthCheck() {
   resultsEl.innerHTML = `
     <div class="health-check-row"><div class="health-check-icon pending">…</div><div class="health-check-body"><div class="health-check-label">Checking week_outcomes for stuck placeholder…</div></div></div>
     <div class="health-check-row"><div class="health-check-icon pending">…</div><div class="health-check-body"><div class="health-check-label">Checking admin panel DOM integrity…</div></div></div>
-    <div class="health-check-row"><div class="health-check-icon pending">…</div><div class="health-check-body"><div class="health-check-label">Checking Satoshi brief generation…</div></div></div>`;
+    <div class="health-check-row"><div class="health-check-icon pending">…</div><div class="health-check-body"><div class="health-check-label">Checking Satoshi brief generation…</div></div></div>
+    <div class="health-check-row"><div class="health-check-icon pending">…</div><div class="health-check-body"><div class="health-check-label">Checking week_outcomes for missing weeks…</div></div></div>
+    <div class="health-check-row"><div class="health-check-icon pending">…</div><div class="health-check-body"><div class="health-check-label">Checking btc_open continuity…</div></div></div>`;
 
   const results = [];
 
@@ -5989,6 +6221,99 @@ async function runWeeklyHealthCheck() {
     }
   } catch (e) {
     results.push({ pass: false, label: 'Satoshi brief check errored', detail: e.message });
+  }
+
+  // Check 4 (v52): holes in week_outcomes. A week with no outcome row is
+  // invisible everywhere — it never renders on the Track Record, its
+  // predictions are never scored, and the players who entered it silently
+  // lose their call. Confirmed live: no row exists for Week 3 while 5
+  // predictions were submitted for it. The anchor-based week numbering hides
+  // the symptom (the chart just jumps W2 -> W4 with no visible gap in the
+  // line), which is exactly why this needs to be an explicit check.
+  //
+  // Iterates over WEEK NUMBERS, not over dates stepping 7 days from the
+  // first row. That distinction matters: the first two rows of the season
+  // are stored on a Tuesday (2026-05-19, 2026-05-26) while everything from
+  // 2026-06-08 on is stored on the Monday the anchor expects. Walking the
+  // date grid from row zero inherits that one-day offset and then reports
+  // every single week as missing. weekNumFromDate-style rounding is immune.
+  try {
+    const MS = 24 * 60 * 60 * 1000;
+    const anchor = new Date(ANCHOR_MONDAY + 'T00:00:00Z');
+    const toWeekNum = ds => ANCHOR_WEEK + Math.round((new Date(ds + 'T00:00:00Z') - anchor) / (7 * MS));
+
+    const rows  = await sbGet('week_outcomes?select=week_start&order=week_start.asc');
+    const preds = await sbGet('predictions?select=week');
+    const counts = {};
+    (preds || []).forEach(p => { counts[p.week] = (counts[p.week] || 0) + 1; });
+
+    const present = new Set((rows || []).map(r => toWeekNum(r.week_start)));
+    const nums = [...present].sort((a, b) => a - b);
+    const missing = [];
+    if (nums.length > 1) {
+      for (let w = nums[0]; w <= nums[nums.length - 1]; w++) {
+        if (present.has(w)) continue;
+        missing.push('Week ' + w + ' (' + getWeekStartDate(w) + ')' +
+          (counts[w] ? ' — ' + counts[w] + ' orphan prediction(s), never scored' : ''));
+      }
+    }
+    if (missing.length === 0) {
+      results.push({ pass: true, label: 'week_outcomes has no gaps', detail: (rows || []).length + ' rows covering weeks ' + nums[0] + '–' + nums[nums.length - 1] + ' with no missing week number.' });
+    } else {
+      results.push({ pass: false, label: missing.length + ' week(s) missing from week_outcomes', detail: missing.join(' · ') + '. Insert the missing row(s) with the real btc_open/btc_close, or those weeks stay invisible on the Track Record forever and their predictions are never scored.' });
+    }
+
+    // Same pass, different defect: rows whose week_start is not the Monday
+    // the anchor expects. Harmless today because every lookup rounds to the
+    // nearest week, but it is the exact shape of drift that produced the
+    // Week 9 settlement landing on the wrong row, so it should be visible.
+    const offGrid = (rows || []).filter(r => r.week_start !== getWeekStartDate(toWeekNum(r.week_start)));
+    if (offGrid.length) {
+      results.push({ pass: false, label: offGrid.length + ' row(s) not on the Monday grid', detail: offGrid.map(r => r.week_start + ' (should be ' + getWeekStartDate(toWeekNum(r.week_start)) + ' for Week ' + toWeekNum(r.week_start) + ')').join(' · ') + '. Week lookups round to the nearest Monday so nothing is broken right now, but any code that matches week_start exactly will silently miss these rows.' });
+    } else {
+      results.push({ pass: true, label: 'All week_start dates on the Monday grid', detail: 'Every row lines up with the ANCHOR_MONDAY reference.' });
+    }
+  } catch (e) {
+    results.push({ pass: false, label: 'week_outcomes gap check errored', detail: e.message });
+  }
+
+  // Check 5 (v52): btc_open continuity. btc_open comes from the earliest
+  // signal_snapshots reading of the week, so it is only as good as whenever
+  // someone first opened the Live tab — if that snapshot is stale, the week
+  // gets a fabricated pct_change, a fabricated direction (which feeds
+  // loadSignalWeights() and every Satoshi brief), and a fabricated
+  // random-walk baseline on the Track Record.
+  // Confirmed live: Week 1 (2026-05-19) carries btc_open 106,760 against a
+  // 77,558 close — a fictional -27% week. BTC was in the 78k-82k range that
+  // Monday. The following week's open matches its predecessor's close
+  // exactly, so Week 1 is the only broken link in the chain.
+  try {
+    const rows = await sbGet('week_outcomes?select=week_start,btc_open,btc_close&order=week_start.asc');
+    const MS = 24 * 60 * 60 * 1000;
+    const issues = [];
+    (rows || []).forEach((r, i) => {
+      if (r.btc_open == null || r.btc_close == null) return;
+      const wk = ANCHOR_WEEK + Math.round((new Date(r.week_start + 'T00:00:00Z') - new Date(ANCHOR_MONDAY + 'T00:00:00Z')) / (7 * MS));
+      const prev = rows[i - 1];
+      const consecutive = prev && Math.round((new Date(r.week_start + 'T00:00:00Z') - new Date(prev.week_start + 'T00:00:00Z')) / MS) === 7;
+      if (consecutive && prev.btc_close) {
+        // Monday's open should sit close to the previous Sunday's close.
+        const jump = Math.abs(r.btc_open - prev.btc_close) / prev.btc_close * 100;
+        if (jump > 8) issues.push('W' + wk + ': open ' + Math.round(r.btc_open).toLocaleString('en-US') + ' vs previous close ' + Math.round(prev.btc_close).toLocaleString('en-US') + ' (' + jump.toFixed(1) + '% apart) — likely a stale snapshot');
+      } else if (!prev) {
+        // No predecessor to compare against, so fall back to flagging an
+        // implausible weekly move for manual verification.
+        const move = Math.abs(r.btc_close - r.btc_open) / r.btc_open * 100;
+        if (move > 15) issues.push('W' + wk + ' (first row, nothing to compare to): ' + Math.round(r.btc_open).toLocaleString('en-US') + ' → ' + Math.round(r.btc_close).toLocaleString('en-US') + ' = ' + move.toFixed(1) + '% — verify btc_open against the market for ' + r.week_start);
+      }
+    });
+    if (issues.length === 0) {
+      results.push({ pass: true, label: 'btc_open continuity OK', detail: 'Every consecutive week opens within 8% of the previous settlement.' });
+    } else {
+      results.push({ pass: false, label: issues.length + ' suspicious btc_open value(s)', detail: issues.join(' · ') + '. A wrong open corrupts pct_change, direction (used by signal weighting) and the random-walk baseline — but NOT btc_close, so the Track Record price line stays correct.' });
+    }
+  } catch (e) {
+    results.push({ pass: false, label: 'btc_open continuity check errored', detail: e.message });
   }
 
   const anyFail = results.some(r => r.pass === false);
