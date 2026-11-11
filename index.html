@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Pundix v54, 2026-11-11: Satoshi's stats (calibration, direction and bias, regime, track record, streak, self-review prompt) count from SATOSHI_STATS_FROM = 2026-07-13; players' weeks 1 to 8 kept as announced. Start Next Week sets btc_open to last Sunday's Binance BTCUSDT close (same source as settlement), so the random walk is the standard next close = last close. Past weeks 9 to 25 were corrected in Supabase the same way. -->
 <!-- Pundix v53, 2026-11-11: Week dating now skips SKIPPED_MONDAYS (the paused week of 2026-09-14 had shifted weeks 18+ one Monday early); all date to week conversions go through weekNumFromWeekStart(). Start Next Week refuses to open a week whose computed Monday differs from the real one. Resolve form prefills the Binance BTCUSDT Sunday 23:59:59 UTC close. Calibration card gained a Brier score next to two flat baselines (always 50%, and always the actual hit rate), read-only, no data or prompt changes. Also realigned PUNDIX_VERSION and the two version placeholders, which had stayed at v50 since v51/v52. -->
 <!-- Pundix v52 — 2026-08-31: Track Record rebuilt. Added a PRICE/ACCURACY view toggle — the price chart could never show a 2% forecasting gap on a $44k axis, so all series overlapped; the accuracy view plots signed % distance from settlement, collapsing BTC to a flat zero line. Added the random-walk baseline (btc_open = "the price won't move this week"), the benchmark that actually matters: over the 11 weeks Satoshi has a call, he averages 3.41% against the baseline's 3.12% and beats it 5/11 weeks, i.e. no edge yet. Fixed the stats row averaging Satoshi (11 wks) against the crowd (14 wks) and calling the difference an "edge" — now one matched window. Crowd points with n<3 render hollow (9 of 14 weeks). btc_open is rejected from the chart when it drifts >8% from the previous settlement (Week 1 carries a stale 106,760 open that was stretching the y-axis to $114k). Legend no longer display:none under 600px. Health Check gained 3 checks: missing week numbers (Week 3 has 5 orphan predictions and no outcome row), week_start rows off the Monday grid (2026-05-19, 2026-05-26), and btc_open continuity. -->
 <!-- Pundix v51 — 2026-08-18: fixed week_outcomes/weekly_winners upserts silently inserting duplicate rows instead of updating — Prefer: resolution=merge-duplicates was missing the on_conflict= query param PostgREST needs to target week_start/week, so it fell back to the primary key (never collides on a fresh insert) and every resolveWeek() call left the startNextWeek() placeholder orphaned instead of overwriting it. This is what the Data Health Check was catching for 2026-08-03 and 2026-08-10 — not a recurrence of the v50 RLS bug, a new bug the v50 fix introduced. -->
@@ -168,7 +169,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v53</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v54</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -581,7 +582,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="satoshi-footer">
         <div class="satoshi-commentary-type" id="satoshiType">—</div>
         <div style="display:flex;align-items:center;gap:16px;">
-          <div id="satoshiNodeLine" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:0.5px;">node://satoshi · v53</div>
+          <div id="satoshiNodeLine" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:0.5px;">node://satoshi · v54</div>
           <button class="satoshi-refresh" onclick="loadSatoshiCommentary(true)" id="satoshiRefreshBtn">↻ refresh</button>
         </div>
       </div>
@@ -1197,7 +1198,7 @@ const CLAUDE_MODEL    = 'claude-sonnet-4-6';
 // versioned external service, so there's no reason to track it as one —
 // one number now drives both, and it can't drift again because there's
 // only one string to change.
-const PUNDIX_VERSION = 'v53';
+const PUNDIX_VERSION = 'v54';
 const SATOSHI_NODE_VERSION = 'node://satoshi · ' + PUNDIX_VERSION;
 
 const SFX = (() => {
@@ -2138,6 +2139,11 @@ const ANCHOR_MONDAY = '2026-07-13'; // verified: predictions.week=9 <-> this Mon
 // If a week is ever skipped again, startNextWeek() detects it and tells you
 // which Monday to add here. Only Mondays after ANCHOR_MONDAY are supported.
 const SKIPPED_MONDAYS = ['2026-09-14'];
+// v54: Satoshi's track record counts from this Monday. Earlier week_outcomes
+// rows predate the anchor fix and their labels are one week out, so his four
+// June/early-July calls can't be matched to the week they were made for.
+// Players' results for those weeks are kept as announced at the time.
+const SATOSHI_STATS_FROM = '2026-07-13';
 function getWeekStartDate(weekNum) {
   try {
     const d = new Date(ANCHOR_MONDAY + 'T00:00:00Z');
@@ -2289,7 +2295,7 @@ async function buildSatoshiMemory() {
     // own recurring patterns instead of those patterns only being visible
     // to a human reading the admin panel afterward. Kept short deliberately
     // — this is meant to be acted on, not narrated at length.
-    const withSatoshi = outcomesResolved.filter(o => o.satoshi_price != null);
+    const withSatoshi = outcomesResolved.filter(o => o.satoshi_price != null && o.week_start >= SATOSHI_STATS_FROM);
     if (withSatoshi.length >= 3) {
       const selfLines = [];
 
@@ -3351,9 +3357,9 @@ async function renderOracleChart() {
         // The random walk: "Monday's price is Sunday's price." No signals,
         // no model. btc_open is exactly that forecast, already stored.
         naive:   trustedOpen(o),
-        satoshi:   o.satoshi_price != null ? parseFloat(o.satoshi_price) : null,
-        rationale: o.satoshi_rationale || null,
-        satoshiStatus: satoshiStatus(o)
+        satoshi:   (o.satoshi_price != null && o.week_start >= SATOSHI_STATS_FROM) ? parseFloat(o.satoshi_price) : null,
+        rationale: o.week_start >= SATOSHI_STATS_FROM ? (o.satoshi_rationale || null) : null,
+        satoshiStatus: o.week_start >= SATOSHI_STATS_FROM ? satoshiStatus(o) : null
       };
     });
 
@@ -4270,7 +4276,7 @@ async function computeSettlementCardData() {
   // same "still open, not really resolved" signal loadSignalWeights()
   // already relies on elsewhere in this file.
   const outcomes = await sbGet('week_outcomes?select=week_start,btc_open,btc_close,satoshi_price&order=week_start.desc&limit=52');
-  const resolved = (outcomes || []).filter(o => o.satoshi_price != null && o.btc_close != null && o.btc_open !== o.btc_close);
+  const resolved = (outcomes || []).filter(o => o.satoshi_price != null && o.btc_close != null && o.btc_open !== o.btc_close && o.week_start >= SATOSHI_STATS_FROM);
   if (!resolved.length) return null;
   const graded = resolved.map(o => {
     const errorPct = Math.abs(o.satoshi_price - o.btc_close) / o.btc_close * 100;
@@ -5569,6 +5575,7 @@ async function loadSatoshiCalibration() {
     // Same WEEK_STATUS fix as loadSignalWeights() — see comment there.
     const usable = (rows || []).filter(function(r) {
       return r.satoshi_confidence != null && r.satoshi_price != null && r.btc_close != null
+        && r.week_start >= SATOSHI_STATS_FROM
         && !(r.week_start === currentWeekMonday && WEEK_STATUS === 'open');
     });
 
@@ -5662,6 +5669,7 @@ async function loadRegimePerformance() {
     // Same WEEK_STATUS fix as loadSignalWeights() — see comment there.
     const usable = (rows || []).filter(function(r) {
       return r.satoshi_price != null && r.btc_close != null && r.pct_change != null
+        && r.week_start >= SATOSHI_STATS_FROM
         && !(r.week_start === currentWeekMonday && WEEK_STATUS === 'open');
     });
 
@@ -5729,6 +5737,7 @@ async function loadDirectionBias() {
     // Same WEEK_STATUS fix as loadSignalWeights() — see comment there.
     const usable = (rows || []).filter(function(r) {
       return r.satoshi_price != null && r.btc_open != null && r.btc_close != null && r.direction != null
+        && r.week_start >= SATOSHI_STATS_FROM
         && !(r.week_start === currentWeekMonday && WEEK_STATUS === 'open');
     });
 
@@ -6162,6 +6171,19 @@ async function startNextWeek() {
     // btc_open is a NOT NULL column in week_outcomes, so it must be supplied
     // at insert time — use liveBTC as the best available price at the moment
     // the week opens (mirrors the fallback already used in resolveWeek()).
+    // v54: the week's open is last Sunday's Binance close (the previous
+    // week's settlement source), so the random-walk baseline and the
+    // settlement come from one source: week = Sunday close to Sunday close.
+    // Falls back to the live price only if Binance can't be reached.
+    let openPrice = liveBTC;
+    try {
+      const lastSunday = new Date(Date.parse(realMonday + 'T00:00:00Z') - 864e5).toISOString().slice(0,10);
+      const r = await fetchSundayCloseBinance(lastSunday);
+      if (r && r.close) openPrice = r.close;
+    } catch (e) {
+      console.warn('startNextWeek: Binance open unavailable, using live price:', e.message);
+      showToast('⚠ Binance close unavailable: week opened at the live price instead.');
+    }
     try {
       // direction/pct_change are NOT NULL columns on week_outcomes — without
       // them this insert throws 23502 and is caught below, silently. At
@@ -6171,7 +6193,7 @@ async function startNextWeek() {
       await sbFetchAdmin('week_outcomes?on_conflict=week_start', {
         method: 'POST',
         prefer: 'resolution=merge-duplicates,return=minimal',
-        body: JSON.stringify({ week_start: getWeekStartDate(nextWeek), btc_open: liveBTC, btc_close: liveBTC, direction: 'up', pct_change: 0 })
+        body: JSON.stringify({ week_start: getWeekStartDate(nextWeek), btc_open: openPrice, btc_close: openPrice, direction: 'up', pct_change: 0 })
       });
     } catch (e) {
       console.warn('week_outcomes row creation for new week failed (non-blocking):', e.message);
