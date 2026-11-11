@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Pundix v53, 2026-11-11: Week dating now skips SKIPPED_MONDAYS (the paused week of 2026-09-14 had shifted weeks 18+ one Monday early); all date to week conversions go through weekNumFromWeekStart(). Start Next Week refuses to open a week whose computed Monday differs from the real one. Resolve form prefills the Binance BTCUSDT Sunday 23:59:59 UTC close. Calibration card gained a Brier score next to two flat baselines (always 50%, and always the actual hit rate), read-only, no data or prompt changes. Also realigned PUNDIX_VERSION and the two version placeholders, which had stayed at v50 since v51/v52. -->
 <!-- Pundix v52 — 2026-08-31: Track Record rebuilt. Added a PRICE/ACCURACY view toggle — the price chart could never show a 2% forecasting gap on a $44k axis, so all series overlapped; the accuracy view plots signed % distance from settlement, collapsing BTC to a flat zero line. Added the random-walk baseline (btc_open = "the price won't move this week"), the benchmark that actually matters: over the 11 weeks Satoshi has a call, he averages 3.41% against the baseline's 3.12% and beats it 5/11 weeks, i.e. no edge yet. Fixed the stats row averaging Satoshi (11 wks) against the crowd (14 wks) and calling the difference an "edge" — now one matched window. Crowd points with n<3 render hollow (9 of 14 weeks). btc_open is rejected from the chart when it drifts >8% from the previous settlement (Week 1 carries a stale 106,760 open that was stretching the y-axis to $114k). Legend no longer display:none under 600px. Health Check gained 3 checks: missing week numbers (Week 3 has 5 orphan predictions and no outcome row), week_start rows off the Monday grid (2026-05-19, 2026-05-26), and btc_open continuity. -->
 <!-- Pundix v51 — 2026-08-18: fixed week_outcomes/weekly_winners upserts silently inserting duplicate rows instead of updating — Prefer: resolution=merge-duplicates was missing the on_conflict= query param PostgREST needs to target week_start/week, so it fell back to the primary key (never collides on a fresh insert) and every resolveWeek() call left the startNextWeek() placeholder orphaned instead of overwriting it. This is what the Data Health Check was catching for 2026-08-03 and 2026-08-10 — not a recurrence of the v50 RLS bug, a new bug the v50 fix introduced. -->
 <!-- Pundix v50 — 2026-08-03: fixed missing week_outcomes UPDATE RLS policy (root cause of stuck btc_close placeholder), startNextWeek() button destroying its own child span, getSatoshiCommentaryType() Saturday fallback mislabeling closed weeks, Satoshi brief preamble/token-truncation causing "No JSON from brief", added admin Health Check panel -->
@@ -167,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="logo">
         <div class="logo-mark">PUN<span>D</span>IX</div>
         <div class="logo-tag">BTC Weekly Prediction League</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v50</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);opacity:.5;letter-spacing:1px;margin-top:2px;" id="pundixVersionTag">v53</div>
       </div>
       <div class="hdr-right">
         <div class="season-badge" id="season-badge" onclick="handleSeasonBadgeTap()" style="cursor:default">Season 1</div>
@@ -580,7 +581,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="satoshi-footer">
         <div class="satoshi-commentary-type" id="satoshiType">—</div>
         <div style="display:flex;align-items:center;gap:16px;">
-          <div id="satoshiNodeLine" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:0.5px;">node://satoshi · v50</div>
+          <div id="satoshiNodeLine" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:0.5px;">node://satoshi · v53</div>
           <button class="satoshi-refresh" onclick="loadSatoshiCommentary(true)" id="satoshiRefreshBtn">↻ refresh</button>
         </div>
       </div>
@@ -1001,6 +1002,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         <div style="margin:16px 0 8px;">
           <label class="form-label">BTC Closing Price (USD)</label>
           <input class="form-input" id="adminClosePrice" type="number" placeholder="e.g. 84500" min="10000" max="500000">
+          <div id="adminClosePriceSource" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:6px;letter-spacing:.3px;"></div>
         </div>
         <button class="submit-btn" id="adminResolveBtn" onclick="resolveWeek()" style="width:100%;margin-top:8px;">
           Resolve Week & Score All →
@@ -1195,7 +1197,7 @@ const CLAUDE_MODEL    = 'claude-sonnet-4-6';
 // versioned external service, so there's no reason to track it as one —
 // one number now drives both, and it can't drift again because there's
 // only one string to change.
-const PUNDIX_VERSION = 'v50';
+const PUNDIX_VERSION = 'v53';
 const SATOSHI_NODE_VERSION = 'node://satoshi · ' + PUNDIX_VERSION;
 
 const SFX = (() => {
@@ -2129,12 +2131,55 @@ async function saveSignalSnapshot(signals, weekNum, btcPrice) {
 // order admin actions run.
 const ANCHOR_WEEK   = 9;
 const ANCHOR_MONDAY = '2026-07-13'; // verified: predictions.week=9 <-> this Monday
+// v53: real Mondays on which the league did NOT run. Week numbers keep
+// counting 1, 2, 3... but their dates jump over these Mondays. Before this
+// list existed, the paused week of 2026-09-14 shifted every later week's
+// week_start one Monday early (week 18 was stored as 09-14, really 09-21).
+// If a week is ever skipped again, startNextWeek() detects it and tells you
+// which Monday to add here. Only Mondays after ANCHOR_MONDAY are supported.
+const SKIPPED_MONDAYS = ['2026-09-14'];
 function getWeekStartDate(weekNum) {
   try {
-    const anchor = new Date(ANCHOR_MONDAY + 'T00:00:00Z');
-    anchor.setUTCDate(anchor.getUTCDate() + (Number(weekNum) - ANCHOR_WEEK) * 7);
-    return anchor.toISOString().slice(0,10);
+    const d = new Date(ANCHOR_MONDAY + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + (Number(weekNum) - ANCHOR_WEEK) * 7);
+    if (Number(weekNum) > ANCHOR_WEEK) {
+      // Walk forward over skipped Mondays (sorted), one week per skip.
+      SKIPPED_MONDAYS.slice().sort().forEach(function(m) {
+        if (d.toISOString().slice(0,10) >= m) d.setUTCDate(d.getUTCDate() + 7);
+      });
+    }
+    return d.toISOString().slice(0,10);
   } catch(e) { return new Date().toISOString().slice(0,10); }
+}
+// Inverse of getWeekStartDate(). Every date -> week-number conversion must go
+// through here so the skip list is applied in both directions. A skipped
+// Monday itself returns null (no league week ran then).
+function weekNumFromWeekStart(dateStr) {
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  if (SKIPPED_MONDAYS.indexOf(dateStr) !== -1) return null;
+  const raw = ANCHOR_WEEK + Math.round((new Date(dateStr + 'T00:00:00Z') - new Date(ANCHOR_MONDAY + 'T00:00:00Z')) / (7 * MS_PER_DAY));
+  if (raw <= ANCHOR_WEEK) return raw;
+  const skipsBefore = SKIPPED_MONDAYS.filter(function(m) { return m < dateStr; }).length;
+  return raw - skipsBefore;
+}
+// Real Monday (UTC) of the week containing `now`.
+function currentRealMondayUTC(now) {
+  const d = new Date(now || Date.now());
+  const back = (d.getUTCDay() + 6) % 7; // Mon=0 ... Sun=6
+  d.setUTCDate(d.getUTCDate() - back);
+  return d.toISOString().slice(0,10);
+}
+// Binance BTCUSDT daily candle for a given Sunday: its close is the price at
+// Sunday 23:59:59 UTC. Same public source every week, no key needed.
+// Returns { close, sunday } or { pending: true } if that candle hasn't closed.
+async function fetchSundayCloseBinance(sundayStr) {
+  const start = Date.parse(sundayStr + 'T00:00:00Z');
+  const res = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=' + start + '&limit=1');
+  if (!res.ok) throw new Error('Binance HTTP ' + res.status);
+  const k = await res.json();
+  if (!Array.isArray(k) || !k.length || k[0][0] !== start) throw new Error('no candle for ' + sundayStr);
+  if (k[0][6] > Date.now()) return { pending: true, sunday: sundayStr };
+  return { close: Math.round(parseFloat(k[0][4]) * 100) / 100, sunday: sundayStr };
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -3226,9 +3271,7 @@ async function renderOracleChart() {
     // so counting by position was shifting Week 9 (2026-07-13) down to
     // display as "Week 8". Date-based numbering is immune to gaps.
     function weekNumFromDate(dateStr) {
-      const MS_PER_DAY = 24 * 60 * 60 * 1000;
-      const diffDays = (new Date(dateStr + 'T00:00:00Z') - new Date(ANCHOR_MONDAY + 'T00:00:00Z')) / MS_PER_DAY;
-      return ANCHOR_WEEK + Math.round(diffDays / 7);
+      return weekNumFromWeekStart(dateStr); // v53: skip-aware
     }
 
     // Group predictions by week number
@@ -4245,9 +4288,7 @@ async function computeSettlementCardData() {
   // the weekNumFromDate() pattern already established (see ~line 3100)
   // rather than assuming CURRENT_WEEK - 1, which breaks in the window
   // described above and after any gap in week_outcomes.
-  const MS_PER_DAY = 24 * 60 * 60 * 1000;
-  const diffDays = (new Date(latest.week_start + 'T00:00:00Z') - new Date(ANCHOR_MONDAY + 'T00:00:00Z')) / MS_PER_DAY;
-  const weekNum = ANCHOR_WEEK + Math.round(diffDays / 7);
+  const weekNum = weekNumFromWeekStart(latest.week_start); // v53: skip-aware
   return { satoshiPrice: latest.satoshi_price, actualPrice: latest.btc_close, isHit: latest.hit, errorPct: latest.errorPct, streak: streak, wins: wins, losses: losses, weekNum: weekNum };
 }
 
@@ -5558,8 +5599,29 @@ async function loadSatoshiCalibration() {
     const avgConfidence = scored.reduce(function(a, s) { return a + s.confidence; }, 0) / scored.length;
     const actualHitRate = scored.filter(function(s) { return s.hit; }).length / scored.length * 100;
 
+    // Brier score (v53): mean of (stated probability - outcome)^2, outcome 1 = hit, 0 = miss.
+    // Lower is better. Compared against two flat forecasts: always 50%, and always
+    // the actual hit rate (the best any constant could do in hindsight). If Satoshi's
+    // score is not below both, his confidence number adds nothing beyond the base rate.
+    const toProb = function(c) { return c > 1 ? c / 100 : c; }; // stored as 38, guard for 0.38
+    const hitRateP = actualHitRate / 100;
+    const brierOf = function(pFn) {
+      return scored.reduce(function(a, s) {
+        const p = pFn(s); const o = s.hit ? 1 : 0;
+        return a + (p - o) * (p - o);
+      }, 0) / scored.length;
+    };
+    const brierSatoshi = brierOf(function(s) { return toProb(s.confidence); });
+    const brierFlat50 = brierOf(function() { return 0.5; });
+    const brierFlatBase = brierOf(function() { return hitRateP; });
+
     let note = scored.length + ' resolved week' + (scored.length === 1 ? '' : 's') + ' with confidence logged. ' +
-      'Avg stated confidence: ' + avgConfidence.toFixed(0) + '%. Actual hit rate: ' + actualHitRate.toFixed(0) + '%.';
+      'Avg stated confidence: ' + avgConfidence.toFixed(0) + '%. Actual hit rate: ' + actualHitRate.toFixed(0) + '%. ' +
+      'Brier score: ' + brierSatoshi.toFixed(3) + ' (flat 50%: ' + brierFlat50.toFixed(3) +
+      ', flat ' + actualHitRate.toFixed(0) + '%: ' + brierFlatBase.toFixed(3) + '; lower is better). ' +
+      (brierSatoshi < brierFlatBase
+        ? 'Confidence is adding information beyond the base rate.'
+        : 'Confidence is not yet adding information: a flat number would have scored better.');
     if (scored.length < 10) {
       note += ' Sample too small to mean much yet — treat as a running log, not a verdict.';
     }
@@ -5833,6 +5895,29 @@ async function loadSignalCorrelation() {
   }
 }
 
+// v53: fill the Resolve price from Binance's close for the Sunday that ends
+// the current week, so every week settles on the same source at Sunday
+// 23:59:59 UTC. Never overwrites a value already typed in the field.
+async function prefillClosePriceFromBinance() {
+  const input = document.getElementById('adminClosePrice');
+  const note  = document.getElementById('adminClosePriceSource');
+  if (!input || !note) return;
+  const sunday = new Date(Date.parse(getWeekStartDate(CURRENT_WEEK) + 'T00:00:00Z') + 6 * 864e5).toISOString().slice(0,10);
+  try {
+    const r = await fetchSundayCloseBinance(sunday);
+    if (r.pending) {
+      note.textContent = 'Binance close for Sun ' + sunday + ' not available until 23:59:59 UTC.';
+      return;
+    }
+    if (!input.value) input.value = r.close;
+    note.textContent = 'Binance BTCUSDT close, Sun ' + sunday + ' 23:59:59 UTC: ' + r.close.toLocaleString('en-US') +
+      (String(input.value) === String(r.close) ? ' (prefilled)' : ' (field already had a value, left as is)');
+  } catch (e) {
+    console.warn('prefillClosePriceFromBinance:', e.message);
+    note.textContent = 'Could not fetch the Binance close (' + e.message + '). Enter the price manually.';
+  }
+}
+
 async function loadAdminDashboard() {
 
   if (sessionStorage.getItem(ADMIN_KEY) !== '1') {
@@ -5848,6 +5933,7 @@ async function loadAdminDashboard() {
   document.getElementById('admin-current-week').textContent = CURRENT_WEEK;
   document.getElementById('admin-week-status').textContent  = WEEK_STATUS;
   document.getElementById('admin-resolve-week').textContent = CURRENT_WEEK;
+  prefillClosePriceFromBinance(); // v53: non-blocking
   document.getElementById('admin-next-week-num').textContent    = CURRENT_WEEK + 1;
   document.getElementById('admin-next-week-btn-num').textContent = CURRENT_WEEK + 1;
 
@@ -6046,6 +6132,16 @@ async function startNextWeek() {
 
   try {
     const nextWeek = CURRENT_WEEK + 1;
+    // v53: refuse to open a week under the wrong Monday. If the league was
+    // paused, the next week's computed date is behind the real calendar.
+    const expectedMonday = getWeekStartDate(nextWeek);
+    const realMonday = currentRealMondayUTC();
+    if (expectedMonday !== realMonday) {
+      showToast('⚠ Week ' + nextWeek + ' would be dated ' + expectedMonday + ' but this week is ' + realMonday +
+        '. If a week was skipped, add ' + expectedMonday + ' to SKIPPED_MONDAYS and redeploy first.');
+      btn.style.opacity = ''; btn.style.pointerEvents = '';
+      return;
+    }
     await sbFetchAdmin('config?id=eq.1', {
       method: 'PATCH',
       body: JSON.stringify({ current_week: nextWeek, week_status: 'open' })
@@ -6240,7 +6336,7 @@ async function runWeeklyHealthCheck() {
   try {
     const MS = 24 * 60 * 60 * 1000;
     const anchor = new Date(ANCHOR_MONDAY + 'T00:00:00Z');
-    const toWeekNum = ds => ANCHOR_WEEK + Math.round((new Date(ds + 'T00:00:00Z') - anchor) / (7 * MS));
+    const toWeekNum = ds => weekNumFromWeekStart(ds); // v53: skip-aware
 
     const rows  = await sbGet('week_outcomes?select=week_start&order=week_start.asc');
     const preds = await sbGet('predictions?select=week');
@@ -6293,7 +6389,7 @@ async function runWeeklyHealthCheck() {
     const issues = [];
     (rows || []).forEach((r, i) => {
       if (r.btc_open == null || r.btc_close == null) return;
-      const wk = ANCHOR_WEEK + Math.round((new Date(r.week_start + 'T00:00:00Z') - new Date(ANCHOR_MONDAY + 'T00:00:00Z')) / (7 * MS));
+      const wk = weekNumFromWeekStart(r.week_start); // v53: skip-aware
       const prev = rows[i - 1];
       const consecutive = prev && Math.round((new Date(r.week_start + 'T00:00:00Z') - new Date(prev.week_start + 'T00:00:00Z')) / MS) === 7;
       if (consecutive && prev.btc_close) {
