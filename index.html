@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Pundix v55, 2026-11-14: Satoshi review fixes. (1) One open price everywhere: resolveWeek() no longer overwrites btc_open with the first mid-week snapshot; the week runs from the previous Sunday's Binance close, and Satoshi's prompt is given that same open. (2) Satoshi's scored call is computed in code from the composite and capped at +/-1% (SATOSHI_CALL_*), since large calls cannot beat the random walk without implausible direction accuracy; the LLM writes the narrative and echoes the number. (3) Noise removed: Sentiment signal retired (no data source), adaptive 8-week weights switched off (equal weights), streak/pattern lines removed from Satoshi's memory. (4) Technical, 200DMA, Cycle and Real Vol share one vote in the composite (SIGNAL_GROUPS); signal hit rates grade readings between 45 and 55 as no call and skip missing rows. -->
 <!-- Pundix v54, 2026-11-11: Satoshi's stats (calibration, direction and bias, regime, track record, streak, self-review prompt) count from SATOSHI_STATS_FROM = 2026-07-13; players' weeks 1 to 8 kept as announced. Start Next Week sets btc_open to last Sunday's Binance BTCUSDT close (same source as settlement), so the random walk is the standard next close = last close. Past weeks 9 to 25 were corrected in Supabase the same way. -->
 <!-- Pundix v53, 2026-11-11: Week dating now skips SKIPPED_MONDAYS (the paused week of 2026-09-14 had shifted weeks 18+ one Monday early); all date to week conversions go through weekNumFromWeekStart(). Start Next Week refuses to open a week whose computed Monday differs from the real one. Resolve form prefills the Binance BTCUSDT Sunday 23:59:59 UTC close. Calibration card gained a Brier score next to two flat baselines (always 50%, and always the actual hit rate), read-only, no data or prompt changes. Also realigned PUNDIX_VERSION and the two version placeholders, which had stayed at v50 since v51/v52. -->
 <!-- Pundix v52 — 2026-08-31: Track Record rebuilt. Added a PRICE/ACCURACY view toggle — the price chart could never show a 2% forecasting gap on a $44k axis, so all series overlapped; the accuracy view plots signed % distance from settlement, collapsing BTC to a flat zero line. Added the random-walk baseline (btc_open = "the price won't move this week"), the benchmark that actually matters: over the 11 weeks Satoshi has a call, he averages 3.41% against the baseline's 3.12% and beats it 5/11 weeks, i.e. no edge yet. Fixed the stats row averaging Satoshi (11 wks) against the crowd (14 wks) and calling the difference an "edge" — now one matched window. Crowd points with n<3 render hollow (9 of 14 weeks). btc_open is rejected from the chart when it drifts >8% from the previous settlement (Week 1 carries a stale 106,760 open that was stretching the y-axis to $114k). Legend no longer display:none under 600px. Health Check gained 3 checks: missing week numbers (Week 3 has 5 orphan predictions and no outcome row), week_start rows off the Monday grid (2026-05-19, 2026-05-26), and btc_open continuity. -->
@@ -1198,7 +1199,7 @@ const CLAUDE_MODEL    = 'claude-sonnet-4-6';
 // versioned external service, so there's no reason to track it as one —
 // one number now drives both, and it can't drift again because there's
 // only one string to change.
-const PUNDIX_VERSION = 'v54';
+const PUNDIX_VERSION = 'v55';
 const SATOSHI_NODE_VERSION = 'node://satoshi · ' + PUNDIX_VERSION;
 
 const SFX = (() => {
@@ -1888,7 +1889,27 @@ async function submitPrediction() {
 }
 
 // ── Signal Weight Engine ──────────────────────────────────────────────────────
-const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','F&G','Technical','Sentiment','Cycle','Funding','Real Vol','Options Skew','ETF Flows','Stablecoins','CVD','Open Interest'];
+// v55: Sentiment retired. It had no data source: the model was handed F&G
+// and the Technical verdict and asked to "infer" social mood and news flow,
+// the same pattern as On-chain (v44) and Social Lag (v46).
+const SIGNAL_NAMES = ['DXY','Nasdaq','200DMA','F&G','Technical','Cycle','Funding','Real Vol','Options Skew','ETF Flows','Stablecoins','CVD','Open Interest'];
+// v55: these four are all derived from recent BTC price, so they share ONE
+// vote in the composite instead of four. They are still shown and
+// snapshotted individually.
+const SIGNAL_GROUPS = { 'Technical': 'Price trend', '200DMA': 'Price trend', 'Cycle': 'Price trend', 'Real Vol': 'Price trend' };
+// v55: weights learned from at most 8 resolved weeks are noise (a coin-flip
+// signal lands at 6/8+ or 2/8- about 29% of the time). Equal weights until a
+// long backtest justifies anything else.
+const ADAPTIVE_WEIGHTS_ENABLED = false;
+// v55: a reading inside the neutral band is "no call", not an up vote.
+// Before, any score >= 50 was graded "up", so neutral defaults (50-55)
+// scored hits whenever BTC rose.
+function signalCall(score) {
+  if (score == null) return null;
+  if (score > 55) return 'up';
+  if (score < 45) return 'down';
+  return null;
+}
 (function() {
   // Drives the "N signals" badge on the Predict-tab toggle header from the
   // single source of truth instead of a hardcoded string — this is what
@@ -2032,6 +2053,7 @@ let signalWeights = {}; // populated by loadSignalWeights()
 SIGNAL_NAMES.forEach(n => signalWeights[n] = SIGNAL_BASE_WEIGHT);
 
 async function loadSignalWeights() {
+  if (!ADAPTIVE_WEIGHTS_ENABLED) return; // v55: equal weights (see ADAPTIVE_WEIGHTS_ENABLED)
   try {
     const [snapshots, outcomes] = await Promise.all([
       sbGet('signal_snapshots?select=week_start,signal_name,score&order=week_start.asc'),
@@ -2062,7 +2084,8 @@ async function loadSignalWeights() {
       const pairs = recentOutcomes.map(o => {
         const snap = snapshots.find(s => s.week_start === o.week_start && s.signal_name === name);
         if (!snap) return null;
-        return (snap.score >= 50 ? 'up' : 'down') === o.direction ? 1 : 0;
+        const call = signalCall(snap.score);
+        return call == null ? null : (call === o.direction ? 1 : 0);
       }).filter(x => x !== null);
       const hitRate = pairs.length ? pairs.reduce((a,b) => a+b, 0) / pairs.length : 0.5;
       const rawBonus = (hitRate - 0.5) * 2; // -1 to +1, based on this signal's own hit rate
@@ -2083,8 +2106,33 @@ function computeWeightedScore(signals) {
   // fall back to using them all rather than dividing by zero.
   const usable = signals.filter(sig => !sig.missing);
   const list = usable.length ? usable : signals;
-  const total = list.reduce((s, sig) => s + (signalWeights[sig.name] || SIGNAL_BASE_WEIGHT), 0);
-  return Math.round(list.reduce((s, sig) => s + sig.score * (signalWeights[sig.name] || SIGNAL_BASE_WEIGHT), 0) / total);
+  // v55: signals in the same SIGNAL_GROUPS group are averaged into one vote,
+  // then every vote counts equally.
+  const groups = {};
+  list.forEach(sig => {
+    const g = SIGNAL_GROUPS[sig.name] || sig.name;
+    const w = signalWeights[sig.name] || SIGNAL_BASE_WEIGHT;
+    if (!groups[g]) groups[g] = { sum: 0, w: 0 };
+    groups[g].sum += sig.score * w;
+    groups[g].w += w;
+  });
+  const votes = Object.keys(groups).map(g => groups[g].sum / groups[g].w);
+  return Math.round(votes.reduce((a, b) => a + b, 0) / votes.length);
+}
+
+// v55: Satoshi's scored call is computed here, not chosen by the model.
+// Under absolute error, a call of size f only beats the random walk if its
+// direction is right often enough: about 53% for 0.5%, 57% for 1%, 66% for
+// 2%, 76% for 3% (weeks averaging a 3% move). Weekly BTC direction is not
+// called 66%+ of the time by anyone, so the call stays small. These two
+// constants are a size discipline, NOT fitted to data: set them from a
+// long backtest before changing them.
+const SATOSHI_CALL_PCT_PER_POINT = 0.05; // composite 60 -> +0.5%, 70 -> +1%
+const SATOSHI_CALL_MAX_PCT       = 1.0;
+function computeSatoshiCallPct(composite) {
+  const raw = (composite - 50) * SATOSHI_CALL_PCT_PER_POINT;
+  const capped = Math.max(-SATOSHI_CALL_MAX_PCT, Math.min(SATOSHI_CALL_MAX_PCT, raw));
+  return Math.round(capped * 100) / 100;
 }
 
 const SNAPSHOT_SAVED_KEY = 'pundix_snapshot_saved_w';
@@ -2226,11 +2274,11 @@ async function buildSatoshiMemory() {
     // ── 1. Recent week outcomes with signal accuracy audit ──
     lines.push('RESOLVED WEEKS (most recent first):');
     outcomesResolved.forEach(o => {
-      const wSnaps = (snapshots || []).filter(s => s.week_start === o.week_start);
+      const wSnaps = (snapshots || []).filter(s => s.week_start === o.week_start && !s.missing && SIGNAL_NAMES.indexOf(s.signal_name) !== -1);
       const signalAudit = wSnaps.map(s => {
-        const predicted = s.score >= 50 ? 'up' : 'down';
-        const hit = predicted === o.direction;
-        return `${s.signal_name}:${hit ? '✓' : '✗'}(${s.score})`;
+        const call = signalCall(s.score);
+        const mark = call == null ? '·' : (call === o.direction ? '✓' : '✗');
+        return `${s.signal_name}:${mark}(${s.score})`;
       }).join(' ');
       const pctStr = (o.pct_change >= 0 ? '+' : '') + o.pct_change + '%';
       lines.push(`  Week of ${o.week_start}: BTC ${o.direction.toUpperCase()} ${pctStr} ($${Math.round(o.btc_open).toLocaleString('en-US')} → $${Math.round(o.btc_close).toLocaleString('en-US')})${signalAudit ? ' | Signals: ' + signalAudit : ''}`);
@@ -2238,18 +2286,17 @@ async function buildSatoshiMemory() {
 
     // ── 2. Signal hit-rate summary ──
     if (snapshots && snapshots.length > 0 && outcomesResolved.length >= 2) {
-      lines.push('\nSIGNAL ACCURACY (last ' + outcomesResolved.length + ' resolved weeks):');
+      lines.push('\nSIGNAL ACCURACY (last ' + outcomesResolved.length + ' resolved weeks; readings between 45 and 55 count as no call; samples this small say nothing about skill, so do not single out a signal on these numbers):');
       SIGNAL_NAMES.forEach(name => {
         const pairs = outcomesResolved.map(o => {
-          const snap = snapshots.find(s => s.week_start === o.week_start && s.signal_name === name);
+          const snap = snapshots.find(s => s.week_start === o.week_start && s.signal_name === name && !s.missing);
           if (!snap) return null;
-          return (snap.score >= 50 ? 'up' : 'down') === o.direction ? 1 : 0;
+          const call = signalCall(snap.score);
+          return call == null ? null : (call === o.direction ? 1 : 0);
         }).filter(x => x !== null);
         if (pairs.length === 0) return;
         const hits = pairs.reduce((a,b) => a+b, 0);
-        const pct = Math.round(hits / pairs.length * 100);
-        const trend = pairs.length >= 3 ? (pairs.slice(-2).every(x=>x===1) ? ' (hot streak)' : pairs.slice(-2).every(x=>x===0) ? ' (cold streak)' : '') : '';
-        lines.push(`  ${name}: ${hits}/${pairs.length} correct (${pct}%)${trend} — current weight ${Math.round((signalWeights[name]||SIGNAL_BASE_WEIGHT)*100)}%`);
+        lines.push(`  ${name}: ${hits}/${pairs.length} directional calls correct`);
       });
     }
 
@@ -2278,11 +2325,8 @@ async function buildSatoshiMemory() {
 
     // ── 5. Streak / pattern detection ──
     if (outcomesResolved.length >= 3) {
-      const dirs = outcomesResolved.slice(0,4).map(o => o.direction);
-      const streak = dirs.filter(d => d === dirs[0]).length;
-      if (streak >= 3) {
-        lines.push(`\nPATTERN: BTC has gone ${dirs[0].toUpperCase()} for ${streak} consecutive weeks. Historically this increases mean-reversion probability.`);
-      }
+      // v55: the "PATTERN ... increases mean-reversion probability" line was
+      // removed: it stated an unsupported claim as fact on 3-4 weeks of data.
       const moves = outcomesResolved.slice(0,4).map(o => Math.abs(o.pct_change));
       const avgMove = (moves.reduce((a,b)=>a+b,0)/moves.length).toFixed(1);
       lines.push(`\nRECENT VOLATILITY: average weekly move last ${moves.length} weeks = ${avgMove}%. Current week context.`);
@@ -2315,7 +2359,7 @@ async function buildSatoshiMemory() {
         else break;
       }
       let biasLine = `Directional bias, last ${biased.length} resolved weeks: mean ${meanBias >= 0 ? '+' : ''}${meanBias.toFixed(2)}% (${meanBias < -0.3 ? 'you tend to call LOW' : meanBias > 0.3 ? 'you tend to call HIGH' : 'roughly centered'}).`;
-      if (streak >= 3) {
+      if (false && streak >= 3) { // v55: streak nudge disabled (3 weeks is noise, and the call is now computed in code)
         biasLine += ` Live streak: ${streak} weeks calling too ${streakSign > 0 ? 'HIGH' : 'LOW'} in a row — before locking in this week's number, actively check whether the same lean is creeping in again.`;
       }
       selfLines.push(biasLine);
@@ -6061,8 +6105,26 @@ async function resolveWeek() {
 
     // Record week outcome for signal weight learning
     const weekMonday = getWeekStartDate(CURRENT_WEEK);
-    const openSnap = await sbGet('signal_snapshots?week_start=eq.' + weekMonday + '&signal_name=eq.F%26G&select=btc_price_at_snapshot&limit=1');
-    const btcOpen = openSnap?.[0]?.btc_price_at_snapshot || closePrice;
+    // v55: the week's open is the previous Sunday's Binance close, the same
+    // source as settlement and the value startNextWeek() stored. Before v55
+    // this overwrote it with the first mid-week snapshot price, undoing the
+    // v54 definition for every newly resolved week. Order: Binance, then the
+    // stored open, then (last resort) the snapshot.
+    let btcOpen = null;
+    try {
+      const prevSunday = new Date(Date.parse(weekMonday + 'T00:00:00Z') - 864e5).toISOString().slice(0,10);
+      const r = await fetchSundayCloseBinance(prevSunday);
+      if (r && r.close) btcOpen = r.close;
+    } catch (e) { console.warn('resolveWeek: Binance open unavailable:', e.message); }
+    if (!btcOpen) {
+      const woRow = await sbGet('week_outcomes?week_start=eq.' + weekMonday + '&select=btc_open&limit=1').catch(function(){ return null; });
+      if (woRow?.[0]?.btc_open != null) btcOpen = parseFloat(woRow[0].btc_open);
+    }
+    if (!btcOpen) {
+      const openSnap = await sbGet('signal_snapshots?week_start=eq.' + weekMonday + '&signal_name=eq.F%26G&select=btc_price_at_snapshot&limit=1');
+      btcOpen = openSnap?.[0]?.btc_price_at_snapshot || closePrice;
+      showToast('⚠ Week open fell back to a mid-week snapshot price. Check btc_open for ' + weekMonday + '.');
+    }
     const pctChg = parseFloat(((closePrice - btcOpen) / btcOpen * 100).toFixed(2));
     try {
       // on_conflict=week_start required: merge-duplicates without it targets
@@ -6517,7 +6579,7 @@ ON THE TRIBE:
 These players chose to commit to a number in public. That earns something. You respect conviction over accuracy. You name patterns when you see them. You don't soften observations to protect feelings — you deliver them at the same temperature as any other fact.
 
 SIGNAL CALIBRATION (important — check before you lean on any signal in conversation):
-The game state you're given includes each signal's current adaptive weight, based on its actual recent hit rate. Before making Fear & Greed, or any other single signal, the centerpiece of an answer, check its stated weight. If it's sitting near the equal-weight baseline (roughly 1/${SIGNAL_NAMES.length} of total, since there are ${SIGNAL_NAMES.length} signals) rather than clearly elevated, it has not earned outsized narrative attention — mention it as one voice among several, not as the reason for anything. Reserve strong language ("this is what's driving the call," "the signal that matters this week") for whichever signal's weight is actually elevated above the others. A signal reading extreme (very high or very low) is not the same thing as a signal that matters — weight, not intensity, is what earns emphasis. If a player asks specifically about Fear & Greed, answer plainly with its number and note whether its current weight is elevated or baseline — don't inflate its importance by default just because "fear" and "greed" are vivid words to reach for.`;
+All signals are weighted equally (Technical, 200DMA, Cycle and Real Vol share one vote, since they all come from recent BTC price). No signal has a proven one-week edge, and the track record is too short to show one, so do not make Fear & Greed or any other single signal the centerpiece of an answer, and do not read hot or cold streaks into a few weeks of hits and misses. A signal reading extreme is not the same thing as a signal that matters. If a player asks about one signal, answer plainly with its number and say it is one voice among several.`;
 
 let satoshiChatHistory = [];
 let satoshiChatPayloadCache = null;
@@ -7038,8 +7100,9 @@ function buildSignalReliabilityRows(outcomes, snapshots) {
   const rows = SIGNAL_NAMES.map(function(name) {
     const cells = outcomes.map(function(o) {
       const snap = snapshots.find(function(s) { return s.week_start === o.week_start && s.signal_name === name; });
-      if (!snap) return null; // no data that week
-      return (snap.score >= 50 ? 'up' : 'down') === o.direction ? 1 : 0;
+      if (!snap || snap.missing) return null; // no data that week
+      const call = signalCall(snap.score);
+      return call == null ? null : (call === o.direction ? 1 : 0); // v55: neutral band = no call
     });
     const known = cells.filter(function(c) { return c !== null; });
     const hits = known.reduce(function(a,b){ return a+b; }, 0);
@@ -7074,7 +7137,7 @@ function renderSignalReliabilityHTML(outcomes, snapshots) {
   }).join('');
 
   return '<div class="reliability-list">' + rowsHtml + '</div>' +
-    '<div class="reliability-footer">Hit rate = how often each signal correctly called the week\'s direction, over the last ' + outcomes.length + ' resolved weeks. Low sample counts are provisional, not settled — this is the same damping the adaptive weights themselves use.</div>';
+    '<div class="reliability-footer">Hit rate = how often each signal correctly called the week\'s direction, over the last ' + outcomes.length + ' resolved weeks. Readings between 45 and 55 count as no call (grey). Samples this small are provisional: none of these rates is evidence of skill yet.</div>';
 }
 
 async function renderSignalStreakHeatmap() {
@@ -7083,7 +7146,7 @@ async function renderSignalStreakHeatmap() {
   try {
     const [outcomesRaw, snapshots] = await Promise.all([
       sbGet('week_outcomes?select=week_start,direction&order=week_start.asc&limit=8'),
-      sbGet('signal_snapshots?select=week_start,signal_name,score&order=week_start.asc')
+      sbGet('signal_snapshots?select=week_start,signal_name,score,missing&order=week_start.asc')
     ]);
     // FIX: same still-open-week contamination as loadSignalWeights() — a
     // limit=8 fetch of the most recent weeks would otherwise include the
@@ -7102,7 +7165,7 @@ async function renderSignalStreakHeatmap() {
   }
 }
 
-const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief_v5';
+const SATOSHI_BRIEF_CACHE_KEY = 'pundix_satoshi_brief_v6'; // v6: v55 call format
 const SATOSHI_BRIEF_CACHE_TTL = 4 * 60 * 60 * 1000;
 
 // ── Shared core-signal builder — added v45 ──────────────────────────────────
@@ -7200,18 +7263,7 @@ async function buildCoreSignals(force) {
   // and always resolves to a real score.
   const ta         = await runTA();
 
-  // Sentiment comes only from fetchSentimentSignal() now — social mood +
-  // news flow, the two genuinely distinct, non-duplicate reads. It no
-  // longer echoes F&G, Technical, or a fabricated On-chain score into this
-  // node (that was silently double-counting three other signals — see
-  // fetchSentimentSignal for the full explanation).
-  //
-  // FIX (v46): this used to read sentimentCache directly without waiting,
-  // which raced against init()'s fire-and-forget fetchSentimentSignal()
-  // call and lost every time on the Live-tab/settlement path — that's why
-  // every saved Sentiment score was a flat 50. Awaiting here shares the
-  // in-flight request (or starts one) and always resolves to a real score.
-  const sentimentSignal = await fetchSentimentSignal();
+  // v55: Sentiment retired from the signal set (see SIGNAL_NAMES).
 
   const signals = [
     {
@@ -7264,15 +7316,6 @@ async function buildCoreSignals(force) {
       weight: 'high',
       live: !!ta,
       missing: !ta
-    },
-    {
-      name: 'Sentiment',
-      score: sentimentSignal ? sentimentSignal.score : 50,
-      label: sentimentSignal ? sentimentSignal.label : '—',
-      note:  sentimentSignal ? sentimentSignal.note : 'social mood + news lag',
-      weight: 'med',
-      live: false,
-      missing: !sentimentSignal
     },
     // Social Lag was removed here (v46) — correlation audit showed it was
     // fng.value + 8 every single week (r=1.0 vs F&G across 8 resolved
@@ -7456,9 +7499,19 @@ async function loadSatoshiBrief(forceRefresh) {
     const [core, satoshiMemory, weekOpenSnap] = await Promise.all([
       buildCoreSignals(forceRefresh),
       buildSatoshiMemory(),
-      sbGet('signal_snapshots?week_start=eq.' + getWeekStartDate(CURRENT_WEEK) + '&signal_name=eq.F%26G&select=btc_price_at_snapshot&limit=1').catch(function(){ return null; })
+      // v55: the week's open is the previous Sunday's Binance close, stored
+      // on week_outcomes by startNextWeek(), the same number the random walk
+      // uses. Before, Satoshi called from the first mid-week snapshot price.
+      sbGet('week_outcomes?week_start=eq.' + getWeekStartDate(CURRENT_WEEK) + '&select=btc_open&limit=1').catch(function(){ return null; })
     ]);
-    const weekBtcOpen = weekOpenSnap?.[0]?.btc_price_at_snapshot || null;
+    let weekBtcOpen = weekOpenSnap?.[0]?.btc_open != null ? parseFloat(weekOpenSnap[0].btc_open) : null;
+    if (!weekBtcOpen) {
+      try {
+        const prevSunday = new Date(Date.parse(getWeekStartDate(CURRENT_WEEK) + 'T00:00:00Z') - 864e5).toISOString().slice(0,10);
+        const r = await fetchSundayCloseBinance(prevSunday);
+        if (r && r.close) weekBtcOpen = r.close;
+      } catch (e) { /* fall back to live price below */ }
+    }
     const signals      = core.signals;
     const macro        = core.macro;
     const dma200Dev    = core.dma200Dev;
@@ -7475,8 +7528,11 @@ async function loadSatoshiBrief(forceRefresh) {
     // Build Claude prompt
     const today   = new Date().toISOString().slice(0,10);
     const price   = Math.round(liveBTC);
-    const sigLines = signals.map(function(s){ return s.name + ': score ' + s.score + '/100 (' + s.note + ', weight ' + Math.round((signalWeights[s.name]||SIGNAL_BASE_WEIGHT)*100) + '%)'; }).join(', ');
+    const sigLines = signals.map(function(s){ return s.name + ': score ' + s.score + '/100 (' + s.note + ')'; }).join(', ');
     const weightedCentre = computeWeightedScore(signals);
+    const callOpen       = weekBtcOpen || price;
+    const callReturnPct  = computeSatoshiCallPct(weightedCentre);
+    const callPrice      = Math.round(callOpen * (1 + callReturnPct / 100));
     const missingSignals = signals.filter(function(s){ return s.missing; });
     const missingSignalsNote = missingSignals.length
       ? '\n\nDATA GAPS THIS WEEK: ' + missingSignals.map(function(s){return s.name;}).join(', ') + ' failed to load and were excluded from the weighted composite below (not counted as neutral). If any of these are normally high-weight or decisive signals, say so plainly and note reduced confidence — do not treat their absence as silence.'
@@ -7496,9 +7552,9 @@ async function loadSatoshiBrief(forceRefresh) {
 
     const briefPrompt = `You are Satoshi — the market desk analyst and institutional conscience of Pundix, a weekly BTC price prediction league. You have been running this desk for multiple weeks. You remember what happened. You remember which signals lied and which delivered. You remember which players called it right and how the crowd was positioned.
 
-Today: ${today}. BTC now: $${price.toLocaleString('en-US')}. Week open (Friday 23:59 UTC): $${(weekBtcOpen ? Math.round(weekBtcOpen).toLocaleString('en-US') : price.toLocaleString('en-US'))}.
+Today: ${today}. BTC now: $${price.toLocaleString('en-US')}. Week open (previous Sunday 23:59 UTC, Binance close): $${Math.round(callOpen).toLocaleString('en-US')}.
 
-CURRENT WEEK SIGNALS (0=extreme bear, 100=extreme bull), with adaptive weights reflecting each signal's historical accuracy:
+CURRENT WEEK SIGNALS (0=extreme bear, 100=extreme bull). All signals are weighted equally, except that Technical, 200DMA, Cycle and Real Vol are all derived from recent BTC price and share one vote:
 ${sigLines}
 ${missingSignalsNote}
 
@@ -7523,12 +7579,12 @@ ${memoryBlock}
 
 YOUR VOICE: You are a cypherpunk analyst. Direct. No hedging. No "could" or "might". You call it as you read it and own the call. When you have been wrong before, you say so plainly and adjust. When a signal has been consistently misleading, you call it out by name. When the crowd is leaning the wrong way based on history, you flag it. You are not here to make players feel good — you are here to sharpen their thinking.
 
-SIGNAL CALIBRATION: The weight shown next to each signal above reflects its actual recent hit rate, not just how extreme its reading is. Before naming a signal as your "dominant signal" or leaning on it in the brief text, check that its weight is genuinely elevated versus the others — a signal reading extreme (e.g. Fear & Greed at 25) is not automatically the signal that matters most this week if its weight is sitting at or near the equal-weight baseline. Give your narrative weight in proportion to adaptive weight, not to how vivid or dramatic a signal's label sounds.
+SIGNAL CALIBRATION: No signal has a proven edge on a one-week horizon, and the track record is far too short to show one. Do not present any single signal as the one that matters, and do not read hot or cold streaks into a few weeks of hits and misses.
 
-TARGET FORMAT: Decide your call as a WEEKLY RETURN — the % move from week open to Sunday settlement — before you think about the absolute price. Seeing an absolute price number pulls estimates toward it regardless of what the signals actually say; deciding the % move first avoids that. Typical BTC weekly moves run 2-8% in magnitude, in either direction — go beyond that only if the signals clearly warrant it. Once target_return_pct is decided, target_price is mechanical: week open price × (1 + target_return_pct / 100), rounded to the nearest integer. Do not pick target_price independently of target_return_pct — it must be the direct arithmetic result.
+YOUR SCORED CALL THIS WEEK IS FIXED: target_return_pct = ${callReturnPct}, target_price = ${callPrice}. It is computed from the composite (${weightedCentre}/100) and capped at ${SATOSHI_CALL_MAX_PCT}% either way, on purpose: weekly BTC direction is hard to call, and only a small call can beat the do-nothing forecast ("next Sunday = last Sunday"). Return these two numbers exactly. Your verdict, score, brief and rationale explain the lean in your own voice; say so plainly if you think the lean is weak.
 
 Write a pre-game brief in exactly this structure:
-1. One sentence on what the dominant signal is saying this week and its current weight/reliability
+1. One sentence on the overall lean of the signals this week and where they disagree
 2. One sentence that references something from your memory — a pattern, a streak, a signal that has been hot or cold, or how the crowd has been wrong
 3. One sentence that creates genuine weight for the decision ahead — specific, not generic
 
@@ -7537,10 +7593,10 @@ Respond ONLY with valid JSON. Do not include any reasoning, preamble, commentary
   "verdict": "<Bearish|Cautious|Neutral|Constructive|Bullish>",
   "score": <0-100>,
   "confidence": <integer 0-100 — how sure you are this specific target_price will be close to Sunday's actual settlement, independent of how bullish or bearish you are. Must follow the calendar-risk guidance above — lower this when a scheduled macro event lands inside this prediction week.>,
-  "dominant_signal": "<signal name and what it is saying — 1 sentence>",
+  "dominant_signal": "<the overall lean of the signals and where they disagree — 1 sentence>",
   "brief": "<memory-informed sentence + closing weight sentence>",
-  "target_return_pct": <number, e.g. -4.2 or 3.1 — your Sunday settlement call as a % move from week open. Decide this FIRST, before target_price. Typical weekly move is 2-8% in magnitude.>,
-  "target_price": <integer — MUST equal week open price × (1 + target_return_pct / 100), rounded to nearest integer. Not an independent guess.>,
+  "target_return_pct": ${callReturnPct},
+  "target_price": ${callPrice},
   "target_rationale": "<max 10 words — the 1-2 signals driving your call, e.g. 'RSI oversold + funding rate reset'>"
 }`;
 
@@ -7561,6 +7617,11 @@ Respond ONLY with valid JSON. Do not include any reasoning, preamble, commentary
     const m = raw.replace(/```json|```/g,'').match(/\{[\s\S]*\}/);
     if (!m) throw new Error('No JSON from brief — raw response started with: ' + JSON.stringify(raw.slice(0, 200)));
     const brief = JSON.parse(m[0]);
+    // v55: the Worker logs target_price from this response. Flag it if the
+    // model did not echo the computed call.
+    if (Math.abs(Number(brief.target_price) - callPrice) > 1) {
+      console.warn('Satoshi did not echo the computed call: got ' + brief.target_price + ', expected ' + callPrice);
+    }
 
     // Override centre node score with Claude's synthesised score
     const verdictScore = Math.max(0, Math.min(100, brief.score || 50));
@@ -7652,7 +7713,7 @@ Respond ONLY with valid JSON. Do not include any reasoning, preamble, commentary
       </div>
 
       <div style="padding:5px 18px 8px;font-family:var(--mono);font-size:8px;color:var(--text-dim);letter-spacing:.5px;">
-        🟢 LIVE: DXY · Nasdaq · 200DMA · F&amp;G · TA · Funding · Real Vol · Options Skew · ETF Flows · Stablecoins&nbsp;&nbsp;·&nbsp;&nbsp;🟡 MODELED: Cycle · Sentiment
+        🟢 LIVE: DXY · Nasdaq · 200DMA · F&amp;G · Funding · Real Vol · Options Skew · ETF Flows · Stablecoins · CVD · OI&nbsp;&nbsp;·&nbsp;&nbsp;🟡 MODELED: Cycle · TA (LLM-read)
       </div>`;
 
     try {
@@ -7735,7 +7796,6 @@ async function loadPredictSignalSnapshot(force) {
     var warmups = [];
     if (!fngCache) warmups.push(loadFNG().catch(function(){}));
     if (!taCache)  warmups.push(runTA().catch(function(){}));
-    if (!sentimentCache) warmups.push(fetchSentimentSignal().catch(function(){}));
     if (warmups.length) await Promise.all(warmups);
 
     const core = await buildCoreSignals(force);
@@ -8181,8 +8241,6 @@ function closePlayerDrawer(e) {
   updateLivePanel();
   initEarlybirdBanner();
   initEarlybirdFormHint();
-  // Run sentiment (social mood + news flow) independently (slow - Cloudflare Worker call)
-  fetchSentimentSignal();
   // Wait for FNG (fast), then build brief
   loadFNG().then(function() {
     loadSatoshiCommentary();
